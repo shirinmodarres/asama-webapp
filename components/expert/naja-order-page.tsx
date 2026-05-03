@@ -8,17 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import {
-  formatCurrency,
-  formatNumber,
-} from "@/lib/expert/utils";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { formatCurrency, formatNumber } from "@/lib/expert/utils";
+import type { NajaCenter } from "@/lib/models/naja-center.model";
 import type { Product } from "@/lib/models/product.model";
-import { createNajaOrder } from "@/lib/services/naja.service";
-import { listOrders } from "@/lib/services/order.service";
-import { listProducts } from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
-import { ChevronLeft, PackageSearch } from "lucide-react";
+import { listNajaCenters } from "@/lib/services/naja-center.service";
+import { createNajaOrder } from "@/lib/services/naja.service";
+import { listProducts } from "@/lib/services/product.service";
+import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -29,8 +27,10 @@ interface NajaOrderPageProps {
 export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [centers, setCenters] = useState<NajaCenter[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [centerObjectId, setCenterObjectId] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [customerName, setCustomerName] = useState("");
@@ -42,21 +42,26 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadProducts() {
-      setIsLoadingProducts(true);
+    async function loadData() {
+      setIsLoading(true);
       setError("");
 
       try {
-        const data = await listProducts();
-        if (isMounted) setProducts(data);
+        const [productData, centerData] = await Promise.all([
+          listProducts(),
+          listNajaCenters(),
+        ]);
+        if (!isMounted) return;
+        setProducts(productData);
+        setCenters(centerData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
-        if (isMounted) setIsLoadingProducts(false);
+        if (isMounted) setIsLoading(false);
       }
     }
 
-    loadProducts();
+    loadData();
 
     return () => {
       isMounted = false;
@@ -64,9 +69,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   }, []);
 
   const selectedProduct = products.find((product) => product.objectId === productId);
-  const totalAmount = selectedProduct
-    ? selectedProduct.unitPrice * quantity
-    : 0;
+  const selectedCenter = centers.find((center) => center.objectId === centerObjectId) ?? null;
+  const totalAmount = selectedProduct ? selectedProduct.unitPrice * quantity : 0;
+
   const productOptions = useMemo(
     () =>
       products
@@ -78,8 +83,24 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     [products],
   );
 
+  const centerOptions = useMemo(
+    () =>
+      centers
+        .filter((center) => center.status === "active")
+        .map((center) => ({
+          value: center.objectId,
+          label: `${center.name} - ${center.centerCode}`,
+        })),
+    [centers],
+  );
+
   const handleSubmit = async () => {
     setError("");
+
+    if (!centerObjectId) {
+      setError("مرکز ناجا را انتخاب کنید.");
+      return;
+    }
 
     if (!productId) {
       setError("کالای ناجا را انتخاب کنید.");
@@ -102,6 +123,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       return;
     }
 
+    if (!customerName.trim() || !nationalId.trim() || !phoneNumber.trim()) {
+      setError("اطلاعات مشتری را کامل وارد کنید.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const order = await createNajaOrder({
@@ -109,14 +135,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         customerName: customerName.trim(),
         customerNationalId: nationalId.trim(),
         customerPhone: phoneNumber.trim(),
+        centerObjectId,
         productObjectId: productId,
         quantity: requestedQuantity,
       });
-      const [refreshedProducts] = await Promise.all([
-        listProducts(),
-        listOrders({ orderType: "naja" }),
-      ]);
-      setProducts(refreshedProducts);
       router.refresh();
       router.push(`/naja/orders/${order.objectId}`);
     } catch (submitError) {
@@ -130,14 +152,30 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     <DashboardLayout role={role} title="ثبت سفارش ناجا">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="p-5">
-          {isLoadingProducts ? (
+          {isLoading ? (
             <LoadingState
-              title="در حال دریافت کالاهای ناجا"
-              description="فهرست کالاها از سرور دریافت می شود."
+              title="در حال دریافت اطلاعات سفارش ناجا"
+              description="فهرست مراکز و کالاهای ناجا از سرور دریافت می شود."
             />
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+              <span>انتخاب مرکز ناجا</span>
+              <div className="relative">
+                <Landmark className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                <SearchableSelect
+                  value={centerObjectId}
+                  onValueChange={setCenterObjectId}
+                  options={centerOptions}
+                  placeholder="انتخاب مرکز ناجا"
+                  searchPlaceholder="جستجو در مراکز ناجا"
+                  emptyMessage="مرکز فعالی پیدا نشد"
+                  triggerClassName="pr-10"
+                />
+              </div>
+            </label>
+
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>کالای ناجا</span>
               <div className="relative">
@@ -197,14 +235,18 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
             </label>
           </div>
 
-          {selectedProduct ? (
+          {selectedProduct || selectedCenter ? (
             <div className="mt-5 rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] px-4 py-3 text-sm leading-7 text-[#6B7280]">
-              {`موجودی ناجا: ${formatNumber(selectedProduct.najaInventoryQty)} ${selectedProduct.unit} • قیمت واحد: ${formatCurrency(selectedProduct.unitPrice)} • سفارش بعد از ثبت مستقیم برای تکمیل اطلاعات انبار ارسال می شود.`}
+              {selectedCenter ? `مرکز انتخاب شده: ${selectedCenter.name} (${selectedCenter.centerCode})` : ""}
+              {selectedCenter && selectedProduct ? " • " : ""}
+              {selectedProduct
+                ? `موجودی ناجا: ${formatNumber(selectedProduct.najaInventoryQty)} ${selectedProduct.unit} • قیمت واحد: ${formatCurrency(selectedProduct.unitPrice)}`
+                : ""}
             </div>
           ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <Button type="button" variant="success" onClick={handleSubmit} disabled={isSubmitting}>
+            <Button type="button" variant="success" onClick={handleSubmit} disabled={isSubmitting || isLoading}>
               ثبت سفارش ناجا
               <ChevronLeft className="size-4" />
             </Button>

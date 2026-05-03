@@ -135,6 +135,18 @@ export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
       description: "ایجاد سفارش جدید از موجودی اختصاصی ناجا",
     },
     {
+      label: "مراکز ناجا",
+      href: "/naja/centers",
+      icon: "layers",
+      description: "فهرست مراکز ثبت شده برای جریان سفارش های ناجا",
+    },
+    {
+      label: "تعریف مرکز ناجا",
+      href: "/naja/centers/new",
+      icon: "plus-circle",
+      description: "ثبت مرکز جدید برای انتخاب در سفارش های ناجا",
+    },
+    {
       label: "سفارش های ناجا",
       href: "/naja/orders",
       icon: "shopping-cart",
@@ -159,6 +171,12 @@ export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
       href: "/manager/order-tracking",
       icon: "activity",
       description: "پایش جریان سفارش تا انتها",
+    },
+    {
+      label: "مراکز ناجا",
+      href: "/manager/naja-centers",
+      icon: "layers",
+      description: "نمای read-only مراکز تعریف شده برای سفارش های ناجا",
     },
   ],
   warehouse: [

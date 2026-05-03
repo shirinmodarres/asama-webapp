@@ -1,7 +1,8 @@
-import type { ExpertOrder } from "@/lib/expert/types";
-
 interface NajaOrderTimelineProps {
-  order: ExpertOrder;
+  order: {
+    orderStatus: string;
+    warehouseStatus: string;
+  };
 }
 
 export function NajaOrderTimeline({ order }: NajaOrderTimelineProps) {
@@ -13,18 +14,21 @@ export function NajaOrderTimeline({ order }: NajaOrderTimelineProps) {
       label: "تکمیل اطلاعات انبار",
       done:
         order.warehouseStatus !== "awaitingNajaDetails" &&
-        order.status !== "returned",
+        order.orderStatus !== "returned",
     },
     {
       key: "invoice",
       label: "صدور فاکتور",
       done:
-        order.status === "invoiced" || order.status === "returnedAfterInvoice",
+        order.orderStatus === "invoiced" ||
+        order.orderStatus === "returnedAfterInvoice",
     },
     {
       key: "return",
       label: "برگشت سفارش",
-      done: order.status === "returned" || order.status === "returnedAfterInvoice",
+      done:
+        order.orderStatus === "returned" ||
+        order.orderStatus === "returnedAfterInvoice",
     },
   ];
 

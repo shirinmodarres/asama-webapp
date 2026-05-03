@@ -7,7 +7,7 @@ type InventoryStatus = "normal" | "warning" | "critical";
 
 interface StatusBadgeProps {
   type: BadgeType;
-  status: OrderStatus | WarehouseStatus | InventoryStatus;
+  status: string;
 }
 
 export function StatusBadge({ type, status }: StatusBadgeProps) {
@@ -20,7 +20,7 @@ export function StatusBadge({ type, status }: StatusBadgeProps) {
   );
 }
 
-function getBadgeConfig(type: BadgeType, status: StatusBadgeProps["status"]) {
+function getBadgeConfig(type: BadgeType, status: string) {
   if (type === "order") {
     const value = status as OrderStatus;
     if (value === "pending") {
@@ -35,7 +35,10 @@ function getBadgeConfig(type: BadgeType, status: StatusBadgeProps["status"]) {
     if (value === "returnedAfterInvoice") {
       return { label: orderStatusLabel[value], variant: "warning" as const };
     }
-    return { label: orderStatusLabel[value], variant: "brand" as const };
+    if (value === "invoiced") {
+      return { label: orderStatusLabel[value], variant: "brand" as const };
+    }
+    return { label: status || "نامشخص", variant: "neutral" as const };
   }
 
   if (type === "warehouse") {
@@ -55,7 +58,10 @@ function getBadgeConfig(type: BadgeType, status: StatusBadgeProps["status"]) {
     if (value === "returnedToInventory") {
       return { label: warehouseStatusLabel[value], variant: "destructive" as const };
     }
-    return { label: warehouseStatusLabel[value], variant: "brand" as const };
+    if (value === "completed") {
+      return { label: warehouseStatusLabel[value], variant: "brand" as const };
+    }
+    return { label: status || "نامشخص", variant: "neutral" as const };
   }
 
   const inventoryStatus = status as InventoryStatus;

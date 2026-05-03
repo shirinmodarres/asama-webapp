@@ -1,6 +1,5 @@
 "use client";
 
-import { AsamaLogo } from "@/components/branding/asama-logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { rolesByKey, sidebarByRole } from "@/lib/mock-data";

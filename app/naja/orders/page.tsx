@@ -9,6 +9,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate } from "@/lib/expert/utils";
@@ -60,8 +61,7 @@ export default function NajaOrdersPage() {
           );
         })
         .sort(
-          (a, b) =>
-            Number(new Date(b.updatedAt)) - Number(new Date(a.updatedAt)),
+          (a, b) => Number(new Date(b.updatedAt)) - Number(new Date(a.updatedAt)),
         ),
     [orders, search],
   );
@@ -75,18 +75,17 @@ export default function NajaOrdersPage() {
       ),
     },
     { key: "customer", header: "نام مشتری", render: (row) => row.customerName ?? "-" },
-
+    { key: "nationalId", header: "کد ملی", render: (row) => row.customerNationalId ?? "-" },
+    { key: "phone", header: "شماره موبایل", render: (row) => row.customerPhone ?? "-" },
     {
       key: "orderStatus",
       header: "وضعیت سفارش",
-      render: (row) => row.orderStatus || "-",
+      render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
     },
     {
       key: "warehouseStatus",
       header: "وضعیت انبار",
-      render: (row) => (
-        row.warehouseStatus || "-"
-      ),
+      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
     },
     {
       key: "updatedAt",

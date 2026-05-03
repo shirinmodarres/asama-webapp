@@ -1,3 +1,5 @@
+import type { NajaCenter } from "@/lib/models/naja-center.model";
+
 export type OrderType = "normal" | "naja";
 
 export interface OrderItem {
@@ -29,6 +31,7 @@ export interface Order {
   returnReason: string | null;
   createdAt: string;
   updatedAt: string;
+  najaCenter: NajaCenter | null;
   items: OrderItem[];
 }
 
@@ -39,7 +42,7 @@ export interface OrderFilters {
 
 export interface CreateOrderPayload {
   customerName: string;
-  createdByName?: string;
+  createdByName: string;
   notes?: string;
   items: Array<{
     productObjectId?: string;

@@ -5,6 +5,7 @@ import {
   toRecord,
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
+import { mapNajaCenterSummaryDto } from "@/lib/mappers/naja-center.mapper";
 import type { Order, OrderItem, OrderType } from "@/lib/models/order.model";
 
 export function mapOrderDto(dto: unknown): Order {
@@ -17,8 +18,12 @@ export function mapOrderDto(dto: unknown): Order {
     orderType: mapOrderType(record.orderType),
     createdByName: toStringValue(record.createdByName),
     customerName: toNullableString(record.customerName),
-    customerNationalId: toNullableString(record.customerNationalId ?? record.nationalId),
-    customerPhone: toNullableString(record.customerPhone ?? record.phoneNumber),
+    customerNationalId: toNullableString(
+      record.customerNationalId ?? record.nationalId,
+    ),
+    customerPhone: toNullableString(
+      record.customerPhone ?? record.phoneNumber,
+    ),
     orderStatus: toStringValue(record.orderStatus) || "pending",
     warehouseStatus: toStringValue(record.warehouseStatus),
     sourceLabel: toNullableString(record.sourceLabel),
@@ -27,6 +32,13 @@ export function mapOrderDto(dto: unknown): Order {
     returnReason: toNullableString(record.returnReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+    najaCenter: mapNajaCenterSummaryDto(
+      record.najaCenter ??
+        record.center ??
+        record.centerInfo ??
+        record.najaCenterInfo,
+      record,
+    ),
     items: toArray(record.items).map(mapOrderItemDto),
   };
 }

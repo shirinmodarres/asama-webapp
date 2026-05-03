@@ -3,14 +3,17 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { useExpertStore } from "@/components/expert/expert-store-provider";
+import { NajaCenterInfoCard } from "@/components/naja/naja-center-info-card";
 import { NajaOrderTimeline } from "@/components/naja/naja-order-timeline";
-import { NajaReturnAction } from "@/components/naja/naja-return-action";
+import { NajaReturnActionRemote } from "@/components/naja/naja-return-action-remote";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
+import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
@@ -18,50 +21,78 @@ import {
   formatDate,
   formatDateTime,
   formatNumber,
-  getOrderItemCount,
   getOrderLineTotal,
-  getOrderTotalQuantity,
 } from "@/lib/expert/utils";
-import type { ExpertOrder } from "@/lib/expert/types";
+import type { Invoice } from "@/lib/models/invoice.model";
+import type { Order } from "@/lib/models/order.model";
+import { listInvoices } from "@/lib/services/invoice.service";
+import { getOrder } from "@/lib/services/order.service";
 
 interface OrderDetailRow {
   id: string;
   name: string;
   brand: string;
-  unit: string;
   unitPrice: number;
   quantity: number;
+  productIdentifier: string | null;
+  trackingCode: string | null;
 }
 
 export default function NajaOrderDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { getOrderById, getProductById, getInvoiceByOrderId } =
-    useExpertStore();
-  const order = getOrderById(params.id);
+  const objectId = decodeURIComponent(params.id);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!order || order.orderSource !== "naja") {
-    return (
-      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
-        <EmptyState
-          title="سفارش ناجا یافت نشد"
-          description="این شناسه در جریان اختصاصی ناجا وجود ندارد."
-        />
-      </DashboardLayout>
-    );
-  }
+  useEffect(() => {
+    let isMounted = true;
 
-  const invoice = getInvoiceByOrderId(order.id);
-  const detailRows: OrderDetailRow[] = order.items.map((item) => {
-    const product = getProductById(item.productId);
-    return {
-      id: item.productId,
-      name: product?.name ?? "کالای نامشخص",
-      brand: product?.brand ?? "-",
-      unit: product?.unit ?? "-",
-      unitPrice: product?.unitPrice ?? 0,
-      quantity: item.quantity,
+    async function loadData() {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const [orderData, invoices] = await Promise.all([
+          getOrder(objectId),
+          listInvoices(),
+        ]);
+        if (!isMounted) return;
+        setOrder(orderData);
+        setInvoice(
+          invoices.find(
+            (entry) =>
+              entry.orderId === orderData.objectId || entry.orderId === orderData.id,
+          ) ?? null,
+        );
+      } catch (loadError) {
+        if (isMounted) setError(loadError instanceof Error ? loadError.message : "دریافت سفارش انجام نشد.");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
     };
-  });
+  }, [objectId]);
+
+  const detailRows = useMemo<OrderDetailRow[]>(() => {
+    if (!order) return [];
+    return order.items.map((item) => ({
+      id: item.objectId || item.productId,
+      name: item.productName || "کالای نامشخص",
+      brand: item.brand || "-",
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      productIdentifier: item.productIdentifier,
+      trackingCode: item.trackingCode,
+    }));
+  }, [order]);
+
   const totalAmount = detailRows.reduce(
     (sum, row) => sum + getOrderLineTotal(row.quantity, row.unitPrice),
     0,
@@ -71,12 +102,9 @@ export default function NajaOrderDetailsPage() {
     {
       key: "name",
       header: "نام کالا",
-      render: (row) => (
-        <span className="font-medium text-[#1F3A5F]">{row.name}</span>
-      ),
+      render: (row) => <span className="font-medium text-[#1F3A5F]">{row.name}</span>,
     },
     { key: "brand", header: "برند", render: (row) => row.brand },
-    { key: "unit", header: "واحد", render: (row) => row.unit },
     {
       key: "unitPrice",
       header: "قیمت واحد",
@@ -90,16 +118,39 @@ export default function NajaOrderDetailsPage() {
     {
       key: "lineTotal",
       header: "مبلغ",
-      render: (row) =>
-        formatCurrency(getOrderLineTotal(row.quantity, row.unitPrice)),
+      render: (row) => formatCurrency(getOrderLineTotal(row.quantity, row.unitPrice)),
     },
   ];
+
+  if (isLoading) {
+    return (
+      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+        <LoadingState title="در حال دریافت جزئیات سفارش ناجا" />
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+        <PageErrorMessage title="دریافت جزئیات سفارش انجام نشد" message={error} />
+      </DashboardLayout>
+    );
+  }
+
+  if (!order || order.orderType !== "naja") {
+    return (
+      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+        <EmptyState title="سفارش ناجا یافت نشد" description="این شناسه در جریان اختصاصی ناجا وجود ندارد." />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
       <SectionHeader
         title={`سفارش ${order.code}`}
-        description="مشاهده اطلاعات مشتری، وضعیت انبار، فاکتور و سوابق بازگردانی سفارش ناجا"
+        description="مشاهده اطلاعات مشتری، مرکز ناجا، وضعیت انبار و فاکتور سفارش"
         actions={
           <Link
             href="/naja/orders"
@@ -113,74 +164,46 @@ export default function NajaOrderDetailsPage() {
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-[#1F3A5F]">
-              اطلاعات سفارش ناجا
-            </h3>
+            <h3 className="text-base font-semibold text-[#1F3A5F]">اطلاعات سفارش ناجا</h3>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <InfoItem label="کد سفارش" value={order.code} />
-
-              <InfoItem label="ثبت کننده" value={order.createdBy} />
-              <InfoItem label="نام مشتری" value={order.customerName} />
-              <InfoItem label="کد ملی" value={order.nationalId ?? "-"} />
-              <InfoItem label="شماره موبایل" value={order.phoneNumber ?? "-"} />
+              <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
+              <InfoItem label="نام مشتری" value={order.customerName ?? "-"} />
+              <InfoItem label="کد ملی" value={order.customerNationalId ?? "-"} />
+              <InfoItem label="شماره موبایل" value={order.customerPhone ?? "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
-              <InfoItem
-                label="وضعیت سفارش"
-                value={<StatusBadge type="order" status={order.status} />}
-              />
-              <InfoItem
-                label="وضعیت انبار"
-                value={
-                  <StatusBadge
-                    type="warehouse"
-                    status={order.warehouseStatus}
-                  />
-                }
-              />
-
-              <InfoItem
-                label="آخرین تغییر"
-                value={formatDateTime(order.updatedAt)}
-              />
-              {order.productIdentifier ? (
-                <InfoItem label="شناسه کالا" value={order.productIdentifier} />
-              ) : null}
-              {order.trackingCode ? (
-                <InfoItem label="کد رهگیری" value={order.trackingCode} />
-              ) : null}
+              <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
+              <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
+              <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />
               <InfoItem
                 label="وضعیت فاکتور"
-                value={
-                  invoice
-                    ? `صادر شده - ${invoice.invoiceNumber}`
-                    : "هنوز صادر نشده"
-                }
+                value={invoice ? `صادر شده - ${invoice.invoiceCode}` : "هنوز صادر نشده"}
               />
+              {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
           </div>
 
-          <DataTable
-            columns={columns}
-            rows={detailRows}
-            rowKey={(row) => row.id}
-          />
+          <NajaCenterInfoCard center={order.najaCenter} />
+
+          <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />
 
           <NajaOrderTimeline order={order} />
         </div>
 
         <div className="space-y-4">
           <OrderSummaryCard
-            customerName={order.customerName}
-            itemCount={getOrderItemCount(order.items)}
-            totalQuantity={getOrderTotalQuantity(order.items)}
+            customerName={order.customerName ?? "-"}
+            itemCount={detailRows.length}
+            totalQuantity={detailRows.reduce((sum, item) => sum + item.quantity, 0)}
             totalAmount={totalAmount}
-            status={order.status}
-            warehouseStatus={order.warehouseStatus}
+            status={order.orderStatus as never}
+            warehouseStatus={order.warehouseStatus as never}
           />
 
-          <NajaReturnAction
-            order={order as ExpertOrder}
-            actorName="کارشناس مرادی"
+          <NajaReturnActionRemote
+            order={order}
+            actorName={order.createdByName || "کارشناس ناجا"}
+            onReturned={(updatedOrder) => setOrder(updatedOrder)}
           />
         </div>
       </section>
