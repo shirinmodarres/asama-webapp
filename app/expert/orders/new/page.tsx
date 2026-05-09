@@ -17,7 +17,7 @@ import {
 } from "@/lib/expert/utils";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Product } from "@/lib/models/product.model";
-import { rolesByKey } from "@/lib/mock-data";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { createOrder } from "@/lib/services/order.service";
 import { listProducts } from "@/lib/services/product.service";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
@@ -127,7 +127,7 @@ export default function NewExpertOrderPage() {
     setIsSubmitting(true);
     try {
       const order = await createOrder({
-        createdByName: rolesByKey.expert.userName,
+        createdByName: getStoredCurrentUser()?.fullName ?? "",
         customerName: customerName.trim(),
         items: normalizedItems.map((item) => ({
           productObjectId: item.productId,

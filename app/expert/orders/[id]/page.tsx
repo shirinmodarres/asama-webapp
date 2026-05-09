@@ -2,197 +2,130 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { useExpertStore } from "@/components/expert/expert-store-provider";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
-import { OrderTimeline } from "@/components/shared/order-timeline";
+import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
-import {
-  getOrderEditBlockReason,
-  orderStatusLabel,
-  warehouseStatusLabel,
-} from "@/lib/expert/mock-data";
-import {
-  formatCurrency,
-  formatDate,
-  formatNumber,
-  getOrderItemCount,
-  getOrderLineTotal,
-  getOrderTotalQuantity,
-  isOrderEditable,
-} from "@/lib/expert/utils";
-
-interface OrderDetailRow {
-  id: string;
-  name: string;
-  brand: string;
-  unit: string;
-  unitPrice: number;
-  quantity: number;
-}
+import { getErrorMessage } from "@/lib/api/api-error";
+import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
+import type { Order } from "@/lib/models/order.model";
+import { getOrder } from "@/lib/services/order.service";
 
 export default function ExpertOrderDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { getOrderById, getProductById } = useExpertStore();
-  const order = getOrderById(params.id);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!order) {
-    return (
-      <DashboardLayout role="expert" title="جزئیات سفارش">
-        <EmptyState
-          title="سفارش یافت نشد"
-          description="شناسه سفارش نامعتبر است یا این سفارش در داده های نمونه وجود ندارد."
-        />
-      </DashboardLayout>
-    );
-  }
+  useEffect(() => {
+    let isMounted = true;
 
-  const detailRows: OrderDetailRow[] = order.items.map((item) => {
-    const product = getProductById(item.productId);
-    return {
-      id: item.productId,
-      name: product?.name ?? "کالای نامشخص",
-      brand: product?.brand ?? "-",
-      unit: product?.unit ?? "-",
-      unitPrice: product?.unitPrice ?? 0,
-      quantity: item.quantity,
+    async function loadOrder() {
+      setIsLoading(true);
+      setError("");
+      try {
+        const data = await getOrder(params.id);
+        if (isMounted) setOrder(data);
+      } catch (loadError) {
+        if (isMounted) setError(getErrorMessage(loadError));
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadOrder();
+
+    return () => {
+      isMounted = false;
     };
-  });
+  }, [params.id]);
+
+  const detailRows = useMemo(
+    () =>
+      order?.items.map((item) => ({
+        id: item.objectId || item.productId,
+        name: item.productName || item.productSku || "کالای نامشخص",
+        brand: item.brand || "-",
+        productSku: item.productSku || "-",
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+      })) ?? [],
+    [order],
+  );
+
   const totalAmount = detailRows.reduce(
-    (sum, row) => sum + getOrderLineTotal(row.quantity, row.unitPrice),
+    (sum, row) => sum + row.quantity * row.unitPrice,
     0,
   );
 
-  const editable = isOrderEditable(order);
-  const blockReason = getOrderEditBlockReason(order.status);
-
-  const columns: DataTableColumn<OrderDetailRow>[] = [
-    {
-      key: "name",
-      header: "نام کالا",
-      render: (row) => (
-        <span className="font-medium text-[#1F3A5F]">{row.name}</span>
-      ),
-    },
+  const columns: DataTableColumn<(typeof detailRows)[number]>[] = [
+    { key: "name", header: "نام کالا", render: (row) => <span className="font-medium text-[#1F3A5F]">{row.name}</span> },
     { key: "brand", header: "برند", render: (row) => row.brand },
-    { key: "unit", header: "واحد", render: (row) => row.unit },
-    {
-      key: "unit-price",
-      header: "قیمت واحد",
-      render: (row) => formatCurrency(row.unitPrice),
-    },
-    {
-      key: "quantity",
-      header: "تعداد",
-      render: (row) => formatNumber(row.quantity),
-    },
-    {
-      key: "line-total",
-      header: "مبلغ",
-      render: (row) => formatCurrency(getOrderLineTotal(row.quantity, row.unitPrice)),
-    },
+    { key: "sku", header: "شناسه کالا", render: (row) => row.productSku },
+    { key: "unitPrice", header: "قیمت واحد", render: (row) => formatCurrency(row.unitPrice) },
+    { key: "quantity", header: "تعداد", render: (row) => formatNumber(row.quantity) },
+    { key: "lineTotal", header: "مبلغ", render: (row) => formatCurrency(row.quantity * row.unitPrice) },
   ];
 
   return (
     <DashboardLayout role="expert" title="جزئیات سفارش">
-      <SectionHeader
-        title={`سفارش ${order.code}`}
-        description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
-        actions={
-          editable ? (
-            <Link
-              href={`/expert/orders/${order.id}/edit`}
-              className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
-            >
-              ویرایش سفارش
-            </Link>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-2 text-sm text-[#94A3B8]"
-              title={blockReason}
-            >
-              غیرقابل ویرایش
-            </button>
-          )
-        }
-      />
-
-      <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-[#1F3A5F]">
-              اطلاعات سفارش
-            </h3>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <InfoItem label="کد سفارش" value={order.code} />
-              <InfoItem label="مشتری" value={order.customerName} />
-              <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
-              <InfoItem
-                label="وضعیت سفارش"
-                value={<StatusBadge type="order" status={order.status} />}
-              />
-              <InfoItem
-                label="وضعیت انبار"
-                value={
-                  <StatusBadge
-                    type="warehouse"
-                    status={order.warehouseStatus}
-                  />
-                }
-              />
-            </dl>
-          </div>
-
-          <div>
-            <DataTable
-              columns={columns}
-              rows={detailRows}
-              rowKey={(row) => row.id}
-            />
-          </div>
-
-          <OrderTimeline status={order.status} />
-        </div>
-
-        <div className="space-y-4">
-          <OrderSummaryCard
-            customerName={order.customerName}
-            itemCount={getOrderItemCount(order.items)}
-            totalQuantity={getOrderTotalQuantity(order.items)}
-            totalAmount={totalAmount}
-            status={order.status}
-            warehouseStatus={order.warehouseStatus}
+      {isLoading ? (
+        <LoadingState title="در حال دریافت جزئیات سفارش" description="اطلاعات سفارش از سرور دریافت می شود." />
+      ) : error ? (
+        <PageErrorMessage title="دریافت جزئیات سفارش انجام نشد" message={error} />
+      ) : !order ? (
+        <EmptyState title="سفارش یافت نشد" description="شناسه سفارش معتبر نیست یا رکوردی برای آن وجود ندارد." />
+      ) : (
+        <>
+          <SectionHeader
+            title={`سفارش ${order.code}`}
+            description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
+            actions={
+              <Link href={`/expert/orders/${order.objectId}/edit`} className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white">
+                ویرایش سفارش
+              </Link>
+            }
           />
 
-          {!editable ? (
-            <div className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-4 text-sm text-[#991B1B]">
-              {blockReason}
-            </div>
-          ) : null}
+          <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
+            <div className="space-y-6">
+              <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+                <h3 className="text-base font-semibold text-[#1F3A5F]">اطلاعات سفارش</h3>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <InfoItem label="کد سفارش" value={order.code} />
+                  <InfoItem label="مشتری" value={order.customerName || "-"} />
+                  <InfoItem label="ثبت کننده" value={order.createdByName} />
+                  <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
+                  <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
+                  <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
+                </dl>
+              </div>
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#475569] shadow-sm">
-            <p className="font-semibold text-[#1F3A5F]">وضعیت های جاری</p>
-            <p className="mt-2">
-              وضعیت سفارش: {orderStatusLabel[order.status]}
-            </p>
-            <p className="mt-1">
-              وضعیت انبار: {warehouseStatusLabel[order.warehouseStatus]}
-            </p>
-          </div>
-        </div>
-      </section>
+              <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />
+            </div>
+
+            <OrderSummaryCard
+              customerName={order.customerName}
+              itemCount={detailRows.length}
+              totalQuantity={detailRows.reduce((sum, row) => sum + row.quantity, 0)}
+              totalAmount={totalAmount}
+              status={order.orderStatus}
+              warehouseStatus={order.warehouseStatus}
+            />
+          </section>
+        </>
+      )}
     </DashboardLayout>
   );
 }
 
-function InfoItem({ label, value }: { label: string; value: ReactNode }) {
+function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
       <dt className="text-xs text-[#6B7280]">{label}</dt>
