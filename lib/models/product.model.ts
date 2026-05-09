@@ -11,6 +11,7 @@ export interface Product {
   unitPrice: number;
   description: string | null;
   status: ProductStatus;
+  statusLabel: string;
   totalStock: number;
   reservedStock: number;
   availableStock: number;
