@@ -24,7 +24,9 @@ export interface Order {
   customerNationalId: string | null;
   customerPhone: string | null;
   orderStatus: string;
+  orderStatusLabel: string;
   warehouseStatus: string;
+  warehouseStatusLabel: string;
   sourceLabel: string | null;
   notes: string | null;
   cancelReason: string | null;

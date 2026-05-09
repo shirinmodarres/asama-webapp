@@ -12,6 +12,7 @@ export interface NajaCenter {
   centerCode: string;
   fullAddress: string;
   status: NajaCenterStatus;
+  statusLabel: string;
   createdAt: string;
   updatedAt: string;
 }

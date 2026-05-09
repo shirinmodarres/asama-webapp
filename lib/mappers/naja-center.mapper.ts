@@ -1,3 +1,4 @@
+import { getProductStatusLabel } from "@/lib/domain/statuses";
 import {
   toArray,
   toNullableString,
@@ -36,6 +37,9 @@ function mapCenterRecord(record: Record<string, unknown>): NajaCenter {
       toStringValue(record.address) ||
       toStringValue(record.centerAddress),
     status: mapStatus(record.status),
+    statusLabel:
+      toStringValue(record.statusLabel) ||
+      getProductStatusLabel(toStringValue(record.status)),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
   };

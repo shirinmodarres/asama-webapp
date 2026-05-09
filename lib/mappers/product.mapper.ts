@@ -1,3 +1,4 @@
+import { getProductStatusLabel } from "@/lib/domain/statuses";
 import type { Product, ProductStatus } from "@/lib/models/product.model";
 import {
   toNullableString,
@@ -29,6 +30,9 @@ export function mapProductDto(dto: unknown): Product {
     unitPrice: toNumberValue(record.unitPrice),
     description: toNullableString(record.description),
     status: mapProductStatus(record.status),
+    statusLabel:
+      getProductStatusLabel(toStringValue(record.status)) ||
+      toStringValue(record.statusLabel),
     totalStock,
     reservedStock,
     availableStock,

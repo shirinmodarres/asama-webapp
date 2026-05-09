@@ -1,10 +1,6 @@
-export type RoleKey =
-  | "expert"
-  | "naja"
-  | "manager"
-  | "warehouse"
-  | "finance"
-  | "support";
+import type { PanelRoleKey } from "@/lib/domain/roles";
+
+export type RoleKey = PanelRoleKey;
 
 export type RoleIconName =
   | "briefcase"

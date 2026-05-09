@@ -23,6 +23,7 @@ export interface Invoice {
   createdByName: string;
   totalAmount: number;
   status: InvoiceStatus;
+  statusLabel: string;
   notes: string | null;
   createdAt: string;
   updatedAt: string;

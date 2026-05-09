@@ -1,4 +1,8 @@
 import {
+  getOrderStatusLabel,
+  getWarehouseStatusLabel,
+} from "@/lib/domain/statuses";
+import {
   toArray,
   toNullableString,
   toNumberValue,
@@ -25,7 +29,13 @@ export function mapOrderDto(dto: unknown): Order {
       record.customerPhone ?? record.phoneNumber,
     ),
     orderStatus: toStringValue(record.orderStatus) || "pending",
+    orderStatusLabel:
+      toStringValue(record.orderStatusLabel) ||
+      getOrderStatusLabel(toStringValue(record.orderStatus) || "pending"),
     warehouseStatus: toStringValue(record.warehouseStatus),
+    warehouseStatusLabel:
+      toStringValue(record.warehouseStatusLabel) ||
+      getWarehouseStatusLabel(toStringValue(record.warehouseStatus)),
     sourceLabel: toNullableString(record.sourceLabel),
     notes: toNullableString(record.notes),
     cancelReason: toNullableString(record.cancelReason),

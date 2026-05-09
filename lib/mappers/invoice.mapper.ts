@@ -1,3 +1,4 @@
+import { getInvoiceStatusLabel } from "@/lib/domain/statuses";
 import {
   toArray,
   toNullableString,
@@ -26,6 +27,9 @@ export function mapInvoiceDto(dto: unknown): Invoice {
     createdByName: toStringValue(record.createdByName),
     totalAmount: toNumberValue(record.totalAmount),
     status: mapInvoiceStatus(record.status),
+    statusLabel:
+      toStringValue(record.statusLabel) ||
+      getInvoiceStatusLabel(toStringValue(record.status)),
     notes: toNullableString(record.notes),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
