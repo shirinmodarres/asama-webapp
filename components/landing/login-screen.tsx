@@ -1,25 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import {
   BriefcaseBusiness,
   LockKeyhole,
   ShieldCheck,
-  UserRound,
+  Smartphone,
   Workflow,
 } from "lucide-react";
 import { AsamaLogo } from "@/components/branding/asama-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
-import { roles, rolesByKey } from "@/lib/mock-data";
-import type { RoleKey } from "@/lib/types";
+import { InlineErrorMessage } from "@/components/shared/inline-error-message";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
+import { getPanelRouteForRole } from "@/lib/domain/roles";
+import { getStoredCurrentUser, getStoredSessionToken, login } from "@/lib/services/auth.service";
 
 const infoItems = [
   {
-    title: "دسترسی متناسب با هر نقش",
+    title: "دسترسی متناسب با هر نقش سازمانی",
     icon: ShieldCheck,
   },
   {
@@ -27,22 +28,43 @@ const infoItems = [
     icon: Workflow,
   },
   {
-    title: "مناسب برای استفاده تیم های عملیاتی",
+    title: "متمرکز بر استفاده روزانه تیم های عملیاتی",
     icon: BriefcaseBusiness,
   },
 ];
 
 export function LoginScreen() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<RoleKey>("expert");
-  const [username, setUsername] = useState(rolesByKey.expert.userName);
-  const [password, setPassword] = useState("123456");
-  const currentRole = rolesByKey[selectedRole];
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleRoleChange = (roleKey: RoleKey) => {
-    setSelectedRole(roleKey);
-    setUsername(rolesByKey[roleKey].userName);
-    localStorage.setItem("asama-demo-role", roleKey);
+  useEffect(() => {
+    const sessionToken = getStoredSessionToken();
+    const currentUser = getStoredCurrentUser();
+    if (sessionToken && currentUser) {
+      router.replace(getPanelRouteForRole(currentUser.role));
+    }
+  }, [router]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await login(phone.trim(), password);
+      router.replace(getPanelRouteForRole(response.user.role));
+    } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.code === "INVALID_CREDENTIALS") {
+        setError("شماره موبایل یا رمز عبور اشتباه است.");
+      } else {
+        setError(getErrorMessage(submitError));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,21 +76,20 @@ export function LoginScreen() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <AsamaLogo href="/" />
             <Badge variant="neutral" dot>
-              درگاه ورود کاربران
+              سامانه داخلی آساما
             </Badge>
           </div>
 
           <div className="mt-10 max-w-xl">
             <p className="text-sm font-semibold tracking-[0.16em] text-[#6B7280]">
-              نقطه ورود یکپارچه
+              درگاه ورود سازمانی
             </p>
             <h1 className="mt-4 max-w-[30rem] text-2xl font-bold leading-[1.8] text-[#102034] lg:text-[2rem]">
-              درگاه ورود کاربران سامانه داخلی آساما
+              دسترسی یکپارچه به عملیات سفارش، انبار، مالی و پشتیبانی
             </h1>
             <p className="mt-4 text-base leading-8 text-[#5F6E81]">
-              از این درگاه، واحدهای فروش، انبار، مالی و پشتیبانی به محیط کاری
-              خود دسترسی پیدا می کنند. ساختار صفحه برای ورود سریع، تشخیص روشن
-              نقش و شروع کار روزانه طراحی شده است.
+              این درگاه برای ورود کاربران سامانه داخلی آساما طراحی شده است تا هر
+              کاربر پس از احراز هویت، مستقیماً وارد پنل متناسب با نقش سازمانی خود شود.
             </p>
           </div>
 
@@ -99,8 +120,8 @@ export function LoginScreen() {
                 ورود به حساب کاربری
               </h2>
               <p className="mt-2 text-sm leading-7 text-[#6B7280]">
-                نام کاربری، گذرواژه و نقش سازمانی را وارد کنید. دسترسی شما پس از
-                ورود بر اساس همین نقش تنظیم می شود.
+                شماره موبایل و رمز عبور خود را وارد کنید. دسترسی شما پس از ورود بر
+                اساس نقش ثبت شده در سامانه تعیین می شود.
               </p>
             </div>
             <div className="flex size-12 items-center justify-center rounded-2xl border border-[#D6E8DA] bg-[#F3FAF4] text-[#6CAE75]">
@@ -108,29 +129,24 @@ export function LoginScreen() {
             </div>
           </div>
 
-          <form
-            className="mt-8 space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              localStorage.setItem("asama-demo-role", currentRole.key);
-              router.push(currentRole.path);
-            }}
-          >
+          <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>نام کاربری</span>
+              <span>شماره موبایل</span>
               <div className="relative">
-                <UserRound className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                <Smartphone className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <Input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
                   className="pr-10"
+                  inputMode="numeric"
+                  autoComplete="username"
                   required
                 />
               </div>
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>گذرواژه</span>
+              <span>رمز عبور</span>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <Input
@@ -138,44 +154,18 @@ export function LoginScreen() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="pr-10"
+                  autoComplete="current-password"
                   required
                 />
               </div>
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>نقش ورود</span>
-              <SearchableSelect
-                value={selectedRole}
-                onValueChange={(value) => handleRoleChange(value as RoleKey)}
-                options={roles.map((role) => ({
-                  value: role.key,
-                  label: role.title,
-                }))}
-                placeholder="انتخاب نقش"
-                searchPlaceholder="جستجو در نقش ها"
-                emptyMessage="نقشی پیدا نشد"
-                triggerClassName="border-[#D6E2D9] bg-[#FBFDFC]"
-              />
-            </label>
+            {error ? <InlineErrorMessage message={error} /> : null}
 
-            <Button type="submit" variant="success" fullWidth size="lg">
-              ورود به سامانه
+            <Button type="submit" variant="success" fullWidth size="lg" disabled={isSubmitting}>
+              {isSubmitting ? "در حال ورود..." : "ورود به سامانه"}
             </Button>
           </form>
-
-          {/* <div className="mt-6 rounded-[20px] bg-[#F7FBF8] px-4 py-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[#315D3D]">
-              <ShieldCheck className="size-4" />
-              نقش انتخاب شده
-            </div>
-            <p className="mt-2 text-sm font-semibold text-[#102034]">
-              {currentRole.title}
-            </p>
-            <p className="mt-1 text-sm leading-7 text-[#6B7280]">
-              {currentRole.entrySummary}
-            </p>
-          </div> */}
         </section>
       </main>
     </div>
