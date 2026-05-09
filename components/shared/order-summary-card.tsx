@@ -1,16 +1,18 @@
 import { PackageCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { orderStatusLabel, warehouseStatusLabel } from "@/lib/expert/mock-data";
-import type { OrderStatus, WarehouseStatus } from "@/lib/expert/types";
+import {
+  getOrderStatusLabel,
+  getWarehouseStatusLabel,
+} from "@/lib/domain/statuses";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 
 interface OrderSummaryCardProps {
-  customerName: string;
+  customerName: string | null;
   itemCount: number;
   totalQuantity: number;
   totalAmount: number;
-  status: OrderStatus;
-  warehouseStatus: WarehouseStatus;
+  status: string;
+  warehouseStatus: string;
 }
 
 export function OrderSummaryCard({
@@ -38,14 +40,14 @@ export function OrderSummaryCard({
       </div>
 
       <dl className="mt-5 space-y-3 text-sm">
-        <SummaryRow label="مشتری" value={customerName} />
+        <SummaryRow label="مشتری" value={customerName || "-"} />
         <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
         <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
         <SummaryRow label="مبلغ تقریبی" value={formatCurrency(totalAmount)} />
-        <SummaryRow label="وضعیت سفارش" value={orderStatusLabel[status]} />
+        <SummaryRow label="وضعیت سفارش" value={getOrderStatusLabel(status)} />
         <SummaryRow
           label="وضعیت انبار"
-          value={warehouseStatusLabel[warehouseStatus]}
+          value={getWarehouseStatusLabel(warehouseStatus)}
         />
       </dl>
     </Card>

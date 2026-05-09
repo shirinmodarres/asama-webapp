@@ -1,6 +1,8 @@
-import { orderStatusLabel, warehouseStatusLabel } from "@/lib/expert/mock-data";
-import type { OrderStatus, WarehouseStatus } from "@/lib/expert/types";
 import { Badge } from "@/components/ui/badge";
+import {
+  getOrderStatusLabel,
+  getWarehouseStatusLabel,
+} from "@/lib/domain/statuses";
 
 type BadgeType = "order" | "warehouse" | "inventory";
 type InventoryStatus = "normal" | "warning" | "critical";
@@ -22,46 +24,41 @@ export function StatusBadge({ type, status }: StatusBadgeProps) {
 
 function getBadgeConfig(type: BadgeType, status: string) {
   if (type === "order") {
-    const value = status as OrderStatus;
-    if (value === "pending") {
-      return { label: orderStatusLabel[value], variant: "warning" as const };
+    if (status === "pending") {
+      return { label: getOrderStatusLabel(status), variant: "warning" as const };
     }
-    if (value === "approved") {
-      return { label: orderStatusLabel[value], variant: "success" as const };
+    if (status === "approved") {
+      return { label: getOrderStatusLabel(status), variant: "success" as const };
     }
-    if (value === "cancelled" || value === "returned") {
-      return { label: orderStatusLabel[value], variant: "destructive" as const };
+    if (status === "cancelled" || status === "returned") {
+      return { label: getOrderStatusLabel(status), variant: "destructive" as const };
     }
-    if (value === "returnedAfterInvoice") {
-      return { label: orderStatusLabel[value], variant: "warning" as const };
+    if (status === "returnedAfterInvoice") {
+      return { label: getOrderStatusLabel(status), variant: "warning" as const };
     }
-    if (value === "invoiced") {
-      return { label: orderStatusLabel[value], variant: "brand" as const };
+    if (status === "invoiced") {
+      return { label: getOrderStatusLabel(status), variant: "brand" as const };
     }
     return { label: status || "نامشخص", variant: "neutral" as const };
   }
 
   if (type === "warehouse") {
-    const value = status as WarehouseStatus;
-    if (value === "reserved" || value === "returned") {
-      return { label: warehouseStatusLabel[value], variant: "neutral" as const };
+    if (status === "reserved") {
+      return { label: getWarehouseStatusLabel(status), variant: "neutral" as const };
     }
-    if (value === "reviewing" || value === "processing" || value === "dispatchIssued") {
-      return { label: warehouseStatusLabel[value], variant: "brand" as const };
+    if (status === "reviewing" || status === "dispatchIssued") {
+      return { label: getWarehouseStatusLabel(status), variant: "brand" as const };
     }
-    if (value === "delivered" || value === "najaDetailsCompleted") {
-      return { label: warehouseStatusLabel[value], variant: "success" as const };
+    if (status === "delivered" || status === "najaDetailsCompleted") {
+      return { label: getWarehouseStatusLabel(status), variant: "success" as const };
     }
-    if (value === "awaitingNajaDetails" || value === "returnedFromWarehouse") {
-      return { label: warehouseStatusLabel[value], variant: "warning" as const };
+    if (status === "awaitingNajaDetails" || status === "returnedFromWarehouse") {
+      return { label: getWarehouseStatusLabel(status), variant: "warning" as const };
     }
-    if (value === "returnedToInventory") {
-      return { label: warehouseStatusLabel[value], variant: "destructive" as const };
+    if (status === "returnedToInventory") {
+      return { label: getWarehouseStatusLabel(status), variant: "destructive" as const };
     }
-    if (value === "completed") {
-      return { label: warehouseStatusLabel[value], variant: "brand" as const };
-    }
-    return { label: status || "نامشخص", variant: "neutral" as const };
+    return { label: getWarehouseStatusLabel(status) || status || "نامشخص", variant: "neutral" as const };
   }
 
   const inventoryStatus = status as InventoryStatus;
