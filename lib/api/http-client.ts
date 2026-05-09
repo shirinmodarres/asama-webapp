@@ -1,4 +1,5 @@
 import { ApiError, FALLBACK_ERROR_MESSAGE } from "@/lib/api/api-error";
+import { clearStoredSession } from "@/lib/auth/storage";
 
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 const API_BASE_URL = configuredApiBaseUrl
@@ -65,6 +66,12 @@ export async function httpRequest<T>(
   const payload = await parseResponseBody(response);
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      clearStoredSession();
+      if (window.location.pathname !== "/") {
+        window.location.replace("/");
+      }
+    }
     throw createApiError(payload, response.status);
   }
 
