@@ -1,0 +1,68 @@
+export type CustomerStatus = "active" | "inactive";
+export type CustomerAddressStatus = "active" | "inactive";
+export type ReceiverType = "self" | "other";
+
+export interface CustomerAddress {
+  objectId: string;
+  id: string;
+  customerId: string;
+  title: string;
+  receiverType: ReceiverType;
+  receiverFullName: string;
+  receiverPhone: string | null;
+  province: string;
+  city: string;
+  county: string | null;
+  fullAddress: string;
+  postalCode: string | null;
+  plaque: string | null;
+  unit: string | null;
+  isDefault: boolean;
+  status: CustomerAddressStatus;
+  statusLabel: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Customer {
+  objectId: string;
+  id: string;
+  fullName: string;
+  phone: string;
+  nationalId: string | null;
+  assignedExpertName: string | null;
+  status: CustomerStatus;
+  statusLabel: string;
+  defaultAddress: CustomerAddress | null;
+  addresses: CustomerAddress[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerFilters {
+  search?: string;
+  status?: CustomerStatus;
+}
+
+export interface CustomerPayload {
+  fullName: string;
+  phone: string;
+  nationalId?: string | null;
+  status?: CustomerStatus;
+  defaultAddress?: CustomerAddressPayload | null;
+}
+
+export interface CustomerAddressPayload {
+  title?: string | null;
+  receiverType: ReceiverType;
+  receiverFullName?: string | null;
+  receiverPhone?: string | null;
+  province: string;
+  city: string;
+  county?: string | null;
+  fullAddress: string;
+  postalCode?: string | null;
+  plaque?: string | null;
+  unit?: string | null;
+  isDefault?: boolean;
+}

@@ -18,6 +18,13 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     issuedByName: toStringValue(record.issuedByName),
     exitDate: toStringValue(record.exitDate),
     notes: toNullableString(record.notes),
+    customerName: toNullableString(record.customerName),
+    customerPhone: toNullableString(record.customerPhone),
+    deliveryFullAddress: toNullableString(record.deliveryFullAddress),
+    receiverFullName: toNullableString(
+      record.receiverFullName ?? record.receiverName,
+    ),
+    receiverPhone: toNullableString(record.receiverPhone),
     deliveryConfirmed: toBooleanValue(record.deliveryConfirmed),
     deliveryConfirmedAt: toNullableString(record.deliveryConfirmedAt),
     createdAt: toStringValue(record.createdAt),

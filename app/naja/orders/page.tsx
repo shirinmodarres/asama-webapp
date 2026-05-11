@@ -15,6 +15,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function NajaOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -75,8 +76,8 @@ export default function NajaOrdersPage() {
       ),
     },
     { key: "customer", header: "نام مشتری", render: (row) => row.customerName ?? "-" },
-    { key: "nationalId", header: "کد ملی", render: (row) => row.customerNationalId ?? "-" },
-    { key: "phone", header: "شماره موبایل", render: (row) => row.customerPhone ?? "-" },
+    { key: "nationalId", header: "کد ملی", render: (row) => row.customerNationalId ? formatFaDigits(row.customerNationalId) : "-" },
+    { key: "phone", header: "شماره موبایل", render: (row) => row.customerPhone ? formatFaDigits(row.customerPhone) : "-" },
     {
       key: "orderStatus",
       header: "وضعیت سفارش",

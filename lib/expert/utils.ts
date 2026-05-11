@@ -1,4 +1,8 @@
 import type { ExpertOrder, OrderItem, Product } from "@/lib/expert/types";
+import {
+  formatFaCurrency,
+  formatFaNumber,
+} from "@/lib/utils/number-format";
 
 const textCollator = (() => {
   try {
@@ -16,19 +20,11 @@ const textCollator = (() => {
 })();
 
 export function formatNumber(value?: number | string | null): string {
-  const numericValue =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim().length > 0
-        ? Number(value)
-        : 0;
-
-  const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
-  return safeValue.toLocaleString("fa-IR");
+  return formatFaNumber(value);
 }
 
 export function formatCurrency(value?: number | string | null): string {
-  return `${formatNumber(value)} ریال`;
+  return formatFaCurrency(value);
 }
 
 export function formatDate(value: string): string {

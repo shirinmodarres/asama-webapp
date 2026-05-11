@@ -21,8 +21,20 @@ export interface Order {
   orderType: OrderType;
   createdByName: string;
   customerName: string | null;
+  customerObjectId: string | null;
+  customerAddressObjectId: string | null;
   customerNationalId: string | null;
   customerPhone: string | null;
+  deliveryAddressTitle: string | null;
+  deliveryProvince: string | null;
+  deliveryCity: string | null;
+  deliveryCounty: string | null;
+  deliveryFullAddress: string | null;
+  deliveryPostalCode: string | null;
+  deliveryPlaque: string | null;
+  deliveryUnit: string | null;
+  receiverFullName: string | null;
+  receiverPhone: string | null;
   orderStatus: string;
   orderStatusLabel: string;
   warehouseStatus: string;
@@ -43,8 +55,10 @@ export interface OrderFilters {
 }
 
 export interface CreateOrderPayload {
-  customerName: string;
+  customerName?: string;
   createdByName: string;
+  customerObjectId?: string;
+  customerAddressObjectId?: string;
   notes?: string;
   items: Array<{
     productObjectId?: string;

@@ -16,6 +16,12 @@ import type { RoleKey } from "@/lib/types";
 import { listNajaCenters } from "@/lib/services/naja-center.service";
 import { createNajaOrder } from "@/lib/services/naja.service";
 import { listProducts } from "@/lib/services/product.service";
+import {
+  formatFaDigits,
+  normalizeDigits,
+  normalizePhone,
+  toNumber,
+} from "@/lib/utils/number-format";
 import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -89,7 +95,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         .filter((center) => center.status === "active")
         .map((center) => ({
           value: center.objectId,
-          label: `${center.name} - ${center.centerCode}`,
+          label: `${center.name} - ${formatFaDigits(center.centerCode)}`,
         })),
     [centers],
   );
@@ -112,7 +118,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       return;
     }
 
-    const requestedQuantity = Number(quantity);
+    const requestedQuantity = toNumber(quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
       setError("تعداد سفارش باید بیشتر از صفر باشد.");
       return;
@@ -133,8 +139,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       const order = await createNajaOrder({
         createdByName: najaExpertName.trim(),
         customerName: customerName.trim(),
-        customerNationalId: nationalId.trim(),
-        customerPhone: phoneNumber.trim(),
+        customerNationalId: normalizeDigits(nationalId.trim()),
+        customerPhone: normalizePhone(phoneNumber),
         centerObjectId,
         productObjectId: productId,
         quantity: requestedQuantity,
@@ -195,10 +201,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>تعداد</span>
               <Input
-                type="number"
-                min={1}
+                inputMode="numeric"
                 value={quantity}
-                onChange={(event) => setQuantity(Number(event.target.value))}
+                onChange={(event) => setQuantity(toNumber(event.target.value))}
               />
             </label>
 
@@ -237,7 +242,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
           {selectedProduct || selectedCenter ? (
             <div className="mt-5 rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] px-4 py-3 text-sm leading-7 text-[#6B7280]">
-              {selectedCenter ? `مرکز انتخاب شده: ${selectedCenter.name} (${selectedCenter.centerCode})` : ""}
+              {selectedCenter ? `مرکز انتخاب شده: ${selectedCenter.name} (${formatFaDigits(selectedCenter.centerCode)})` : ""}
               {selectedCenter && selectedProduct ? " • " : ""}
               {selectedProduct
                 ? `موجودی ناجا: ${formatNumber(selectedProduct.najaInventoryQty)} ${selectedProduct.unit} • قیمت واحد: ${formatCurrency(selectedProduct.unitPrice)}`

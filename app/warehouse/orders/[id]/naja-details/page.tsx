@@ -11,6 +11,7 @@ import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import type { Order } from "@/lib/models/order.model";
 import { completeNajaWarehouseInfo } from "@/lib/services/naja.service";
 import { getOrder } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function WarehouseNajaDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -43,8 +45,8 @@ export default function WarehouseNajaDetailsPage() {
         const data = await getOrder(objectId);
         if (!isMounted) return;
         setOrder(data);
-        setProductIdentifier(data.items[0]?.productIdentifier ?? "");
-        setTrackingCode(data.items[0]?.trackingCode ?? "");
+        setProductIdentifier(formatFaDigits(data.items[0]?.productIdentifier ?? ""));
+        setTrackingCode(formatFaDigits(data.items[0]?.trackingCode ?? ""));
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -151,7 +153,10 @@ export default function WarehouseNajaDetailsPage() {
             <p className="font-semibold text-[#102034]">خلاصه سفارش</p>
             <p className="mt-2">مشتری: {order.customerName ?? "-"}</p>
             <p>ثبت کننده: {order.createdByName || "-"}</p>
-            <p>وضعیت فعلی: {order.warehouseStatus || "-"}</p>
+            <div className="flex items-center gap-2">
+              <span>وضعیت فعلی:</span>
+              <StatusBadge type="warehouse" status={order.warehouseStatus} />
+            </div>
           </Card>
 
           <NajaReturnActionRemote order={order} actorName="رضا احمدی" onReturned={(updatedOrder) => setOrder(updatedOrder)} />

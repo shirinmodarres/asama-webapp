@@ -22,6 +22,18 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "فهرست سفارش های ثبت شده",
     },
     {
+      label: "مشتری‌ها",
+      href: "/expert/customers",
+      icon: "users",
+      description: "مدیریت مشتری ها و آدرس های تحویل",
+    },
+    {
+      label: "تعریف مشتری",
+      href: "/expert/customers/new",
+      icon: "plus-circle",
+      description: "ثبت مشتری جدید و آدرس پیش فرض",
+    },
+    {
       label: "ثبت سفارش",
       href: "/expert/orders/new",
       icon: "plus-circle",

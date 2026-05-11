@@ -12,6 +12,7 @@ import {
 } from "@/components/support/product-form";
 import type { Product } from "@/lib/models/product.model";
 import { getProduct, updateProduct } from "@/lib/services/product.service";
+import { toNumber } from "@/lib/utils/number-format";
 import { useParams, useRouter } from "next/navigation";
 
 export default function SupportEditProductPage() {
@@ -88,7 +89,7 @@ export default function SupportEditProductPage() {
         brand: input.brand.trim(),
         category: input.category.trim(),
         unit: input.unit.trim(),
-        unitPrice: Number(input.unitPrice),
+        unitPrice: toNumber(input.unitPrice),
         description: input.description?.trim() || undefined,
         status: input.status,
       });

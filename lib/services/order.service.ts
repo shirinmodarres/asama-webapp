@@ -6,6 +6,7 @@ import type {
   OrderFilters,
   UpdatePendingOrderPayload,
 } from "@/lib/models/order.model";
+import { toNumber } from "@/lib/utils/number-format";
 
 export async function listOrders(filters?: OrderFilters): Promise<Order[]> {
   const data = await httpClient.get<unknown>(buildOrdersPath(filters));
@@ -18,7 +19,10 @@ export async function getOrder(objectId: string): Promise<Order> {
 }
 
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
-  const data = await httpClient.post<unknown>("/api/orders", payload);
+  const data = await httpClient.post<unknown>(
+    "/api/orders",
+    normalizeOrderPayload(payload),
+  );
   return mapOrderDto(data);
 }
 
@@ -28,9 +32,21 @@ export async function updatePendingOrder(
 ): Promise<Order> {
   const data = await httpClient.patch<unknown>(
     `/api/orders/${objectId}`,
-    payload,
+    normalizeOrderPayload(payload),
   );
   return mapOrderDto(data);
+}
+
+function normalizeOrderPayload(
+  payload: UpdatePendingOrderPayload,
+): Record<string, unknown> {
+  return {
+    ...payload,
+    items: payload.items?.map((item) => ({
+      ...item,
+      quantity: toNumber(item.quantity),
+    })),
+  };
 }
 
 export async function approveOrder(objectId: string): Promise<Order> {

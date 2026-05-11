@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { NajaCenterInfoCard } from "@/components/naja/naja-center-info-card";
 import { NajaReturnActionRemote } from "@/components/naja/naja-return-action-remote";
@@ -20,6 +21,7 @@ import { formatDate, formatDateTime } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { createNajaInvoice } from "@/lib/services/naja.service";
 import { getOrder } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function FinanceNajaInvoicePage() {
   const params = useParams<{ id: string }>();
@@ -125,11 +127,11 @@ export default function FinanceNajaInvoicePage() {
               <InfoItem label="نام صورتحساب" value="ناجا" />
               <InfoItem label="کارشناس ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="نام مشتری" value={order.customerName ?? "-"} />
-              <InfoItem label="کد ملی" value={order.customerNationalId ?? "-"} />
-              <InfoItem label="شماره موبایل" value={order.customerPhone ?? "-"} />
+              <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
+              <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
               <InfoItem label="کالا" value={firstItem?.productName ?? "-"} />
-              <InfoItem label="شناسه کالا" value={firstItem?.productIdentifier ?? "-"} />
-              <InfoItem label="کد رهگیری" value={firstItem?.trackingCode ?? "-"} />
+              <InfoItem label="شناسه کالا" value={firstItem?.productIdentifier ? formatFaDigits(firstItem.productIdentifier) : "-"} />
+              <InfoItem label="کد رهگیری" value={firstItem?.trackingCode ? formatFaDigits(firstItem.trackingCode) : "-"} />
               <InfoItem label="تاریخ ثبت سفارش" value={formatDate(order.createdAt)} />
               <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />
             </div>
@@ -143,6 +145,8 @@ export default function FinanceNajaInvoicePage() {
               </Button>
             </div>
           </Card>
+
+          <CustomerInfoCard order={order} />
 
           <NajaCenterInfoCard center={order.najaCenter} title="مرکز ناجا در صورتحساب" />
         </div>

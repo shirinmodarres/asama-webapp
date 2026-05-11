@@ -39,7 +39,7 @@ function getBadgeConfig(type: BadgeType, status: string) {
     if (status === "invoiced") {
       return { label: getOrderStatusLabel(status), variant: "brand" as const };
     }
-    return { label: status || "نامشخص", variant: "neutral" as const };
+    return { label: getOrderStatusLabel(status) || status || "نامشخص", variant: "neutral" as const };
   }
 
   if (type === "warehouse") {

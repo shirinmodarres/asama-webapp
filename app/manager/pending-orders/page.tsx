@@ -6,9 +6,11 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import {
   formatDate,
   formatNumber,
@@ -89,14 +91,12 @@ export default function ManagerPendingOrdersPage() {
     {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => row.orderStatus || "-",
+      render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
     },
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => (
-        row.warehouseStatus || "-"
-      ),
+      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
     },
     {
       key: "actions",
@@ -133,7 +133,7 @@ export default function ManagerPendingOrdersPage() {
               options={[
                 { value: "pending", label: "در انتظار تایید" },
                 { value: "all", label: "همه وضعیت ها" },
-                ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((value) => ({ value, label: value })),
+                ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((value) => ({ value, label: getOrderStatusLabel(value) })),
               ]}
               placeholder="فیلتر وضعیت"
               searchPlaceholder="جستجو در وضعیت ها"

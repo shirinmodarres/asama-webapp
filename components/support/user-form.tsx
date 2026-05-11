@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ROLE_OPTIONS } from "@/lib/domain/roles";
 import type { BackendRoleKey } from "@/lib/domain/roles";
 import type { UserStatus } from "@/lib/models/auth.model";
+import { normalizePhone } from "@/lib/utils/number-format";
 
 interface BaseProps {
   onCancel: () => void;
@@ -71,7 +72,7 @@ export function UserForm(props: UserFormProps) {
         if (props.mode === "create") {
           props.onSubmit({
             fullName: fullName.trim(),
-            phone: phone.trim(),
+            phone: normalizePhone(phone),
             password,
             role,
             status,
@@ -81,7 +82,7 @@ export function UserForm(props: UserFormProps) {
 
         props.onSubmit({
           fullName: fullName.trim(),
-          phone: phone.trim(),
+          phone: normalizePhone(phone),
           password: password.trim() || undefined,
           role,
           status,

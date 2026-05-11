@@ -5,6 +5,7 @@ import type {
   UpdateUserPayload,
   User,
 } from "@/lib/models/user.model";
+import { normalizePhone } from "@/lib/utils/number-format";
 
 export async function listUsers(): Promise<User[]> {
   const data = await httpClient.get<unknown>("/api/users");
@@ -12,7 +13,10 @@ export async function listUsers(): Promise<User[]> {
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<User> {
-  const data = await httpClient.post<unknown>("/api/users", payload);
+  const data = await httpClient.post<unknown>("/api/users", {
+    ...payload,
+    phone: normalizePhone(payload.phone),
+  });
   return mapAuthUserDto(data);
 }
 
@@ -29,6 +33,9 @@ export async function updateUser(
   objectId: string,
   payload: UpdateUserPayload,
 ): Promise<User> {
-  const data = await httpClient.put<unknown>(`/api/users/${objectId}`, payload);
+  const data = await httpClient.put<unknown>(`/api/users/${objectId}`, {
+    ...payload,
+    phone: payload.phone ? normalizePhone(payload.phone) : payload.phone,
+  });
   return mapAuthUserDto(data);
 }

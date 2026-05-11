@@ -127,7 +127,7 @@ export default function SupportInventoryPage() {
       const updated = await updateProductStock(selectedProduct.objectId, {
         inventoryScope: input.inventoryScope,
         changeType: input.changeType,
-        amount: Number(input.amount),
+        amount: input.amount,
         notes: input.note.trim() || undefined,
       });
       setProducts((current) =>

@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
+import { toNumber } from "@/lib/utils/number-format";
 
 interface InventoryProduct {
   objectId?: string;
@@ -72,7 +73,7 @@ function InventoryUpdateModalContent({
   const [changeType, setChangeType] = useState<"increase" | "decrease">(
     initialChangeType,
   );
-  const [amount, setAmount] = useState(1);
+  const [amount, setAmount] = useState("1");
   const [note, setNote] = useState("");
 
   return (
@@ -85,7 +86,7 @@ function InventoryUpdateModalContent({
               productId: product.id,
               inventoryScope,
               changeType,
-              amount,
+              amount: toNumber(amount),
               note,
               createdBy: "سارا کریمی",
             });
@@ -119,10 +120,9 @@ function InventoryUpdateModalContent({
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>مقدار</span>
               <Input
-                type="number"
-                min={1}
+                inputMode="numeric"
                 value={amount}
-                onChange={(event) => setAmount(Number(event.target.value))}
+                onChange={(event) => setAmount(event.target.value)}
               />
             </label>
 

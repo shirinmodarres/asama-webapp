@@ -7,6 +7,11 @@ export interface ExitSlip {
   issuedByName: string;
   exitDate: string;
   notes: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  deliveryFullAddress: string | null;
+  receiverFullName: string | null;
+  receiverPhone: string | null;
   deliveryConfirmed: boolean;
   deliveryConfirmedAt: string | null;
   createdAt: string;

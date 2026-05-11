@@ -6,12 +6,13 @@ import {
   toRecord,
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
+import { normalizeDigits } from "@/lib/utils/number-format";
 
 export function mapProductDto(dto: unknown): Product {
   const record = toRecord(dto);
   const objectId = toStringValue(record.objectId);
-  const id = toStringValue(record.id) || toStringValue(record.sku);
-  const sku = toStringValue(record.sku) || toStringValue(record.id);
+  const id = normalizeDigits(toStringValue(record.id) || toStringValue(record.sku));
+  const sku = normalizeDigits(toStringValue(record.sku) || toStringValue(record.id));
   const totalStock = toNumberValue(record.totalStock);
   const reservedStock = toNumberValue(record.reservedStock);
   const availableStock =

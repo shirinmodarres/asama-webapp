@@ -6,6 +6,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -93,14 +94,12 @@ export default function WarehouseDeliveredPage() {
     {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => row.order.orderStatus || "-",
+      render: (row) => <StatusBadge type="order" status={row.order.orderStatus} />,
     },
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => (
-        row.order.warehouseStatus || "-"
-      ),
+      render: (row) => <StatusBadge type="warehouse" status={row.order.warehouseStatus} />,
     },
     {
       key: "actions",

@@ -9,6 +9,7 @@ import type {
   NajaCenter,
   NajaCenterStatus,
 } from "@/lib/models/naja-center.model";
+import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 function mapStatus(value: unknown): NajaCenterStatus {
   return value === "inactive" ? "inactive" : "active";
@@ -26,12 +27,15 @@ function mapCenterRecord(record: Record<string, unknown>): NajaCenter {
       toStringValue(record.responsibleName) ||
       toStringValue(record.centerResponsibleName) ||
       toStringValue(record.responsible),
-    phone: toStringValue(record.phone) || toStringValue(record.phoneNumber),
+    phone: normalizePhone(
+      toStringValue(record.phone) || toStringValue(record.phoneNumber),
+    ),
     province: toStringValue(record.province),
     city: toStringValue(record.city),
     county: toStringValue(record.county),
-    centerCode:
+    centerCode: normalizeDigits(
       toStringValue(record.centerCode) || toStringValue(record.code),
+    ),
     fullAddress:
       toStringValue(record.fullAddress) ||
       toStringValue(record.address) ||

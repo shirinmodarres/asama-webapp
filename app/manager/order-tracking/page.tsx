@@ -9,9 +9,14 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
+import {
+  getOrderStatusLabel,
+  getWarehouseStatusLabel,
+} from "@/lib/domain/statuses";
 import { formatDate } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
@@ -98,14 +103,12 @@ export default function ManagerOrderTrackingPage() {
     {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => row.orderStatus || "-",
+      render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
     },
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => (
-        row.warehouseStatus || "-"
-      ),
+      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
     },
     {
       key: "updated",
@@ -146,14 +149,14 @@ export default function ManagerOrderTrackingPage() {
               onValueChange={(value) => setFilter(value as TrackingFilter)}
               options={[
                 { value: "all", label: "همه وضعیت ها" },
-                { value: "pending", label: "در انتظار تایید" },
-                { value: "approved", label: "تایید شده" },
-                { value: "cancelled", label: "لغو شده" },
-                { value: "dispatchIssued", label: "حواله خروج صادر شد" },
-                { value: "delivered", label: "تایید تحویل به مشتری" },
-                { value: "invoiced", label: "فاکتور شده" },
-                { value: "returned", label: "برگشتی" },
-                { value: "returnedAfterInvoice", label: "برگشتی پس از فاکتور" },
+                { value: "pending", label: getOrderStatusLabel("pending") },
+                { value: "approved", label: getOrderStatusLabel("approved") },
+                { value: "cancelled", label: getOrderStatusLabel("cancelled") },
+                { value: "dispatchIssued", label: getWarehouseStatusLabel("dispatchIssued") },
+                { value: "delivered", label: getWarehouseStatusLabel("delivered") },
+                { value: "invoiced", label: getOrderStatusLabel("invoiced") },
+                { value: "returned", label: getOrderStatusLabel("returned") },
+                { value: "returnedAfterInvoice", label: getOrderStatusLabel("returnedAfterInvoice") },
               ]}
               placeholder="فیلتر وضعیت"
               searchPlaceholder="جستجو در وضعیت ها"

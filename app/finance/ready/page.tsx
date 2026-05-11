@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InvoiceTable } from "@/components/finance/invoice-table";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -141,14 +142,12 @@ export default function FinanceReadyPage() {
     {
       key: "orderStatus",
       header: "وضعیت سفارش",
-      render: (row) => row.order.orderStatus || "-",
+      render: (row) => <StatusBadge type="order" status={row.order.orderStatus} />,
     },
     {
       key: "warehouseStatus",
       header: "وضعیت انبار",
-      render: (row) => (
-        row.order.warehouseStatus || "-"
-      ),
+      render: (row) => <StatusBadge type="warehouse" status={row.order.warehouseStatus} />,
     },
     {
       key: "actions",

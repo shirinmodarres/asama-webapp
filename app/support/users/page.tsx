@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { User } from "@/lib/models/user.model";
 import { listUsers } from "@/lib/services/user.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function SupportUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -48,7 +49,7 @@ export default function SupportUsersPage() {
       header: "نام",
       render: (row) => <span className="font-medium text-[#1F3A5F]">{row.fullName}</span>,
     },
-    { key: "phone", header: "شماره موبایل", render: (row) => row.phone },
+    { key: "phone", header: "شماره موبایل", render: (row) => formatFaDigits(row.phone) },
     { key: "role", header: "نقش", render: (row) => row.roleLabel },
     {
       key: "status",

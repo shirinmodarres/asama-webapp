@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Truck,
+  Users,
   Warehouse,
 } from "lucide-react";
 import type { RoleIconName, SidebarIconName } from "@/lib/types";
@@ -43,4 +44,5 @@ export const sidebarIconMap: Record<SidebarIconName, LucideIcon> = {
   layers: FileSpreadsheet,
   history: History,
   pencil: PencilLine,
+  users: Users,
 };

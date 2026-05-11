@@ -16,11 +16,22 @@ import {
   getOrderTotalQuantity,
 } from "@/lib/expert/utils";
 import { getErrorMessage } from "@/lib/api/api-error";
+import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
+import {
+  listCustomerAddresses,
+  listCustomers,
+} from "@/lib/services/customer.service";
 import { createOrder } from "@/lib/services/order.service";
 import { listProducts } from "@/lib/services/product.service";
+import {
+  formatDeliveryAddress,
+  getReceiverName,
+} from "@/lib/utils/address-format";
+import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -33,24 +44,35 @@ interface DraftItem {
 export default function NewExpertOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [items, setItems] = useState<DraftItem[]>([
     { rowId: "1", productId: "", quantity: 1 },
   ]);
   const [customerName, setCustomerName] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedAddressId, setSelectedAddressId] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadProducts() {
+    async function loadInitialData() {
       setIsLoadingProducts(true);
       setError("");
 
       try {
-        const data = await listProducts();
-        if (isMounted) setProducts(data);
+        const [productData, customerData] = await Promise.all([
+          listProducts(),
+          listCustomers(),
+        ]);
+        if (isMounted) {
+          setProducts(productData);
+          setCustomers(customerData);
+        }
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -58,12 +80,52 @@ export default function NewExpertOrderPage() {
       }
     }
 
-    loadProducts();
+    loadInitialData();
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAddresses() {
+      if (!selectedCustomerId) {
+        setAddresses([]);
+        setSelectedAddressId("");
+        return;
+      }
+
+      const customer = customers.find(
+        (entry) => entry.objectId === selectedCustomerId,
+      );
+      setCustomerName(customer?.fullName ?? "");
+      setIsLoadingAddresses(true);
+      setError("");
+
+      try {
+        const data = await listCustomerAddresses(selectedCustomerId);
+        if (!isMounted) return;
+        setAddresses(data);
+        const defaultAddress =
+          data.find((address) => address.isDefault) ??
+          customer?.defaultAddress ??
+          data[0];
+        setSelectedAddressId(defaultAddress?.objectId ?? "");
+      } catch (loadError) {
+        if (isMounted) setError(getErrorMessage(loadError));
+      } finally {
+        if (isMounted) setIsLoadingAddresses(false);
+      }
+    }
+
+    loadAddresses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [customers, selectedCustomerId]);
 
   const normalizedItems = useMemo(
     () =>
@@ -93,6 +155,12 @@ export default function NewExpertOrderPage() {
     const product = productsById[item.productId];
     return sum + item.quantity * (product?.unitPrice ?? 0);
   }, 0);
+  const selectedCustomer = customers.find(
+    (customer) => customer.objectId === selectedCustomerId,
+  );
+  const selectedAddress = addresses.find(
+    (address) => address.objectId === selectedAddressId,
+  );
 
   const addRow = () => {
     setItems((current) => [
@@ -124,11 +192,18 @@ export default function NewExpertOrderPage() {
       return;
     }
 
+    if (selectedCustomerId && !selectedAddressId) {
+      setError("برای مشتری انتخاب شده باید آدرس تحویل انتخاب شود.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const order = await createOrder({
         createdByName: getStoredCurrentUser()?.fullName ?? "",
-        customerName: customerName.trim(),
+        customerName: selectedCustomerId ? undefined : customerName.trim(),
+        customerObjectId: selectedCustomerId || undefined,
+        customerAddressObjectId: selectedAddressId || undefined,
         items: normalizedItems.map((item) => ({
           productObjectId: item.productId,
           quantity: item.quantity,
@@ -146,14 +221,93 @@ export default function NewExpertOrderPage() {
     <DashboardLayout role="expert" title="ثبت سفارش جدید">
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="p-5">
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>نام مشتری</span>
-            <Input
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              placeholder="نام مشتری یا نمایندگی را وارد کنید"
-            />
-          </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>مشتری</span>
+              <SearchableSelect
+                value={selectedCustomerId || undefined}
+                onValueChange={setSelectedCustomerId}
+                options={customers.map((customer) => ({
+                  value: customer.objectId,
+                  label: customer.fullName,
+                }))}
+                placeholder="انتخاب مشتری"
+                searchPlaceholder="جستجو بر اساس نام"
+                emptyMessage="مشتری پیدا نشد"
+              />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>آدرس تحویل</span>
+              <SearchableSelect
+                value={selectedAddressId || undefined}
+                onValueChange={setSelectedAddressId}
+                options={addresses.map((address) => ({
+                  value: address.objectId,
+                  label: `${address.title} - ${address.city}`,
+                }))}
+                placeholder={
+                  isLoadingAddresses ? "در حال دریافت آدرس‌ها" : "انتخاب آدرس"
+                }
+                searchPlaceholder="جستجو در آدرس‌ها"
+                emptyMessage="آدرسی پیدا نشد"
+                disabled={!selectedCustomerId || isLoadingAddresses}
+              />
+            </label>
+          </div>
+
+          {selectedCustomer ? (
+            <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#334155]">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <span>
+                  موبایل:{" "}
+                  {selectedCustomer.phone
+                    ? formatFaDigits(selectedCustomer.phone)
+                    : "-"}
+                </span>
+              </div>
+              {selectedAddress ? (
+                <div className="mt-2 space-y-1 text-[#6B7280]">
+                  {selectedAddress.title ? (
+                    <p className="text-xs text-[#94A3B8]">
+                      {selectedAddress.title}
+                    </p>
+                  ) : null}
+                  <p>
+                    گیرنده بار:{" "}
+                    {getReceiverName(selectedAddress, selectedCustomer) || "-"}
+                  </p>
+                  <p>
+                    موبایل گیرنده:{" "}
+                    {selectedAddress.receiverPhone
+                      ? formatFaDigits(selectedAddress.receiverPhone)
+                      : "-"}
+                  </p>
+                  <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
+                </div>
+              ) : addresses.length === 0 && !isLoadingAddresses ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
+                  <span>این مشتری آدرس فعالی ندارد.</span>
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      href={`/expert/customers/${selectedCustomer.objectId}/edit`}
+                    >
+                      افزودن آدرس
+                    </Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <label className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
+              <span>نام مشتری دستی</span>
+              <Input
+                value={customerName}
+                onChange={(event) => setCustomerName(event.target.value)}
+                placeholder="در صورت نبود مشتری ثبت شده، نام را وارد کنید"
+              />
+            </label>
+          )}
 
           <div className="mt-6 flex items-start justify-between gap-4">
             <div>
@@ -206,12 +360,11 @@ export default function NewExpertOrderPage() {
                   </div>
 
                   <Input
-                    type="number"
-                    min={1}
+                    inputMode="numeric"
                     value={item.quantity}
                     onChange={(event) =>
                       updateRow(item.rowId, {
-                        quantity: Number(event.target.value),
+                        quantity: toNumber(event.target.value),
                       })
                     }
                     className="px-2.5 text-center"
@@ -264,7 +417,11 @@ export default function NewExpertOrderPage() {
               افزودن آیتم
             </Button>
 
-            <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
               ثبت سفارش
               <ChevronLeft className="size-4" />
             </Button>
@@ -278,7 +435,9 @@ export default function NewExpertOrderPage() {
         </Card>
 
         <OrderSummaryCard
-          customerName={customerName || "ثبت نشده"}
+          customerName={
+            selectedCustomer?.fullName || customerName || "ثبت نشده"
+          }
           itemCount={totalItems}
           totalQuantity={totalQuantity}
           totalAmount={totalAmount}

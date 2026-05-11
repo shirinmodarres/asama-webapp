@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import type { NajaCenter } from "@/lib/models/naja-center.model";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface NajaCenterInfoCardProps {
   center: NajaCenter | null;
@@ -26,9 +27,9 @@ export function NajaCenterInfoCard({
       {center ? (
         <dl className="mt-5 grid gap-3 sm:grid-cols-2 text-sm">
           <InfoItem label="نام مرکز" value={center.name} />
-          <InfoItem label="کد مرکز" value={center.centerCode} />
+          <InfoItem label="کد مرکز" value={formatFaDigits(center.centerCode)} />
           <InfoItem label="مسئول" value={center.responsibleName} />
-          <InfoItem label="تلفن" value={center.phone} />
+          <InfoItem label="تلفن" value={formatFaDigits(center.phone)} />
           <InfoItem label="استان" value={center.province} />
           <InfoItem label="شهر" value={center.city} />
           <InfoItem label="شهرستان" value={center.county} />

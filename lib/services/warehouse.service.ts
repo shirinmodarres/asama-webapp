@@ -13,6 +13,11 @@ export async function listExitSlips(): Promise<ExitSlip[]> {
   return mapExitSlipListDto(data);
 }
 
+export async function getExitSlip(objectId: string): Promise<ExitSlip> {
+  const data = await httpClient.get<unknown>(`/api/exit-slips/${objectId}`);
+  return mapExitSlipDto(data);
+}
+
 export async function createExitSlip(
   orderObjectId: string,
   payload: CreateExitSlipPayload,

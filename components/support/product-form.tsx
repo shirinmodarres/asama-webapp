@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { formatFaNumber, toNumber } from "@/lib/utils/number-format";
 
 interface BaseProps {
   onCancel: () => void;
@@ -83,9 +84,9 @@ export function ProductForm(props: ProductFormProps) {
     props.mode === "edit" ? props.initialValues.unit : "دستگاه",
   );
   const [unitPrice, setUnitPrice] = useState(
-    props.mode === "edit" ? props.initialValues.unitPrice : 0,
+    props.mode === "edit" ? formatFaNumber(props.initialValues.unitPrice) : "",
   );
-  const [totalStock, setTotalStock] = useState(0);
+  const [totalStock, setTotalStock] = useState("");
   const [status, setStatus] = useState<"active" | "inactive">(
     props.mode === "edit" ? props.initialValues.status : "active",
   );
@@ -102,8 +103,8 @@ export function ProductForm(props: ProductFormProps) {
             brand,
             category,
             unit,
-            unitPrice,
-            totalStock: Number(totalStock) || 0,
+            unitPrice: toNumber(unitPrice),
+            totalStock: toNumber(totalStock),
             description,
             status,
           });
@@ -116,7 +117,7 @@ export function ProductForm(props: ProductFormProps) {
           brand,
           category,
           unit,
-          unitPrice,
+          unitPrice: toNumber(unitPrice),
           description,
           status,
         });
@@ -135,10 +136,9 @@ export function ProductForm(props: ProductFormProps) {
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>قیمت واحد</span>
             <Input
-              type="number"
-              min={0}
               value={unitPrice}
-              onChange={(event) => setUnitPrice(Number(event.target.value))}
+              onChange={(event) => setUnitPrice(event.target.value)}
+              inputMode="numeric"
               required
             />
           </label>
@@ -148,10 +148,9 @@ export function ProductForm(props: ProductFormProps) {
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>موجودی اولیه</span>
                 <Input
-                  type="number"
-                  min={0}
                   value={totalStock}
-                  onChange={(event) => setTotalStock(Number(event.target.value))}
+                  onChange={(event) => setTotalStock(event.target.value)}
+                  inputMode="numeric"
                   required
                 />
               </label>

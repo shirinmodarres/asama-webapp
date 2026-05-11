@@ -3,6 +3,7 @@ import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { NajaCenterStatusBadge } from "@/components/naja/naja-center-status-badge";
 import type { NajaCenter } from "@/lib/models/naja-center.model";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface NajaCentersTableProps {
   centers: NajaCenter[];
@@ -23,9 +24,9 @@ export function NajaCentersTable({
         <span className="font-semibold text-[#1F3A5F]">{row.name}</span>
       ),
     },
-    { key: "centerCode", header: "کد مرکز", render: (row) => row.centerCode },
+    { key: "centerCode", header: "کد مرکز", render: (row) => formatFaDigits(row.centerCode) },
     { key: "responsibleName", header: "مسئول", render: (row) => row.responsibleName },
-    { key: "phone", header: "تلفن", render: (row) => row.phone },
+    { key: "phone", header: "تلفن", render: (row) => formatFaDigits(row.phone) },
     { key: "province", header: "استان", render: (row) => row.province },
     { key: "city", header: "شهر", render: (row) => row.city },
     { key: "county", header: "شهرستان", render: (row) => row.county },

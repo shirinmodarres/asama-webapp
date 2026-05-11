@@ -22,7 +22,8 @@ export type SidebarIconName =
   | "file-text"
   | "layers"
   | "history"
-  | "pencil";
+  | "pencil"
+  | "users";
 
 export interface Role {
   key: RoleKey;

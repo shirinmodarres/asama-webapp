@@ -111,7 +111,7 @@ export default function SupportNajaInventoryPage() {
     try {
       const updated = await updateProductNajaStock(selectedProduct.objectId, {
         changeType: input.changeType,
-        amount: Number(input.amount),
+        amount: input.amount,
         notes: input.note.trim() || undefined,
       });
       setProducts((current) =>

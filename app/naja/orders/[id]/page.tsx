@@ -27,6 +27,7 @@ import type { Invoice } from "@/lib/models/invoice.model";
 import type { Order } from "@/lib/models/order.model";
 import { listInvoices } from "@/lib/services/invoice.service";
 import { getOrder } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface OrderDetailRow {
   id: string;
@@ -169,8 +170,8 @@ export default function NajaOrderDetailsPage() {
               <InfoItem label="کد سفارش" value={order.code} />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="نام مشتری" value={order.customerName ?? "-"} />
-              <InfoItem label="کد ملی" value={order.customerNationalId ?? "-"} />
-              <InfoItem label="شماره موبایل" value={order.customerPhone ?? "-"} />
+              <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
+              <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
               <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />

@@ -86,17 +86,13 @@ export function SearchableSelect({
       const rect = triggerRef.current?.getBoundingClientRect();
       if (!rect) return;
 
-      const menuHeight = 340;
       const gap = 6;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const shouldOpenUp = spaceBelow < menuHeight && rect.top > menuHeight / 2;
+      const top = rect.bottom + gap;
 
       setMenuStyle({
         position: "fixed",
-        top: shouldOpenUp
-          ? Math.max(rect.top - menuHeight - gap, 12)
-          : Math.min(rect.bottom + gap, window.innerHeight - 12),
-        right: Math.max(window.innerWidth - rect.right, 12),
+        top,
+        left: rect.left,
         width: rect.width,
         zIndex: 80,
       });
@@ -144,7 +140,7 @@ export function SearchableSelect({
             <div
               ref={menuRef}
               style={menuStyle}
-              className="rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+              className="max-h-[340px] overflow-hidden rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
             >
               <div className="relative">
                 <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6B7280]" />

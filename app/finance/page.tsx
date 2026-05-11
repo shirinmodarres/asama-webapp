@@ -12,6 +12,7 @@ import type { ExitSlip } from "@/lib/models/warehouse.model";
 import { listInvoices } from "@/lib/services/invoice.service";
 import { listOrders } from "@/lib/services/order.service";
 import { listExitSlips } from "@/lib/services/warehouse.service";
+import { formatFaNumber } from "@/lib/utils/number-format";
 
 export default function FinancePage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -101,7 +102,7 @@ export default function FinancePage() {
           href="/finance/ready"
           icon="file-check"
           title="بررسی تطبیق سفارش و حواله"
-          description={`تعداد ${reconciliableCount.toLocaleString("fa-IR")} سفارش قابل تطبیق`}
+          description={`تعداد ${formatFaNumber(reconciliableCount)} سفارش قابل تطبیق`}
         />
         <ActionLinkCard
           href="/finance/invoices"

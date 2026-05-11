@@ -19,6 +19,7 @@ import type { Order } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
 import { getOrder, updatePendingOrder } from "@/lib/services/order.service";
 import { listProducts } from "@/lib/services/product.service";
+import { toNumber } from "@/lib/utils/number-format";
 
 interface DraftItem {
   rowId: string;
@@ -172,7 +173,7 @@ export default function EditExpertOrderPage() {
                         />
                       </div>
 
-                      <Input type="number" min={1} value={item.quantity} onChange={(event) => updateRow(item.rowId, { quantity: Number(event.target.value) })} />
+                      <Input inputMode="numeric" value={item.quantity} onChange={(event) => updateRow(item.rowId, { quantity: toNumber(event.target.value) })} />
 
                       <Button type="button" onClick={() => removeRow(item.rowId)} variant="outline">حذف</Button>
 

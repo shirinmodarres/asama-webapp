@@ -8,11 +8,24 @@ import type {
   CreateNajaOrderPayload,
 } from "@/lib/models/naja.model";
 import type { Order } from "@/lib/models/order.model";
+import {
+  normalizeDigits,
+  normalizePhone,
+  toNumber,
+} from "@/lib/utils/number-format";
 
 export async function createNajaOrder(
   payload: CreateNajaOrderPayload,
 ): Promise<Order> {
-  const data = await httpClient.post<unknown>("/api/naja/orders", payload);
+  const data = await httpClient.post<unknown>(
+    "/api/naja/orders",
+    {
+      ...payload,
+      customerNationalId: normalizeDigits(payload.customerNationalId),
+      customerPhone: normalizePhone(payload.customerPhone),
+      quantity: toNumber(payload.quantity),
+    },
+  );
   return mapOrderDto(data);
 }
 
@@ -22,7 +35,11 @@ export async function completeNajaWarehouseInfo(
 ): Promise<Order> {
   const data = await httpClient.post<unknown>(
     `/api/naja/orders/${orderObjectId}/warehouse-info`,
-    payload,
+    {
+      ...payload,
+      productIdentifier: normalizeDigits(payload.productIdentifier),
+      trackingCode: normalizeDigits(payload.trackingCode),
+    },
   );
   return mapOrderDto(data);
 }

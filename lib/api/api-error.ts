@@ -5,6 +5,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: "شماره موبایل یا رمز عبور اشتباه است.",
   DUPLICATE_PRODUCT_ID: "شناسه کالا تکراری است.",
   DUPLICATE_PHONE: "این شماره موبایل قبلاً ثبت شده است.",
+  DUPLICATE_CUSTOMER_PHONE:
+    "این شماره موبایل قبلاً ثبت شده است.",
+  RECEIVER_INFO_REQUIRED: "اطلاعات گیرنده کامل نیست.",
+  CUSTOMER_NOT_FOUND: "مشتری پیدا نشد.",
+  ADDRESS_NOT_FOUND: "آدرس پیدا نشد.",
+  ADDRESS_NOT_BELONG_TO_CUSTOMER: "آدرس متعلق به این مشتری نیست.",
   VALIDATION_ERROR: "اطلاعات وارد شده معتبر نیست.",
   PARSE_ERROR: "خطای ذخیره‌سازی رخ داد.",
   NETWORK_ERROR: "اتصال به سرور برقرار نشد.",

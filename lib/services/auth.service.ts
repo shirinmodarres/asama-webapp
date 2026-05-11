@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/storage";
 import { httpClient } from "@/lib/api/http-client";
 import { mapAuthUserDto } from "@/lib/mappers/auth.mapper";
+import { normalizePhone } from "@/lib/utils/number-format";
 
 interface BootstrapSupportPayload {
   fullName: string;
@@ -19,7 +20,7 @@ export async function bootstrapSupport(
 ): Promise<AuthUser> {
   const data = await httpClient.post<unknown>(
     "/api/auth/bootstrap-support",
-    payload,
+    { ...payload, phone: normalizePhone(payload.phone) },
   );
   return mapAuthUserDto(data);
 }
@@ -29,7 +30,7 @@ export async function login(
   password: string,
 ): Promise<LoginResponse> {
   const data = await httpClient.post<unknown>("/api/auth/login", {
-    phone,
+    phone: normalizePhone(phone),
     password,
   });
   const response = mapLoginResponse(data);

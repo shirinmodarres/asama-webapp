@@ -8,6 +8,7 @@ import {
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { createProduct } from "@/lib/services/product.service";
+import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -24,15 +25,15 @@ export default function SupportCreateProductPage() {
 
     try {
       await createProduct({
-        id: input.id.trim(),
+        id: normalizeDigits(input.id.trim()),
         name: input.name.trim(),
         brand: input.brand.trim(),
         category: input.category.trim(),
         unit: input.unit.trim(),
-        unitPrice: Number(input.unitPrice),
+        unitPrice: toNumber(input.unitPrice),
         description: input.description?.trim() || undefined,
         status: input.status,
-        totalStock: Number(input.totalStock) || 0,
+        totalStock: toNumber(input.totalStock),
       });
 
       setMessageType("success");

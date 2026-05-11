@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -12,6 +13,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
@@ -169,11 +171,13 @@ export default function ManagerOrderReviewPage() {
               <InfoItem label="مشتری" value={order.customerName ?? "-"} />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
-              <InfoItem label="وضعیت سفارش" value={order.orderStatus || "-"} />
-              <InfoItem label="وضعیت انبار" value={order.warehouseStatus || "-"} />
+              <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
+              <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
               <InfoItem label="آخرین تغییر" value={formatDate(order.updatedAt)} />
             </dl>
           </div>
+
+          <CustomerInfoCard order={order} />
 
           <DataTable
             columns={columns}

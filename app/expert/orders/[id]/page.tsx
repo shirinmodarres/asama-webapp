@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -106,6 +107,8 @@ export default function ExpertOrderDetailsPage() {
                   <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
                 </dl>
               </div>
+
+              <CustomerInfoCard order={order} />
 
               <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />
             </div>

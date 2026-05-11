@@ -10,6 +10,10 @@ import type {
   UpdateProductPayload,
   UpdateProductStockPayload,
 } from "@/lib/models/product.model";
+import {
+  normalizeDigits,
+  toNumber,
+} from "@/lib/utils/number-format";
 
 export async function listProducts(): Promise<Product[]> {
   const data = await httpClient.get<unknown>("/api/products");
@@ -37,7 +41,10 @@ export async function getProduct(objectId: string): Promise<Product> {
 export async function createProduct(
   payload: CreateProductPayload,
 ): Promise<Product> {
-  const data = await httpClient.post<unknown>("/api/products", payload);
+  const data = await httpClient.post<unknown>(
+    "/api/products",
+    normalizeProductPayload(payload),
+  );
   return mapProductDto(data);
 }
 
@@ -45,7 +52,10 @@ export async function updateProduct(
   objectId: string,
   payload: UpdateProductPayload,
 ): Promise<Product> {
-  const data = await httpClient.put<unknown>(`/api/products/${objectId}`, payload);
+  const data = await httpClient.put<unknown>(
+    `/api/products/${objectId}`,
+    normalizeProductPayload(payload),
+  );
   return mapProductDto(data);
 }
 
@@ -55,7 +65,7 @@ export async function updateProductStock(
 ): Promise<Product> {
   const data = await httpClient.patch<unknown>(
     `/api/products/${objectId}/stock`,
-    payload,
+    normalizeStockPayload(payload),
   );
   return mapProductDto(data);
 }
@@ -66,9 +76,33 @@ export async function updateProductNajaStock(
 ): Promise<Product> {
   const data = await httpClient.patch<unknown>(
     `/api/products/${objectId}/naja-stock`,
-    payload,
+    normalizeStockPayload(payload),
   );
   return mapProductDto(data);
+}
+
+function normalizeProductPayload(
+  payload: Partial<CreateProductPayload>,
+): Record<string, unknown> {
+  return {
+    ...payload,
+    id: payload.id ? normalizeDigits(payload.id) : payload.id,
+    unitPrice:
+      payload.unitPrice !== undefined ? toNumber(payload.unitPrice) : undefined,
+    totalStock:
+      payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined,
+  };
+}
+
+function normalizeStockPayload(
+  payload: UpdateProductStockPayload,
+): Record<string, unknown> {
+  return {
+    ...payload,
+    amount: payload.amount !== undefined ? toNumber(payload.amount) : undefined,
+    totalStock:
+      payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined,
+  };
 }
 
 export async function deactivateProduct(objectId: string): Promise<Product> {
