@@ -2,9 +2,11 @@ import { httpClient } from "@/lib/api/http-client";
 import { mapOrderDto, mapOrderListDto } from "@/lib/mappers/order.mapper";
 import type {
   CreateOrderPayload,
+  LockShipmentPayload,
   Order,
   OrderFilters,
   UpdatePendingOrderPayload,
+  UnlockShipmentPayload,
 } from "@/lib/models/order.model";
 import { toNumber } from "@/lib/utils/number-format";
 
@@ -33,6 +35,28 @@ export async function updatePendingOrder(
   const data = await httpClient.patch<unknown>(
     `/api/orders/${objectId}`,
     normalizeOrderPayload(payload),
+  );
+  return mapOrderDto(data);
+}
+
+export async function lockShipment(
+  objectId: string,
+  payload: LockShipmentPayload,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/hold`,
+    payload,
+  );
+  return mapOrderDto(data);
+}
+
+export async function unlockShipment(
+  objectId: string,
+  payload: UnlockShipmentPayload,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/unhold`,
+    payload,
   );
   return mapOrderDto(data);
 }

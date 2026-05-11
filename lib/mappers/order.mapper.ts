@@ -3,6 +3,10 @@ import {
   getWarehouseStatusLabel,
 } from "@/lib/domain/statuses";
 import {
+  mapCustomerAddressDto,
+  mapCustomerDto,
+} from "@/lib/mappers/customer.mapper";
+import {
   toArray,
   toNullableString,
   toNumberValue,
@@ -10,15 +14,28 @@ import {
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
 import { mapNajaCenterSummaryDto } from "@/lib/mappers/naja-center.mapper";
-import type { Order, OrderItem, OrderType } from "@/lib/models/order.model";
+import type {
+  FulfillmentStatus,
+  Order,
+  OrderItem,
+  OrderType,
+} from "@/lib/models/order.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 export function mapOrderDto(dto: unknown): Order {
   const record = toRecord(dto);
   const customerRecord = toRecord(record.customer);
+  const customer = isObjectRecord(record.customer)
+    ? mapCustomerDto(record.customer)
+    : null;
   const addressRecord = toRecord(
     record.deliveryAddress ?? record.customerAddress ?? record.address,
   );
+  const deliveryAddressSource =
+    record.deliveryAddress ?? record.customerAddress ?? record.address;
+  const deliveryAddress = isObjectRecord(deliveryAddressSource)
+    ? mapCustomerAddressDto(deliveryAddressSource, record.customer)
+    : null;
 
   return {
     objectId: toStringValue(record.objectId),
@@ -29,6 +46,7 @@ export function mapOrderDto(dto: unknown): Order {
     customerName: toNullableString(
       record.customerName ?? customerRecord.fullName,
     ),
+    customer,
     customerObjectId: toNullableString(
       record.customerObjectId ?? customerRecord.objectId,
     ),
@@ -72,6 +90,7 @@ export function mapOrderDto(dto: unknown): Order {
     receiverPhone: normalizeNullablePhone(
       record.receiverPhone ?? addressRecord.receiverPhone,
     ),
+    deliveryAddress,
     orderStatus: toStringValue(record.orderStatus) || "pending",
     orderStatusLabel: getOrderStatusLabel(
       toStringValue(record.orderStatus) || "pending",
@@ -80,6 +99,13 @@ export function mapOrderDto(dto: unknown): Order {
     warehouseStatusLabel: getWarehouseStatusLabel(
       toStringValue(record.warehouseStatus),
     ),
+    fulfillmentStatus: mapFulfillmentStatus(record.fulfillmentStatus),
+    fulfillmentStatusLabel: getFulfillmentStatusLabel(
+      mapFulfillmentStatus(record.fulfillmentStatus),
+    ),
+    holdReason: toNullableString(record.holdReason),
+    heldByName: toNullableString(record.heldByName),
+    heldAt: toNullableString(record.heldAt),
     sourceLabel: toNullableString(record.sourceLabel),
     notes: toNullableString(record.notes),
     cancelReason: toNullableString(record.cancelReason),
@@ -103,13 +129,16 @@ export function mapOrderListDto(dto: unknown): Order[] {
 
 function mapOrderItemDto(dto: unknown): OrderItem {
   const record = toRecord(dto);
+  const productRecord = toRecord(record.product);
 
   return {
     objectId: toStringValue(record.objectId),
-    productId: toStringValue(record.productId),
-    productSku: toStringValue(record.productSku),
-    productName: toStringValue(record.productName),
-    brand: toStringValue(record.brand),
+    productId: toStringValue(
+      record.productObjectId ?? record.productId ?? productRecord.objectId,
+    ),
+    productSku: toStringValue(record.productSku ?? productRecord.sku),
+    productName: toStringValue(record.productName ?? productRecord.name),
+    brand: toStringValue(record.brand ?? productRecord.brand),
     quantity: toNumberValue(record.quantity),
     unitPrice: toNumberValue(record.unitPrice),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),
@@ -121,6 +150,14 @@ function mapOrderType(value: unknown): OrderType {
   return value === "naja" ? "naja" : "normal";
 }
 
+function mapFulfillmentStatus(value: unknown): FulfillmentStatus {
+  return value === "onHold" ? "onHold" : "normal";
+}
+
+function getFulfillmentStatusLabel(status: FulfillmentStatus): string {
+  return status === "onHold" ? "متوقف شده" : "مجاز به خروج";
+}
+
 function normalizeNullableDigits(value: unknown): string | null {
   const text = toNullableString(value);
   return text ? normalizeDigits(text) : null;
@@ -129,4 +166,8 @@ function normalizeNullableDigits(value: unknown): string | null {
 function normalizeNullablePhone(value: unknown): string | null {
   const text = toNullableString(value);
   return text ? normalizePhone(text) : null;
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object");
 }
