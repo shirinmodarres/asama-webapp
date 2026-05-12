@@ -106,10 +106,22 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "نمای کلی عملیات انبار",
     },
     {
-      label: "سفارش های تأییدشده",
-      href: "/warehouse/orders",
+      label: "ورود کالا",
+      href: "/warehouse/inbound",
+      icon: "plus-circle",
+      description: "ثبت ورود کالاهای فیزیکی به انبار",
+    },
+    {
+      label: "رسیدهای ورود",
+      href: "/warehouse/inbound/receipts",
+      icon: "file-check",
+      description: "مرور رسیدهای ورود ثبت شده",
+    },
+    {
+      label: "خروج کالا",
+      href: "/warehouse/outbound",
       icon: "package",
-      description: "صف سفارش های آماده بررسی",
+      description: "صف سفارش های آماده صدور حواله خروج",
     },
     {
       label: "حواله های خروج",
@@ -118,7 +130,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "مدیریت حواله ها و ارسال",
     },
     {
-      label: "سفارش های تحویل شده",
+      label: "تحویل‌شده‌ها",
       href: "/warehouse/delivered",
       icon: "file-check",
       description: "ثبت و تایید تحویل نهایی",

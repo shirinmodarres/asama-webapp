@@ -13,12 +13,17 @@ export function mapProductDto(dto: unknown): Product {
   const objectId = toStringValue(record.objectId);
   const id = normalizeDigits(toStringValue(record.id) || toStringValue(record.sku));
   const sku = normalizeDigits(toStringValue(record.sku) || toStringValue(record.id));
-  const totalStock = toNumberValue(record.totalStock);
+  const salesStock = toNumberValue(record.salesStock ?? record.totalStock);
+  const warehouseStock = toNumberValue(record.warehouseStock);
   const reservedStock = toNumberValue(record.reservedStock);
   const availableStock =
     record.availableStock === undefined
-      ? totalStock - reservedStock
+      ? salesStock - reservedStock
       : toNumberValue(record.availableStock);
+  const warehouseAvailableStock =
+    record.warehouseAvailableStock === undefined
+      ? warehouseStock
+      : toNumberValue(record.warehouseAvailableStock);
 
   return {
     objectId,
@@ -26,6 +31,7 @@ export function mapProductDto(dto: unknown): Product {
     sku,
     name: toStringValue(record.name),
     brand: toStringValue(record.brand),
+    model: toNullableString(record.model),
     category: toStringValue(record.category),
     unit: toStringValue(record.unit) || "عدد",
     unitPrice: toNumberValue(record.unitPrice),
@@ -34,9 +40,12 @@ export function mapProductDto(dto: unknown): Product {
     statusLabel:
       getProductStatusLabel(toStringValue(record.status)) ||
       toStringValue(record.statusLabel),
-    totalStock,
+    totalStock: salesStock,
+    salesStock,
+    warehouseStock,
     reservedStock,
     availableStock,
+    warehouseAvailableStock,
     najaInventoryQty: toNumberValue(record.najaInventoryQty),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),

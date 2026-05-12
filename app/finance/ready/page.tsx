@@ -69,7 +69,10 @@ export default function FinanceReadyPage() {
         (order) =>
           (order.orderType === "normal" &&
             order.orderStatus === "approved" &&
-            order.warehouseStatus === "delivered") ||
+            order.warehouseStatus === "delivered" &&
+            exitSlips.some(
+              (slip) => slip.orderId === order.objectId && slip.deliveryConfirmed,
+            )) ||
           (order.orderType === "naja" &&
             order.orderStatus === "approved" &&
             order.warehouseStatus === "najaDetailsCompleted"),

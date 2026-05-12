@@ -6,6 +6,7 @@ export interface Product {
   sku: string;
   name: string;
   brand: string;
+  model: string | null;
   category: string;
   unit: string;
   unitPrice: number;
@@ -13,8 +14,11 @@ export interface Product {
   status: ProductStatus;
   statusLabel: string;
   totalStock: number;
+  salesStock: number;
+  warehouseStock: number;
   reservedStock: number;
   availableStock: number;
+  warehouseAvailableStock: number;
   najaInventoryQty: number;
   createdAt: string;
   updatedAt: string;

@@ -78,16 +78,22 @@ export default function WarehousePage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         <ActionLinkCard
-          href="/warehouse/orders"
+          href="/warehouse/inbound"
+          icon="plus-circle"
+          title="ورود کالا"
+          description="ثبت کالاهای فیزیکی و شناسه‌های انبار"
+        />
+        <ActionLinkCard
+          href="/warehouse/outbound"
           icon="package"
-          title="مشاهده سفارش های تاییدشده"
-          description="ورود به صف بررسی انبار و آماده سازی خروج"
+          title="خروج کالا"
+          description="صدور حواله خروج برای سفارش‌های مجاز"
         />
         <ActionLinkCard
           href="/warehouse/exit-slips"
           icon="truck"
-          title="ثبت حواله خروج"
-          description="پیگیری حواله های صادرشده و ثبت جزئیات خروج"
+          title="حواله‌های خروج"
+          description="پیگیری حواله‌های صادرشده و وضعیت تحویل"
         />
         <ActionLinkCard
           href="/warehouse/delivered"

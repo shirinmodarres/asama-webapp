@@ -3,7 +3,20 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "آساما | سامانه داخلی عملیات",
-  description: "پروتوتایپ پنل داخلی سفارش، انبار، پشتیبانی و فاکتور برای برند آساما",
+  description:
+    "پروتوتایپ پنل داخلی سفارش، انبار، پشتیبانی و فاکتور برای برند آساما",
+  icons: {
+    icon: [
+      {
+        url: "/favicon-light.ico",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/favicon-dark.ico",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

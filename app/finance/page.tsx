@@ -51,7 +51,10 @@ export default function FinancePage() {
     (order) =>
       (order.orderType === "normal" &&
         order.orderStatus === "approved" &&
-        order.warehouseStatus === "delivered") ||
+        order.warehouseStatus === "delivered" &&
+        exitSlips.some(
+          (slip) => slip.orderId === order.objectId && slip.deliveryConfirmed,
+        )) ||
       (order.orderType === "naja" &&
         order.orderStatus === "approved" &&
         order.warehouseStatus === "najaDetailsCompleted"),
@@ -66,7 +69,9 @@ export default function FinancePage() {
       order.orderStatus === "approved" &&
       order.warehouseStatus === "delivered" &&
       order.orderType === "normal" &&
-      exitSlips.some((slip) => slip.orderId === order.objectId),
+      exitSlips.some(
+        (slip) => slip.orderId === order.objectId && slip.deliveryConfirmed,
+      ),
   ).length;
 
   return (
