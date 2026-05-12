@@ -48,8 +48,16 @@ export interface Order {
   holdReason: string | null;
   heldByName: string | null;
   heldAt: string | null;
+  shipmentStopReasonCode: string | null;
+  shipmentStopReasonLabel: string | null;
+  shipmentStoppedByName: string | null;
+  shipmentStoppedAt: string | null;
   sourceLabel: string | null;
   notes: string | null;
+  cancelReasonCode: string | null;
+  cancelReasonLabel: string | null;
+  cancelledByName: string | null;
+  cancelledAt: string | null;
   cancelReason: string | null;
   returnReason: string | null;
   createdAt: string;
@@ -79,10 +87,20 @@ export interface CreateOrderPayload {
 export type UpdatePendingOrderPayload = Partial<CreateOrderPayload>;
 
 export interface LockShipmentPayload {
-  reason: string;
-  heldByName: string;
+  reasonCode: string;
+  stoppedByName: string;
+  heldByName?: string;
 }
 
 export interface UnlockShipmentPayload {
   releasedByName: string;
 }
+
+export interface CancelOrderPayload {
+  reasonCode: string;
+  cancelledByName: string;
+}
+
+export type StopShipmentPayload = LockShipmentPayload;
+
+export type ReleaseShipmentPayload = UnlockShipmentPayload;

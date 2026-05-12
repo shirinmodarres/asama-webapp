@@ -98,7 +98,7 @@ export default function WarehouseOutboundPage() {
           <div className="space-y-2">
             <Badge variant="warning">
               <Lock className="size-3.5" />
-              متوقف شده
+              خروج متوقف شده
             </Badge>
             <p className="text-xs leading-6 text-[#8A5A00]">
               این سفارش فعلاً مجاز به خروج نیست.

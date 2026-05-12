@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock, XCircle } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
@@ -17,8 +17,18 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
+import {
+  CANCEL_REASONS,
+  SHIPMENT_STOP_REASONS,
+} from "@/lib/domain/order-action-reasons";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -26,8 +36,8 @@ import {
   approveOrder,
   cancelOrder,
   getOrder,
-  lockShipment,
-  unlockShipment,
+  releaseShipment,
+  stopShipment,
 } from "@/lib/services/order.service";
 
 type DecisionType = "approve" | "cancel" | null;
@@ -42,7 +52,8 @@ export default function ManagerOrderReviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [decision, setDecision] = useState<DecisionType>(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
-  const [shipmentStopReason, setShipmentStopReason] = useState("");
+  const [cancelReasonCode, setCancelReasonCode] = useState("");
+  const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
 
@@ -94,7 +105,13 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const canDecide = order.orderStatus === "pending" && order.orderType === "normal";
+  const canApprove = order.orderStatus === "pending" && order.orderType === "normal";
+  const canCancel =
+    order.orderType === "normal" &&
+    !["cancelled", "invoiced", "returned", "returnedAfterInvoice"].includes(
+      order.orderStatus,
+    ) &&
+    !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
   const shipmentActionBlockedWarehouseStatuses = ["dispatchIssued", "delivered"];
   const canManageShipmentStop =
@@ -103,6 +120,7 @@ export default function ManagerOrderReviewPage() {
     !shipmentActionBlockedStatuses.includes(order.orderStatus) &&
     !shipmentActionBlockedWarehouseStatuses.includes(order.warehouseStatus);
   const isShipmentStopped = order.fulfillmentStatus === "onHold";
+  const isCancelled = order.orderStatus === "cancelled";
 
   const columns: DataTableColumn<OrderItem>[] = [
     {
@@ -130,6 +148,14 @@ export default function ManagerOrderReviewPage() {
   const confirmDecision = async () => {
     if (!decision) return;
 
+    const currentUserName = getStoredCurrentUser()?.fullName ?? "";
+
+    if (decision === "cancel" && !cancelReasonCode) {
+      setMessageType("error");
+      setMessage("لطفاً دلیل لغو سفارش را انتخاب کنید.");
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage("");
 
@@ -137,16 +163,25 @@ export default function ManagerOrderReviewPage() {
       const updated =
         decision === "approve"
           ? await approveOrder(order.objectId)
-          : await cancelOrder(order.objectId);
+          : await cancelOrder(order.objectId, {
+              reasonCode: cancelReasonCode,
+              cancelledByName: currentUserName,
+            });
       setOrder(updated);
       setMessageType("success");
-      setMessage("عملیات با موفقیت انجام شد.");
+      setMessage(
+        decision === "approve"
+          ? "سفارش با موفقیت تأیید شد."
+          : "سفارش با موفقیت لغو شد.",
+      );
       setDecision(null);
-      setTimeout(() => router.push("/manager/order-tracking"), 700);
+      setCancelReasonCode("");
+      if (decision === "approve") {
+        setTimeout(() => router.push("/manager/order-tracking"), 700);
+      }
     } catch (error) {
       setMessageType("error");
       setMessage(getErrorMessage(error));
-      setDecision(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -157,9 +192,9 @@ export default function ManagerOrderReviewPage() {
 
     const currentUserName = getStoredCurrentUser()?.fullName ?? "";
 
-    if (shipmentAction === "lock" && !shipmentStopReason.trim()) {
+    if (shipmentAction === "lock" && !shipmentStopReasonCode) {
       setMessageType("error");
-      setMessage("دلیل توقف خروج را وارد کنید.");
+      setMessage("لطفاً دلیل توقف خروج را انتخاب کنید.");
       return;
     }
 
@@ -169,22 +204,22 @@ export default function ManagerOrderReviewPage() {
     try {
       const updated =
         shipmentAction === "lock"
-          ? await lockShipment(order.objectId, {
-              reason: shipmentStopReason.trim(),
-              heldByName: currentUserName,
+          ? await stopShipment(order.objectId, {
+              reasonCode: shipmentStopReasonCode,
+              stoppedByName: currentUserName,
             })
-          : await unlockShipment(order.objectId, {
+          : await releaseShipment(order.objectId, {
               releasedByName: currentUserName,
             });
       setOrder(updated);
       setMessageType("success");
       setMessage(
         shipmentAction === "lock"
-          ? "توقف خروج سفارش ثبت شد."
+          ? "خروج سفارش از انبار متوقف شد."
           : "توقف خروج سفارش رفع شد.",
       );
       setShipmentAction(null);
-      setShipmentStopReason("");
+      setShipmentStopReasonCode("");
     } catch (error) {
       setMessageType("error");
       setMessage(getErrorMessage(error));
@@ -237,7 +272,7 @@ export default function ManagerOrderReviewPage() {
                   order.fulfillmentStatus === "onHold" ? (
                     <Badge variant="warning">
                       <Lock className="size-3.5" />
-                      متوقف شده
+                      خروج متوقف شده
                     </Badge>
                   ) : (
                     order.fulfillmentStatusLabel
@@ -255,13 +290,42 @@ export default function ManagerOrderReviewPage() {
                 <h3 className="text-base font-semibold">دلیل توقف خروج</h3>
               </div>
               <p className="mt-3 text-sm leading-7 text-[#5F4320]">
-                {order.holdReason || "دلیلی ثبت نشده است."}
+                {order.shipmentStopReasonLabel || "دلیلی ثبت نشده است."}
               </p>
-              {order.heldByName || order.heldAt ? (
+              {order.shipmentStoppedByName || order.shipmentStoppedAt ? (
                 <p className="mt-3 text-xs leading-6 text-[#8A6A3A]">
-                  {order.heldByName ? `ثبت کننده: ${order.heldByName}` : ""}
-                  {order.heldByName && order.heldAt ? " • " : ""}
-                  {order.heldAt ? `زمان ثبت: ${formatDate(order.heldAt)}` : ""}
+                  {order.shipmentStoppedByName
+                    ? `ثبت کننده: ${order.shipmentStoppedByName}`
+                    : ""}
+                  {order.shipmentStoppedByName && order.shipmentStoppedAt
+                    ? " • "
+                    : ""}
+                  {order.shipmentStoppedAt
+                    ? `زمان ثبت: ${formatDate(order.shipmentStoppedAt)}`
+                    : ""}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {isCancelled ? (
+            <div className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-5 shadow-sm">
+              <div className="flex items-center gap-2 text-[#B91C1C]">
+                <XCircle className="size-4" />
+                <h3 className="text-base font-semibold">دلیل لغو سفارش</h3>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#7F1D1D]">
+                {order.cancelReasonLabel || "دلیلی ثبت نشده است."}
+              </p>
+              {order.cancelledByName || order.cancelledAt ? (
+                <p className="mt-3 text-xs leading-6 text-[#991B1B]">
+                  {order.cancelledByName
+                    ? `ثبت کننده: ${order.cancelledByName}`
+                    : ""}
+                  {order.cancelledByName && order.cancelledAt ? " • " : ""}
+                  {order.cancelledAt
+                    ? `زمان ثبت: ${formatDate(order.cancelledAt)}`
+                    : ""}
                 </p>
               ) : null}
             </div>
@@ -286,26 +350,31 @@ export default function ManagerOrderReviewPage() {
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <p className="text-sm leading-7 text-[#6B7280]">
-              {canDecide
+              {canApprove || canCancel
                 ? "این سفارش آماده تصمیم گیری است."
                 : "این سفارش در وضعیت فعلی قابل تایید یا لغو نیست."}
             </p>
             <div className="mt-4 flex gap-2">
-              <Button
-                type="button"
-                disabled={!canDecide || isSubmitting}
-                onClick={() => setDecision("approve")}
-              >
-                تایید سفارش
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={!canDecide || isSubmitting}
-                onClick={() => setDecision("cancel")}
-              >
-                لغو سفارش
-              </Button>
+              {canApprove ? (
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setDecision("approve")}
+                >
+                  تایید سفارش
+                </Button>
+              ) : null}
+              {canCancel ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isSubmitting}
+                  onClick={() => setDecision("cancel")}
+                >
+                  <XCircle className="size-4" />
+                  لغو سفارش
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -324,7 +393,7 @@ export default function ManagerOrderReviewPage() {
               {isShipmentStopped ? (
                 <Badge variant="warning">
                   <Lock className="size-3.5" />
-                  متوقف شده
+                  خروج متوقف شده
                 </Badge>
               ) : null}
             </div>
@@ -364,13 +433,39 @@ export default function ManagerOrderReviewPage() {
         message={
           decision === "approve"
             ? "با تایید، سفارش وارد فرآیند انبار می شود."
-            : "با لغو، سفارش از فرآیند عملیاتی خارج می شود."
+            : "برای لغو سفارش، دلیل لغو را انتخاب کنید."
         }
-        confirmText={decision === "approve" ? "تایید نهایی" : "لغو نهایی"}
+        confirmText={decision === "approve" ? "تایید نهایی" : "ثبت لغو سفارش"}
         tone={decision === "approve" ? "success" : "danger"}
+        busy={isSubmitting}
         onConfirm={confirmDecision}
-        onCancel={() => setDecision(null)}
-      />
+        onCancel={() => {
+          setDecision(null);
+          setCancelReasonCode("");
+        }}
+      >
+        {decision === "cancel" ? (
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>دلیل لغو</span>
+            <Select
+              value={cancelReasonCode}
+              onValueChange={setCancelReasonCode}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="انتخاب دلیل لغو" />
+              </SelectTrigger>
+              <SelectContent>
+                {CANCEL_REASONS.map((reason) => (
+                  <SelectItem key={reason.code} value={reason.code}>
+                    {reason.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+        ) : null}
+      </ConfirmationModal>
 
       <ConfirmationModal
         open={shipmentAction !== null}
@@ -381,7 +476,7 @@ export default function ManagerOrderReviewPage() {
         }
         message={
           shipmentAction === "lock"
-            ? "با ثبت این مورد، انباردار امکان صدور حواله خروج برای این سفارش را نخواهد داشت."
+            ? "برای جلوگیری از خروج کالا از انبار، دلیل توقف را انتخاب کنید."
             : "با رفع توقف، سفارش دوباره برای خروج از انبار مجاز می‌شود."
         }
         confirmText={
@@ -392,18 +487,28 @@ export default function ManagerOrderReviewPage() {
         onConfirm={confirmShipmentAction}
         onCancel={() => {
           setShipmentAction(null);
-          setShipmentStopReason("");
+          setShipmentStopReasonCode("");
         }}
       >
         {shipmentAction === "lock" ? (
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>دلیل توقف</span>
-            <Textarea
-              value={shipmentStopReason}
-              onChange={(event) => setShipmentStopReason(event.target.value)}
-              placeholder="مثلاً: چک مشتری هنوز دریافت نشده است"
+            <span>دلیل توقف خروج</span>
+            <Select
+              value={shipmentStopReasonCode}
+              onValueChange={setShipmentStopReasonCode}
               disabled={isSubmitting}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="انتخاب دلیل توقف خروج" />
+              </SelectTrigger>
+              <SelectContent>
+                {SHIPMENT_STOP_REASONS.map((reason) => (
+                  <SelectItem key={reason.code} value={reason.code}>
+                    {reason.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         ) : null}
       </ConfirmationModal>

@@ -1,10 +1,15 @@
 import { httpClient } from "@/lib/api/http-client";
+import { ApiError } from "@/lib/api/api-error";
+import { getShipmentStopReasonLabel } from "@/lib/domain/order-action-reasons";
 import { mapOrderDto, mapOrderListDto } from "@/lib/mappers/order.mapper";
 import type {
+  CancelOrderPayload,
   CreateOrderPayload,
   LockShipmentPayload,
   Order,
   OrderFilters,
+  ReleaseShipmentPayload,
+  StopShipmentPayload,
   UpdatePendingOrderPayload,
   UnlockShipmentPayload,
 } from "@/lib/models/order.model";
@@ -43,22 +48,61 @@ export async function lockShipment(
   objectId: string,
   payload: LockShipmentPayload,
 ): Promise<Order> {
-  const data = await httpClient.post<unknown>(
-    `/api/orders/${objectId}/hold`,
-    payload,
-  );
-  return mapOrderDto(data);
+  return stopShipment(objectId, payload);
 }
 
 export async function unlockShipment(
   objectId: string,
   payload: UnlockShipmentPayload,
 ): Promise<Order> {
-  const data = await httpClient.post<unknown>(
-    `/api/orders/${objectId}/unhold`,
-    payload,
-  );
-  return mapOrderDto(data);
+  return releaseShipment(objectId, payload);
+}
+
+export async function stopShipment(
+  objectId: string,
+  payload: StopShipmentPayload,
+): Promise<Order> {
+  try {
+    const data = await httpClient.post<unknown>(
+      `/api/orders/${objectId}/stop-shipment`,
+      payload,
+    );
+    return mapOrderDto(data);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      const reasonLabel = getShipmentStopReasonLabel(payload.reasonCode);
+      const data = await httpClient.post<unknown>(`/api/orders/${objectId}/hold`, {
+        reasonCode: payload.reasonCode,
+        reason: reasonLabel,
+        stoppedByName: payload.stoppedByName,
+        heldByName: payload.heldByName ?? payload.stoppedByName,
+      });
+      return mapOrderDto(data);
+    }
+    throw error;
+  }
+}
+
+export async function releaseShipment(
+  objectId: string,
+  payload: ReleaseShipmentPayload,
+): Promise<Order> {
+  try {
+    const data = await httpClient.post<unknown>(
+      `/api/orders/${objectId}/release-shipment`,
+      payload,
+    );
+    return mapOrderDto(data);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      const data = await httpClient.post<unknown>(
+        `/api/orders/${objectId}/unhold`,
+        payload,
+      );
+      return mapOrderDto(data);
+    }
+    throw error;
+  }
 }
 
 function normalizeOrderPayload(
@@ -80,11 +124,12 @@ export async function approveOrder(objectId: string): Promise<Order> {
 
 export async function cancelOrder(
   objectId: string,
-  reason?: string,
+  payload: CancelOrderPayload,
 ): Promise<Order> {
-  const data = await httpClient.post<unknown>(`/api/orders/${objectId}/cancel`, {
-    reason,
-  });
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/cancel`,
+    payload,
+  );
   return mapOrderDto(data);
 }
 

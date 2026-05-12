@@ -26,6 +26,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
   SALES_STOCK_BELOW_RESERVED:
     "موجودی فروش نمی‌تواند کمتر از موجودی رزروشده باشد.",
+  CANCEL_REASON_REQUIRED: "لطفاً دلیل لغو سفارش را انتخاب کنید.",
+  INVALID_CANCEL_REASON: "دلیل لغو معتبر نیست.",
+  ORDER_NOT_CANCELLABLE: "این سفارش قابل لغو نیست.",
+  SHIPMENT_STOP_REASON_REQUIRED: "لطفاً دلیل توقف خروج را انتخاب کنید.",
+  INVALID_SHIPMENT_STOP_REASON: "دلیل توقف خروج معتبر نیست.",
+  ORDER_CANNOT_STOP_SHIPMENT: "امکان توقف خروج برای این سفارش وجود ندارد.",
   VALIDATION_ERROR: "اطلاعات وارد شده معتبر نیست.",
   PARSE_ERROR: "خطای ذخیره‌سازی رخ داد.",
   NETWORK_ERROR: "اتصال به سرور برقرار نشد.",

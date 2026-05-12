@@ -3,6 +3,10 @@ import {
   getWarehouseStatusLabel,
 } from "@/lib/domain/statuses";
 import {
+  getCancelReasonLabel,
+  getShipmentStopReasonLabel,
+} from "@/lib/domain/order-action-reasons";
+import {
   mapCustomerAddressDto,
   mapCustomerDto,
 } from "@/lib/mappers/customer.mapper";
@@ -36,6 +40,13 @@ export function mapOrderDto(dto: unknown): Order {
   const deliveryAddress = isObjectRecord(deliveryAddressSource)
     ? mapCustomerAddressDto(deliveryAddressSource, record.customer)
     : null;
+
+  const shipmentStopReasonCode = toNullableString(
+    record.shipmentStopReasonCode,
+  );
+  const cancelReasonCode = toNullableString(record.cancelReasonCode);
+  const holdReason = toNullableString(record.holdReason);
+  const cancelReason = toNullableString(record.cancelReason);
 
   return {
     objectId: toStringValue(record.objectId),
@@ -103,12 +114,30 @@ export function mapOrderDto(dto: unknown): Order {
     fulfillmentStatusLabel: getFulfillmentStatusLabel(
       mapFulfillmentStatus(record.fulfillmentStatus),
     ),
-    holdReason: toNullableString(record.holdReason),
+    holdReason,
     heldByName: toNullableString(record.heldByName),
     heldAt: toNullableString(record.heldAt),
+    shipmentStopReasonCode,
+    shipmentStopReasonLabel:
+      toNullableString(record.shipmentStopReasonLabel) ||
+      getShipmentStopReasonLabel(shipmentStopReasonCode) ||
+      holdReason,
+    shipmentStoppedByName: toNullableString(
+      record.shipmentStoppedByName ?? record.heldByName,
+    ),
+    shipmentStoppedAt: toNullableString(
+      record.shipmentStoppedAt ?? record.heldAt,
+    ),
     sourceLabel: toNullableString(record.sourceLabel),
     notes: toNullableString(record.notes),
-    cancelReason: toNullableString(record.cancelReason),
+    cancelReasonCode,
+    cancelReasonLabel:
+      toNullableString(record.cancelReasonLabel) ||
+      getCancelReasonLabel(cancelReasonCode) ||
+      cancelReason,
+    cancelledByName: toNullableString(record.cancelledByName),
+    cancelledAt: toNullableString(record.cancelledAt),
+    cancelReason,
     returnReason: toNullableString(record.returnReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
@@ -155,7 +184,7 @@ function mapFulfillmentStatus(value: unknown): FulfillmentStatus {
 }
 
 function getFulfillmentStatusLabel(status: FulfillmentStatus): string {
-  return status === "onHold" ? "متوقف شده" : "مجاز به خروج";
+  return status === "onHold" ? "خروج متوقف شده" : "مجاز به خروج";
 }
 
 function normalizeNullableDigits(value: unknown): string | null {
