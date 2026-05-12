@@ -91,7 +91,7 @@ export function OrderForm({
 
       try {
         const [productData, customerData] = await Promise.all([
-          listProducts(),
+          listProducts("expert"),
           listCustomers(),
         ]);
         if (!isMounted) return;
@@ -424,7 +424,7 @@ export function OrderForm({
 
                 <p className="text-xs text-[#6B7280] md:col-span-4">
                   {product
-                    ? `موجودی قابل استفاده: ${formatNumber(product.availableStock)} ${product.unit} • قیمت واحد: ${formatCurrency(product.unitPrice)}`
+                    ? `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
                 </p>
               </div>

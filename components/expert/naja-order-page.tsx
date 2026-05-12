@@ -54,7 +54,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
       try {
         const [productData, centerData] = await Promise.all([
-          listProducts(),
+          listProducts("naja"),
           listNajaCenters(),
         ]);
         if (!isMounted) return;

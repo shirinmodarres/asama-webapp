@@ -15,8 +15,8 @@ import {
   toNumber,
 } from "@/lib/utils/number-format";
 
-export async function listProducts(): Promise<Product[]> {
-  const data = await httpClient.get<unknown>("/api/products");
+export async function listProducts(viewerRole?: string): Promise<Product[]> {
+  const data = await httpClient.get<unknown>(buildProductsPath(viewerRole));
   return mapProductListDto(data);
 }
 
@@ -84,25 +84,41 @@ export async function updateProductNajaStock(
 function normalizeProductPayload(
   payload: Partial<CreateProductPayload>,
 ): Record<string, unknown> {
+  const totalStock =
+    payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined;
+  const salesStock =
+    payload.salesStock !== undefined ? toNumber(payload.salesStock) : totalStock;
+
   return {
     ...payload,
     id: payload.id ? normalizeDigits(payload.id) : payload.id,
     unitPrice:
       payload.unitPrice !== undefined ? toNumber(payload.unitPrice) : undefined,
-    totalStock:
-      payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined,
+    totalStock,
+    salesStock,
   };
 }
 
 function normalizeStockPayload(
   payload: UpdateProductStockPayload,
 ): Record<string, unknown> {
+  const totalStock =
+    payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined;
+  const salesStock =
+    payload.salesStock !== undefined ? toNumber(payload.salesStock) : totalStock;
+
   return {
     ...payload,
     amount: payload.amount !== undefined ? toNumber(payload.amount) : undefined,
-    totalStock:
-      payload.totalStock !== undefined ? toNumber(payload.totalStock) : undefined,
+    totalStock,
+    salesStock,
   };
+}
+
+function buildProductsPath(viewerRole?: string): string {
+  if (!viewerRole) return "/api/products";
+  const params = new URLSearchParams({ viewerRole });
+  return `/api/products?${params.toString()}`;
 }
 
 export async function deactivateProduct(objectId: string): Promise<Product> {

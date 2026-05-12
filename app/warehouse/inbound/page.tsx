@@ -48,7 +48,7 @@ export default function WarehouseInboundPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listProducts();
+        const data = await listProducts("warehouse");
         if (isMounted) setProducts(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -180,7 +180,7 @@ export default function WarehouseInboundPage() {
       setMessage(`رسید ورود ${formatFaDigits(receipt.receiptCode)} ثبت شد.`);
       setUnits([]);
       setNotes("");
-      const refreshedProducts = await listProducts();
+      const refreshedProducts = await listProducts("warehouse");
       setProducts(refreshedProducts);
     } catch (submitError) {
       setError(getErrorMessage(submitError));
@@ -247,11 +247,7 @@ export default function WarehouseInboundPage() {
                 <InfoItem label="برند" value={selectedProduct.brand || "-"} />
                 <InfoItem label="مدل" value={selectedProduct.model || "-"} />
                 <InfoItem
-                  label="موجودی فروش"
-                  value={formatNumber(selectedProduct.salesStock)}
-                />
-                <InfoItem
-                  label="موجودی انبار"
+                  label="موجودی واقعی انبار"
                   value={formatNumber(selectedProduct.warehouseStock)}
                 />
               </dl>

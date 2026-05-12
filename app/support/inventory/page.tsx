@@ -43,7 +43,7 @@ export default function SupportInventoryPage() {
       setMessage("");
 
       try {
-        const data = await listProducts();
+        const data = await listProducts("support");
         if (isMounted) setProducts(data);
       } catch (error) {
         if (isMounted) {
@@ -77,8 +77,8 @@ export default function SupportInventoryPage() {
     { key: "name", header: "کالا", render: (row) => row.name },
     {
       key: "total",
-      header: "موجودی کل",
-      render: (row) => formatNumber(row.totalStock),
+      header: "موجودی فروش",
+      render: (row) => formatNumber(row.salesStock),
     },
     {
       key: "reserved",
@@ -87,8 +87,13 @@ export default function SupportInventoryPage() {
     },
     {
       key: "available",
-      header: "موجودی قابل استفاده",
+      header: "موجودی قابل فروش",
       render: (row) => formatNumber(row.availableStock),
+    },
+    {
+      key: "warehouse",
+      header: "موجودی واقعی انبار",
+      render: (row) => formatNumber(row.warehouseStock),
     },
     {
       key: "status",
@@ -105,7 +110,7 @@ export default function SupportInventoryPage() {
             size="sm"
             onClick={() => openModal(row, "increase")}
           >
-            افزایش موجودی
+            افزایش موجودی فروش
           </Button>
           <Button
             type="button"
@@ -113,7 +118,7 @@ export default function SupportInventoryPage() {
             variant="destructive"
             onClick={() => openModal(row, "decrease")}
           >
-            کاهش موجودی
+            کاهش موجودی فروش
           </Button>
         </div>
       ),

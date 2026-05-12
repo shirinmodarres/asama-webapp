@@ -30,7 +30,11 @@ export interface Product {
   description?: string;
   status: "active" | "inactive";
   totalStock: number;
+  salesStock?: number;
+  warehouseStock?: number;
   reservedStock: number;
+  availableStock?: number;
+  warehouseAvailableStock?: number;
   najaInventoryQty: number;
 }
 

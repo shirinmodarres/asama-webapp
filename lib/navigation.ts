@@ -92,6 +92,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "پایش جریان سفارش تا انتها",
     },
     {
+      label: "موجودی فروش و انبار",
+      href: "/manager/inventory",
+      icon: "boxes",
+      description: "مقایسه موجودی فروش با موجودی واقعی انبار",
+    },
+    {
       label: "مراکز ناجا",
       href: "/manager/naja-centers",
       icon: "layers",
@@ -109,13 +115,19 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       label: "ورود کالا",
       href: "/warehouse/inbound",
       icon: "plus-circle",
-      description: "ثبت ورود کالاهای فیزیکی به انبار",
+      description: "ثبت ورود کالاهای  به انبار",
     },
     {
       label: "رسیدهای ورود",
       href: "/warehouse/inbound/receipts",
       icon: "file-check",
       description: "مرور رسیدهای ورود ثبت شده",
+    },
+    {
+      label: "موجودی واقعی انبار",
+      href: "/warehouse/inventory",
+      icon: "boxes",
+      description: "مشاهده موجودی  کالاها",
     },
     {
       label: "خروج کالا",

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BriefcaseBusiness,
+  Eye,
+  EyeOff,
   LockKeyhole,
   ShieldCheck,
   Smartphone,
@@ -16,7 +18,11 @@ import { Input } from "@/components/ui/input";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { getPanelRouteForRole } from "@/lib/domain/roles";
-import { getStoredCurrentUser, getStoredSessionToken, login } from "@/lib/services/auth.service";
+import {
+  getStoredCurrentUser,
+  getStoredSessionToken,
+  login,
+} from "@/lib/services/auth.service";
 
 const infoItems = [
   {
@@ -39,6 +45,7 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const sessionToken = getStoredSessionToken();
@@ -57,7 +64,10 @@ export function LoginScreen() {
       const response = await login(phone.trim(), password);
       router.replace(getPanelRouteForRole(response.user.role));
     } catch (submitError) {
-      if (submitError instanceof ApiError && submitError.code === "INVALID_CREDENTIALS") {
+      if (
+        submitError instanceof ApiError &&
+        submitError.code === "INVALID_CREDENTIALS"
+      ) {
         setError("شماره موبایل یا رمز عبور اشتباه است.");
       } else {
         setError(getErrorMessage(submitError));
@@ -89,7 +99,8 @@ export function LoginScreen() {
             </h1>
             <p className="mt-4 text-base leading-8 text-[#5F6E81]">
               این درگاه برای ورود کاربران سامانه داخلی آساما طراحی شده است تا هر
-              کاربر پس از احراز هویت، مستقیماً وارد پنل متناسب با نقش سازمانی خود شود.
+              کاربر پس از احراز هویت، مستقیماً وارد پنل متناسب با نقش سازمانی
+              خود شود.
             </p>
           </div>
 
@@ -120,8 +131,8 @@ export function LoginScreen() {
                 ورود به حساب کاربری
               </h2>
               <p className="mt-2 text-sm leading-7 text-[#6B7280]">
-                شماره موبایل و رمز عبور خود را وارد کنید. دسترسی شما پس از ورود بر
-                اساس نقش ثبت شده در سامانه تعیین می شود.
+                شماره موبایل و رمز عبور خود را وارد کنید. دسترسی شما پس از ورود
+                بر اساس نقش ثبت شده در سامانه تعیین می شود.
               </p>
             </div>
             <div className="flex size-12 items-center justify-center rounded-2xl border border-[#D6E8DA] bg-[#F3FAF4] text-[#6CAE75]">
@@ -145,24 +156,43 @@ export function LoginScreen() {
               </div>
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <label className="grid gap-2 text-sm font-medium text-[#334155] relative">
               <span>رمز عبور</span>
               <div className="relative">
                 <LockKeyhole className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="pr-10"
+                  className="pr-10 pl-10"
                   autoComplete="current-password"
                   required
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  className="absolute top-1/2 left-3.5 -translate-y-1/2 text-[#6B7280] transition hover:text-[#102034]"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
               </div>
             </label>
 
             {error ? <InlineErrorMessage message={error} /> : null}
 
-            <Button type="submit" variant="success" fullWidth size="lg" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              variant="success"
+              fullWidth
+              size="lg"
+              disabled={isSubmitting}
+            >
               {isSubmitting ? "در حال ورود..." : "ورود به سامانه"}
             </Button>
           </form>

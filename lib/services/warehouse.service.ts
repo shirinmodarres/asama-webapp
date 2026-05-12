@@ -1,5 +1,7 @@
 import { httpClient } from "@/lib/api/http-client";
+import { ApiError } from "@/lib/api/api-error";
 import { mapOrderListDto } from "@/lib/mappers/order.mapper";
+import { mapProductListDto } from "@/lib/mappers/product.mapper";
 import {
   mapExitSlipDto,
   mapExitSlipPdfDataDto,
@@ -10,6 +12,7 @@ import {
   mapWarehouseItemUnitListDto,
 } from "@/lib/mappers/warehouse.mapper";
 import type { Order } from "@/lib/models/order.model";
+import type { Product } from "@/lib/models/product.model";
 import type {
   ConfirmDeliveryPayload,
   CreateExitSlipPayload,
@@ -66,6 +69,24 @@ export async function listWarehouseUnits(
 export async function listWarehouseOrders(): Promise<Order[]> {
   const data = await httpClient.get<unknown>("/api/warehouse/orders");
   return mapOrderListDto(data);
+}
+
+export async function listWarehouseInventory(): Promise<Product[]> {
+  try {
+    const data = await httpClient.get<unknown>("/api/warehouse/inventory");
+    return mapProductListDto(data);
+  } catch (error) {
+    // Backward compatible while older backend deployments do not expose
+    // /api/warehouse/inventory yet. The warehouse viewer role still returns
+    // warehouseStock from the product serializer.
+    if (error instanceof ApiError && error.status === 404) {
+      const fallbackData = await httpClient.get<unknown>(
+        "/api/products?viewerRole=warehouse",
+      );
+      return mapProductListDto(fallbackData);
+    }
+    throw error;
+  }
 }
 
 export async function validateExitSlipScan(

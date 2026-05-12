@@ -39,7 +39,7 @@ export default function SupportProductsPage() {
       setError("");
 
       try {
-        const data = await listProducts();
+        const data = await listProducts("support");
         if (isMounted) setProducts(data);
       } catch (requestError) {
         if (isMounted) {
@@ -94,8 +94,18 @@ export default function SupportProductsPage() {
     { key: "category", header: "دسته بندی", render: (row) => row.category },
     {
       key: "total",
-      header: "موجودی کل",
-      render: (row) => formatNumber(row.totalStock),
+      header: "موجودی فروش",
+      render: (row) => formatNumber(row.salesStock),
+    },
+    {
+      key: "najaInventoryQty",
+      header: "موجودی ناجا",
+      render: (row) => formatNumber(row.najaInventoryQty),
+    },
+    {
+      key: "warehouseStock",
+      header: "موجودی واقعی انبار",
+      render: (row) => formatNumber(row.warehouseStock),
     },
     { key: "unit", header: "واحد", render: (row) => row.unit },
     {

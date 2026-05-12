@@ -94,7 +94,7 @@ function InventoryUpdateModalContent({
         >
           <DialogHeader>
             <DialogTitle>
-              {inventoryScope === "naja" ? "به روزرسانی موجودی ناجا" : "به روزرسانی موجودی"}
+              {inventoryScope === "naja" ? "به روزرسانی موجودی ناجا" : "به روزرسانی موجودی فروش"}
             </DialogTitle>
             <DialogDescription>{product.name}</DialogDescription>
           </DialogHeader>
@@ -108,8 +108,20 @@ function InventoryUpdateModalContent({
                   setChangeType(value as "increase" | "decrease")
                 }
                 options={[
-                  { value: "increase", label: "افزایش موجودی" },
-                  { value: "decrease", label: "کاهش موجودی" },
+                  {
+                    value: "increase",
+                    label:
+                      inventoryScope === "naja"
+                        ? "افزایش موجودی ناجا"
+                        : "افزایش موجودی فروش",
+                  },
+                  {
+                    value: "decrease",
+                    label:
+                      inventoryScope === "naja"
+                        ? "کاهش موجودی ناجا"
+                        : "کاهش موجودی فروش",
+                  },
                 ]}
                 placeholder="نوع تغییر"
                 searchPlaceholder="جستجو در نوع تغییر"

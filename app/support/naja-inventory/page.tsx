@@ -40,7 +40,7 @@ export default function SupportNajaInventoryPage() {
       setMessage("");
 
       try {
-        const data = await listProducts();
+        const data = await listProducts("support");
         if (isMounted) setProducts(data);
       } catch (error) {
         if (isMounted) {

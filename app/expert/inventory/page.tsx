@@ -34,7 +34,7 @@ export default function ExpertInventoryPage() {
       setError("");
 
       try {
-        const data = await listProducts();
+        const data = await listProducts("expert");
         if (isMounted) setProducts(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -68,7 +68,7 @@ export default function ExpertInventoryPage() {
   const summary = useMemo(() => {
     return products.reduce(
       (acc, product) => {
-        acc.total += product.totalStock;
+        acc.total += product.salesStock;
         acc.reserved += product.reservedStock;
         acc.available += product.availableStock;
         return acc;
@@ -94,8 +94,8 @@ export default function ExpertInventoryPage() {
     },
     {
       key: "total",
-      header: "موجودی کل",
-      render: (row) => formatNumber(row.totalStock),
+      header: "موجودی فروش",
+      render: (row) => formatNumber(row.salesStock),
     },
     {
       key: "reserved",
@@ -104,7 +104,7 @@ export default function ExpertInventoryPage() {
     },
     {
       key: "available",
-      header: "موجودی قابل استفاده",
+      header: "موجودی قابل فروش",
       render: (row) => formatNumber(row.availableStock),
     },
     {
@@ -120,9 +120,9 @@ export default function ExpertInventoryPage() {
     <DashboardLayout role="expert" title="موجودی کالاها">
       <section className="grid gap-4 md:grid-cols-3">
         <InventorySummaryCard
-          title="موجودی کل"
+          title="موجودی فروش"
           value={summary.total}
-          hint="مجموع تمام اقلام انبار"
+          hint="مجموع ظرفیت فروش ثبت شده"
         />
         <InventorySummaryCard
           title="موجودی رزروشده"
@@ -130,7 +130,7 @@ export default function ExpertInventoryPage() {
           hint="اختصاص یافته به سفارش های در انتظار تایید"
         />
         <InventorySummaryCard
-          title="موجودی قابل استفاده"
+          title="موجودی قابل فروش"
           value={summary.available}
           hint="قابل انتخاب برای سفارش جدید"
         />
@@ -194,6 +194,6 @@ export default function ExpertInventoryPage() {
 function getInventoryStatus(product: Product): InventoryStatus {
   const available = product.availableStock;
   if (available <= 0) return "critical";
-  if (available <= product.totalStock * 0.2) return "warning";
+  if (available <= product.salesStock * 0.2) return "warning";
   return "normal";
 }

@@ -34,6 +34,7 @@ export interface CreateProductPayload {
   description?: string;
   status: ProductStatus;
   totalStock: number;
+  salesStock?: number;
 }
 
 export type UpdateProductPayload = Partial<
@@ -45,5 +46,6 @@ export interface UpdateProductStockPayload {
   changeType?: "increase" | "decrease";
   amount?: number;
   totalStock?: number;
+  salesStock?: number;
   notes?: string;
 }

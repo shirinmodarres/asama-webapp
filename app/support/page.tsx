@@ -22,7 +22,7 @@ export default function SupportPage() {
     async function loadDashboard() {
       try {
         const [productData, orderData] = await Promise.all([
-          listProducts(),
+          listProducts("support"),
           listOrders(),
         ]);
         if (isMounted) {
@@ -44,7 +44,7 @@ export default function SupportPage() {
   const lowStockCount = products.filter(
     (product) =>
       product.availableStock <=
-      Math.max(5, Math.floor(product.totalStock * 0.2)),
+      Math.max(5, Math.floor(product.salesStock * 0.2)),
   ).length;
   const orderNeedsEditCount = orders.filter(
     (order) => order.orderStatus === "pending" || order.orderStatus === "approved",
@@ -86,7 +86,7 @@ export default function SupportPage() {
         />
         <SupportActionCard
           title="ثبت موجودی"
-          description="افزایش یا کاهش کنترل شده موجودی انبار"
+          description="افزایش یا کاهش کنترل شده موجودی فروش"
           href="/support/inventory"
         />
         <SupportActionCard

@@ -76,12 +76,18 @@ export default function WarehousePage() {
         />
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <ActionLinkCard
+          href="/warehouse/inventory"
+          icon="boxes"
+          title="موجودی واقعی انبار"
+          description="مشاهده موجودی کالاها"
+        />
         <ActionLinkCard
           href="/warehouse/inbound"
           icon="plus-circle"
           title="ورود کالا"
-          description="ثبت کالاهای فیزیکی و شناسه‌های انبار"
+          description="ثبت کالاهای  و شناسه‌های انبار"
         />
         <ActionLinkCard
           href="/warehouse/outbound"

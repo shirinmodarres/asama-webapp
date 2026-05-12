@@ -146,7 +146,7 @@ export function ProductForm(props: ProductFormProps) {
           {props.mode === "create" ? (
             <>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>موجودی اولیه</span>
+                <span>موجودی فروش اولیه</span>
                 <Input
                   value={totalStock}
                   onChange={(event) => setTotalStock(event.target.value)}
