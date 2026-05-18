@@ -28,6 +28,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
   SALES_STOCK_BELOW_RESERVED:
     "موجودی فروش نمی‌تواند کمتر از موجودی رزروشده باشد.",
+  REVIEW_REASON_REQUIRED: "لطفاً دلیل نیاز به بررسی را انتخاب کنید.",
+  INVALID_REVIEW_REASON: "دلیل انتخاب‌شده معتبر نیست.",
+  ORDER_CANNOT_NEED_REVIEW: "امکان ارسال این سفارش برای بررسی وجود ندارد.",
+  ORDER_NOT_REVIEWABLE: "این سفارش در وضعیت بررسی نیست.",
   CANCEL_REASON_REQUIRED: "لطفاً دلیل لغو سفارش را انتخاب کنید.",
   INVALID_CANCEL_REASON: "دلیل لغو معتبر نیست.",
   ORDER_NOT_CANCELLABLE: "این سفارش قابل لغو نیست.",

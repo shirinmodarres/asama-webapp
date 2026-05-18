@@ -1,7 +1,10 @@
 export type OrderStatusCode =
   | "pending"
+  | "needs_review"
+  | "review_resolved"
   | "approved"
   | "cancelled"
+  | "voided"
   | "invoiced"
   | "returned"
   | "returnedAfterInvoice";
@@ -21,8 +24,11 @@ export type InvoiceStatusCode = "issued" | "needs_follow_up";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   pending: "در انتظار تأیید",
+  needs_review: "نیازمند بررسی",
+  review_resolved: "مشکل برطرف شد",
   approved: "تأیید شده",
   cancelled: "لغو شده",
+  voided: "باطل شده",
   invoiced: "فاکتور شده",
   returned: "برگشتی",
   returnedAfterInvoice: "برگشتی پس از فاکتور",

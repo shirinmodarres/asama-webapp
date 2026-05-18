@@ -44,9 +44,13 @@ export default function ExpertPage() {
 
   const stats = useMemo(() => {
     const pendingOrders = orders.filter((order) => order.orderStatus === "pending");
+    const needsReviewOrders = orders.filter(
+      (order) => order.orderStatus === "needs_review",
+    );
     const approvedOrders = orders.filter((order) => order.orderStatus === "approved");
     const invoicedOrders = orders.filter((order) => order.orderStatus === "invoiced");
-    const latestEditableOrder = pendingOrders[0] ?? null;
+    const latestEditableOrder =
+      orders.find((order) => isEditableOrderStatus(order.orderStatus)) ?? null;
 
     return {
       cards: [
@@ -61,6 +65,12 @@ export default function ExpertPage() {
           label: "در انتظار تأیید",
           value: String(pendingOrders.length),
           hint: "منتظر بررسی مدیر فروش",
+        },
+        {
+          id: "needs-review",
+          label: "نیازمند بررسی",
+          value: String(needsReviewOrders.length),
+          hint: "قابل ویرایش برای رفع مشکل",
         },
         {
           id: "approved",
@@ -126,7 +136,7 @@ export default function ExpertPage() {
                       <div className="text-sm font-semibold text-[#102034]">ویرایش آخرین سفارش</div>
                       <p className="mt-1 text-sm leading-7 text-[#6B7280]">
                         {stats.latestEditableOrder
-                          ? `آخرین سفارش قابل ویرایش ${stats.latestEditableOrder.code} در انتظار تأیید قرار دارد.`
+                          ? `آخرین سفارش قابل ویرایش ${stats.latestEditableOrder.code} در وضعیت ${stats.latestEditableOrder.orderStatusLabel} قرار دارد.`
                           : "در حال حاضر سفارشی در وضعیت قابل ویرایش وجود ندارد."}
                       </p>
                     </div>
@@ -167,4 +177,8 @@ export default function ExpertPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isEditableOrderStatus(status: string): boolean {
+  return status === "pending" || status === "needs_review";
 }

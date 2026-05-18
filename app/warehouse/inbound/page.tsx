@@ -202,8 +202,8 @@ export default function WarehouseInboundPage() {
       });
       const stockMessage =
         selectedWarehouse?.type === "naja"
-          ? "موجودی ناجا برای این کالا افزایش یافت."
-          : "موجودی فروش / انبار عمومی برای این کالا افزایش یافت.";
+          ? "موجودی واقعی انبار ناجا برای این کالا افزایش یافت."
+          : "موجودی واقعی انبار عمومی برای این کالا افزایش یافت.";
       setMessage(
         `رسید ورود ${formatFaDigits(receipt.receiptCode)} ثبت شد. ${stockMessage}`,
       );

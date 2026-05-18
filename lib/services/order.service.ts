@@ -6,9 +6,11 @@ import type {
   CancelOrderPayload,
   CreateOrderPayload,
   LockShipmentPayload,
+  MarkOrderNeedsReviewPayload,
   Order,
   OrderFilters,
   ReleaseShipmentPayload,
+  ResolveOrderReviewPayload,
   StopShipmentPayload,
   UpdatePendingOrderPayload,
   UnlockShipmentPayload,
@@ -131,6 +133,35 @@ export async function cancelOrder(
     payload,
   );
   return mapOrderDto(data);
+}
+
+export async function markOrderNeedsReview(
+  objectId: string,
+  payload: MarkOrderNeedsReviewPayload,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/needs-review`,
+    payload,
+  );
+  return mapOrderDto(data);
+}
+
+export async function resolveOrderReview(
+  objectId: string,
+  payload: ResolveOrderReviewPayload,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/resolve-review`,
+    payload,
+  );
+  return mapOrderDto(data);
+}
+
+export async function voidExpiredReviews(): Promise<Order[]> {
+  const data = await httpClient.post<unknown>(
+    "/api/orders/void-expired-reviews",
+  );
+  return mapOrderListDto(data);
 }
 
 function buildOrdersPath(filters?: OrderFilters): string {

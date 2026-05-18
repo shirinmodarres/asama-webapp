@@ -68,6 +68,19 @@ export default function ManagerPendingOrdersPage() {
       });
   }, [orders, search, statusFilter]);
 
+  const statusOptions = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          "pending",
+          "needs_review",
+          "review_resolved",
+          ...orders.map((order) => order.orderStatus).filter(Boolean),
+        ]),
+      ),
+    [orders],
+  );
+
   const columns: DataTableColumn<Order>[] = [
     {
       key: "code",
@@ -92,6 +105,16 @@ export default function ManagerPendingOrdersPage() {
       key: "order-status",
       header: "وضعیت سفارش",
       render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
+    },
+    {
+      key: "review",
+      header: "بررسی",
+      render: (row) =>
+        row.orderStatus === "needs_review"
+          ? row.reviewReasonLabel || "نیازمند بررسی"
+          : row.orderStatus === "review_resolved"
+            ? "مشکل برطرف شد"
+            : "-",
     },
     {
       key: "warehouse-status",
@@ -132,8 +155,17 @@ export default function ManagerPendingOrdersPage() {
               onValueChange={setStatusFilter}
               options={[
                 { value: "pending", label: "در انتظار تایید" },
+                { value: "needs_review", label: "نیازمند بررسی" },
+                { value: "review_resolved", label: "مشکل برطرف شد" },
                 { value: "all", label: "همه وضعیت ها" },
-                ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((value) => ({ value, label: getOrderStatusLabel(value) })),
+                ...statusOptions
+                  .filter(
+                    (value) =>
+                      !["pending", "needs_review", "review_resolved"].includes(
+                        value,
+                      ),
+                  )
+                  .map((value) => ({ value, label: getOrderStatusLabel(value) })),
               ]}
               placeholder="فیلتر وضعیت"
               searchPlaceholder="جستجو در وضعیت ها"

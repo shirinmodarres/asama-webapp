@@ -73,7 +73,7 @@ export default function EditExpertOrderPage() {
           title="سفارش یافت نشد"
           description="شناسه سفارش معتبر نیست یا رکوردی برای آن وجود ندارد."
         />
-      ) : order.orderStatus !== "pending" ? (
+      ) : !isEditableOrderStatus(order.orderStatus) ? (
         <div className="space-y-4">
           <EmptyState
             title="این سفارش دیگر قابل ویرایش نیست."
@@ -114,4 +114,8 @@ export default function EditExpertOrderPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isEditableOrderStatus(status: string): boolean {
+  return status === "pending" || status === "needs_review";
 }

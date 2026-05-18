@@ -4,7 +4,13 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Lock, Unlock, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Lock,
+  Unlock,
+  XCircle,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
@@ -17,7 +23,6 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,25 +32,22 @@ import {
 } from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
-  CANCEL_REASONS,
+  REVIEW_REASONS,
   SHIPMENT_STOP_REASONS,
 } from "@/lib/domain/order-action-reasons";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
-  approveNajaOrder,
-  rejectNajaOrder,
-} from "@/lib/services/naja.service";
-import {
   approveOrder,
   cancelOrder,
   getOrder,
+  markOrderNeedsReview,
   releaseShipment,
   stopShipment,
 } from "@/lib/services/order.service";
 
-type DecisionType = "approve" | "cancel" | null;
+type DecisionType = "approve" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
 
 export default function ManagerOrderReviewPage() {
@@ -57,8 +59,7 @@ export default function ManagerOrderReviewPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [decision, setDecision] = useState<DecisionType>(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
-  const [cancelReasonCode, setCancelReasonCode] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
+  const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
@@ -102,7 +103,10 @@ export default function ManagerOrderReviewPage() {
     return (
       <DashboardLayout role="manager" title="بررسی سفارش">
         {message ? <InlineErrorMessage message={message} /> : null}
-        <EmptyState title="سفارش یافت نشد" description="شناسه سفارش معتبر نیست." />
+        <EmptyState
+          title="سفارش یافت نشد"
+          description="شناسه سفارش معتبر نیست."
+        />
       </DashboardLayout>
     );
   }
@@ -111,14 +115,19 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const canApprove = order.orderStatus === "pending";
+  const canApprove = ["pending", "review_resolved"].includes(order.orderStatus);
+  const canNeedReview = order.orderStatus === "pending";
+  const shouldShowNeedReviewButton =
+    canNeedReview || order.orderStatus === "review_resolved";
   const canCancel =
-    !["cancelled", "invoiced", "returned", "returnedAfterInvoice"].includes(
+    ["pending", "needs_review", "review_resolved"].includes(
       order.orderStatus,
-    ) &&
-    !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
+    ) && !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
-  const shipmentActionBlockedWarehouseStatuses = ["dispatchIssued", "delivered"];
+  const shipmentActionBlockedWarehouseStatuses = [
+    "dispatchIssued",
+    "delivered",
+  ];
   const canManageShipmentStop =
     order.orderType === "normal" &&
     order.orderStatus === "approved" &&
@@ -126,6 +135,9 @@ export default function ManagerOrderReviewPage() {
     !shipmentActionBlockedWarehouseStatuses.includes(order.warehouseStatus);
   const isShipmentStopped = order.fulfillmentStatus === "onHold";
   const isCancelled = order.orderStatus === "cancelled";
+  const isNeedsReview = order.orderStatus === "needs_review";
+  const isReviewResolved = order.orderStatus === "review_resolved";
+  const isVoided = order.orderStatus === "voided";
 
   const columns: DataTableColumn<OrderItem>[] = [
     {
@@ -155,14 +167,9 @@ export default function ManagerOrderReviewPage() {
 
     const currentUserName = getStoredCurrentUser()?.fullName ?? "";
 
-    if (decision === "cancel" && order.orderType === "normal" && !cancelReasonCode) {
+    if (decision === "needs_review" && !reviewReasonCode) {
       setMessageType("error");
-      setMessage("لطفاً دلیل لغو سفارش را انتخاب کنید.");
-      return;
-    }
-    if (decision === "cancel" && order.orderType === "naja" && !rejectReason.trim()) {
-      setMessageType("error");
-      setMessage("لطفاً دلیل رد سفارش را وارد کنید.");
+      setMessage("لطفاً دلیل نیاز به بررسی را انتخاب کنید.");
       return;
     }
 
@@ -172,16 +179,13 @@ export default function ManagerOrderReviewPage() {
     try {
       const updated =
         decision === "approve"
-          ? order.orderType === "naja"
-            ? await approveNajaOrder(order.objectId)
-            : await approveOrder(order.objectId)
-          : order.orderType === "naja"
-            ? await rejectNajaOrder(order.objectId, {
-                reason: rejectReason.trim(),
-                rejectedByName: currentUserName,
+          ? await approveOrder(order.objectId)
+          : decision === "needs_review"
+            ? await markOrderNeedsReview(order.objectId, {
+                reasonCode: reviewReasonCode,
+                requestedByName: currentUserName,
               })
             : await cancelOrder(order.objectId, {
-                reasonCode: cancelReasonCode,
                 cancelledByName: currentUserName,
               });
       setOrder(updated);
@@ -189,13 +193,12 @@ export default function ManagerOrderReviewPage() {
       setMessage(
         decision === "approve"
           ? "سفارش با موفقیت تأیید شد."
-          : order.orderType === "naja"
-            ? "سفارش با موفقیت رد شد."
+          : decision === "needs_review"
+            ? "سفارش برای بررسی کارشناس ثبت شد."
             : "سفارش با موفقیت لغو شد.",
       );
       setDecision(null);
-      setCancelReasonCode("");
-      setRejectReason("");
+      setReviewReasonCode("");
       if (decision === "approve") {
         setTimeout(() => router.push("/manager/order-tracking"), 700);
       }
@@ -280,12 +283,26 @@ export default function ManagerOrderReviewPage() {
             </h3>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <InfoItem label="کد سفارش" value={order.code || "-"} />
-              <InfoItem label="منبع سفارش" value={order.orderType === "naja" ? "ناجا" : "عادی"} />
+              <InfoItem
+                label="منبع سفارش"
+                value={order.orderType === "naja" ? "ناجا" : "عادی"}
+              />
               <InfoItem label="مشتری" value={order.customerName ?? "-"} />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
-              <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
-              <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
+              <InfoItem
+                label="وضعیت سفارش"
+                value={<StatusBadge type="order" status={order.orderStatus} />}
+              />
+              <InfoItem
+                label="وضعیت انبار"
+                value={
+                  <StatusBadge
+                    type="warehouse"
+                    status={order.warehouseStatus}
+                  />
+                }
+              />
               <InfoItem
                 label="ممنوعیت خروج از انبار"
                 value={
@@ -299,9 +316,79 @@ export default function ManagerOrderReviewPage() {
                   )
                 }
               />
-              <InfoItem label="آخرین تغییر" value={formatDate(order.updatedAt)} />
+              <InfoItem
+                label="آخرین تغییر"
+                value={formatDate(order.updatedAt)}
+              />
             </dl>
           </div>
+
+          {isNeedsReview || isReviewResolved ? (
+            <div className="rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] p-5 shadow-sm">
+              <div className="flex items-center gap-2 text-[#9A6C18]">
+                <AlertTriangle className="size-4" />
+                <h3 className="text-base font-semibold">
+                  {isReviewResolved ? "سوابق بررسی سفارش" : "دلیل بررسی"}
+                </h3>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#5F4320]">
+                {order.reviewReasonLabel || "دلیلی ثبت نشده است."}
+              </p>
+              <div className="mt-3 space-y-1 text-xs leading-6 text-[#8A6A3A]">
+                <MetaLine
+                  label="ثبت‌کننده"
+                  value={order.reviewRequestedByName}
+                />
+                <MetaLine
+                  label="زمان ثبت"
+                  value={
+                    order.reviewRequestedAt
+                      ? formatDate(order.reviewRequestedAt)
+                      : null
+                  }
+                />
+                {isNeedsReview ? (
+                  <MetaLine
+                    label="مهلت باقی‌مانده"
+                    value={formatReviewRemaining(order)}
+                  />
+                ) : null}
+                {isReviewResolved ? (
+                  <>
+                    <MetaLine
+                      label="برطرف‌کننده"
+                      value={order.reviewResolvedByName}
+                    />
+                    <MetaLine
+                      label="زمان رفع مشکل"
+                      value={
+                        order.reviewResolvedAt
+                          ? formatDate(order.reviewResolvedAt)
+                          : null
+                      }
+                    />
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {isVoided ? (
+            <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] p-5 shadow-sm">
+              <div className="flex items-center gap-2 text-[#475569]">
+                <XCircle className="size-4" />
+                <h3 className="text-base font-semibold">سفارش باطل شده</h3>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#475569]">
+                {order.voidReason || "مهلت ۴۸ ساعته بررسی سفارش به پایان رسید."}
+              </p>
+              {order.voidedAt ? (
+                <p className="mt-3 text-xs text-[#64748B]">
+                  زمان ابطال: {formatDate(order.voidedAt)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           {isShipmentStopped ? (
             <div className="rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] p-5 shadow-sm">
@@ -332,10 +419,10 @@ export default function ManagerOrderReviewPage() {
             <div className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-5 shadow-sm">
               <div className="flex items-center gap-2 text-[#B91C1C]">
                 <XCircle className="size-4" />
-                <h3 className="text-base font-semibold">دلیل لغو سفارش</h3>
+                <h3 className="text-base font-semibold">لغو سفارش</h3>
               </div>
               <p className="mt-3 text-sm leading-7 text-[#7F1D1D]">
-                {order.cancelReasonLabel || "دلیلی ثبت نشده است."}
+                {order.cancelReasonLabel || "سفارش لغو شده است."}
               </p>
               {order.cancelledByName || order.cancelledAt ? (
                 <p className="mt-3 text-xs leading-6 text-[#991B1B]">
@@ -370,29 +457,50 @@ export default function ManagerOrderReviewPage() {
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <p className="text-sm leading-7 text-[#6B7280]">
-              {canApprove || canCancel
-                ? "این سفارش آماده تصمیم گیری است."
+              {canApprove || canCancel || canNeedReview
+                ? "وضعیت سفارش را مشخص کنید."
                 : "این سفارش در وضعیت فعلی قابل تایید یا لغو نیست."}
             </p>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {canApprove ? (
                 <Button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => setDecision("approve")}
+                  className="w-full justify-center gap-2 sm:col-span-2"
                 >
+                  <CheckCircle2 className="size-4" />
                   تایید سفارش
                 </Button>
               ) : null}
+
+              {shouldShowNeedReviewButton ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting || !canNeedReview}
+                  onClick={() => setDecision("needs_review")}
+                  className="w-full justify-center gap-2 disabled:opacity-60"
+                  title={
+                    canNeedReview
+                      ? "ارسال سفارش برای بررسی کارشناس"
+                      : "مشکل این سفارش قبلاً برطرف شده است."
+                  }
+                >
+                  <AlertTriangle className="size-5 shrink-0" /> نیازمند بررسی
+                </Button>
+              ) : null}
+
               {canCancel ? (
                 <Button
                   type="button"
                   variant="destructive"
                   disabled={isSubmitting}
                   onClick={() => setDecision("cancel")}
+                  className="w-full justify-center gap-2"
                 >
                   <XCircle className="size-4" />
-                  {order.orderType === "naja" ? "رد سفارش" : "لغو سفارش"}
+                  لغو سفارش
                 </Button>
               ) : null}
             </div>
@@ -418,7 +526,7 @@ export default function ManagerOrderReviewPage() {
               ) : null}
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 flex">
               {isShipmentStopped ? (
                 <Button
                   type="button"
@@ -426,6 +534,7 @@ export default function ManagerOrderReviewPage() {
                   disabled={!canManageShipmentStop || isSubmitting}
                   onClick={() => setShipmentAction("unlock")}
                   title="با رفع توقف، سفارش دوباره برای خروج از انبار مجاز می‌شود."
+                  className="w-full justify-center gap-2"
                 >
                   <Unlock className="size-4" />
                   رفع توقف خروج
@@ -437,6 +546,7 @@ export default function ManagerOrderReviewPage() {
                   disabled={!canManageShipmentStop || isSubmitting}
                   onClick={() => setShipmentAction("lock")}
                   title="با فعال‌سازی این گزینه، انباردار امکان صدور حواله خروج برای این سفارش را نخواهد داشت."
+                  className="w-full justify-center gap-2"
                 >
                   <Lock className="size-4" />
                   توقف خروج
@@ -452,46 +562,45 @@ export default function ManagerOrderReviewPage() {
         title={
           decision === "approve"
             ? "تایید سفارش"
-            : order.orderType === "naja"
-              ? "رد سفارش"
+            : decision === "needs_review"
+              ? "ارسال برای بررسی"
               : "لغو سفارش"
         }
         message={
           decision === "approve"
             ? "با تایید، سفارش وارد فرآیند انبار می شود."
-            : order.orderType === "naja"
-              ? "برای رد سفارش، دلیل را وارد کنید."
-              : "برای لغو سفارش، دلیل لغو را انتخاب کنید."
+            : decision === "needs_review"
+              ? "در این وضعیت موجودی سفارش تا ۴۸ ساعت رزرو می‌ماند و کارشناس باید مشکل را برطرف کند."
+              : "آیا از لغو این سفارش مطمئن هستید؟"
         }
         confirmText={
           decision === "approve"
             ? "تایید نهایی"
-            : order.orderType === "naja"
-              ? "ثبت رد سفارش"
+            : decision === "needs_review"
+              ? "ثبت نیاز به بررسی"
               : "ثبت لغو سفارش"
         }
-        tone={decision === "approve" ? "success" : "danger"}
+        tone={decision === "cancel" ? "danger" : "success"}
         busy={isSubmitting}
         onConfirm={confirmDecision}
         onCancel={() => {
           setDecision(null);
-          setCancelReasonCode("");
-          setRejectReason("");
+          setReviewReasonCode("");
         }}
       >
-        {decision === "cancel" && order.orderType === "normal" ? (
+        {decision === "needs_review" ? (
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>دلیل لغو</span>
+            <span>دلیل نیاز به بررسی</span>
             <Select
-              value={cancelReasonCode}
-              onValueChange={setCancelReasonCode}
+              value={reviewReasonCode}
+              onValueChange={setReviewReasonCode}
               disabled={isSubmitting}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب دلیل لغو" />
+                <SelectValue placeholder="انتخاب دلیل نیاز به بررسی" />
               </SelectTrigger>
               <SelectContent>
-                {CANCEL_REASONS.map((reason) => (
+                {REVIEW_REASONS.map((reason) => (
                   <SelectItem key={reason.code} value={reason.code}>
                     {reason.label}
                   </SelectItem>
@@ -500,24 +609,12 @@ export default function ManagerOrderReviewPage() {
             </Select>
           </label>
         ) : null}
-        {decision === "cancel" && order.orderType === "naja" ? (
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>دلیل رد سفارش</span>
-            <Textarea
-              value={rejectReason}
-              onChange={(event) => setRejectReason(event.target.value)}
-              disabled={isSubmitting}
-            />
-          </label>
-        ) : null}
       </ConfirmationModal>
 
       <ConfirmationModal
         open={shipmentAction !== null}
         title={
-          shipmentAction === "lock"
-            ? "توقف خروج سفارش"
-            : "رفع توقف خروج سفارش"
+          shipmentAction === "lock" ? "توقف خروج سفارش" : "رفع توقف خروج سفارش"
         }
         message={
           shipmentAction === "lock"
@@ -568,4 +665,40 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
       <dd className="mt-1 text-sm font-medium text-[#1F3A5F]">{value}</dd>
     </div>
   );
+}
+
+function MetaLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  if (!value) return null;
+
+  return (
+    <p>
+      {label}: {value}
+    </p>
+  );
+}
+
+function formatReviewRemaining(order: Order): string | null {
+  if (
+    order.reviewRemainingMs !== null &&
+    order.reviewRemainingMs !== undefined
+  ) {
+    if (order.reviewRemainingMs <= 0) return "مهلت بررسی پایان یافته است.";
+
+    const hours = Math.floor(order.reviewRemainingMs / (60 * 60 * 1000));
+    const minutes = Math.floor(
+      (order.reviewRemainingMs % (60 * 60 * 1000)) / (60 * 1000),
+    );
+
+    return `${formatNumber(hours)} ساعت و ${formatNumber(minutes)} دقیقه`;
+  }
+
+  return order.reviewExpiresAt
+    ? `مهلت بررسی تا: ${formatDate(order.reviewExpiresAt)}`
+    : null;
 }

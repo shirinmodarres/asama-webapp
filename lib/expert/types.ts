@@ -1,7 +1,10 @@
 export type OrderStatus =
   | "pending"
+  | "needs_review"
+  | "review_resolved"
   | "approved"
   | "cancelled"
+  | "voided"
   | "invoiced"
   | "returned"
   | "returnedAfterInvoice";

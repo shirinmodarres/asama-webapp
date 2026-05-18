@@ -4,6 +4,7 @@ import {
 } from "@/lib/domain/statuses";
 import {
   getCancelReasonLabel,
+  getReviewReasonLabel,
   getShipmentStopReasonLabel,
 } from "@/lib/domain/order-action-reasons";
 import {
@@ -44,9 +45,11 @@ export function mapOrderDto(dto: unknown): Order {
   const shipmentStopReasonCode = toNullableString(
     record.shipmentStopReasonCode,
   );
+  const reviewReasonCode = toNullableString(record.reviewReasonCode);
   const cancelReasonCode = toNullableString(record.cancelReasonCode);
   const holdReason = toNullableString(record.holdReason);
   const cancelReason = toNullableString(record.cancelReason);
+  const orderStatus = toStringValue(record.orderStatus) || "pending";
 
   return {
     objectId: toStringValue(record.objectId),
@@ -111,10 +114,8 @@ export function mapOrderDto(dto: unknown): Order {
       record.receiverPhone ?? addressRecord.receiverPhone,
     ),
     deliveryAddress,
-    orderStatus: toStringValue(record.orderStatus) || "pending",
-    orderStatusLabel: getOrderStatusLabel(
-      toStringValue(record.orderStatus) || "pending",
-    ),
+    orderStatus,
+    orderStatusLabel: getOrderStatusLabel(orderStatus),
     warehouseStatus: toStringValue(record.warehouseStatus),
     warehouseStatusLabel: getWarehouseStatusLabel(
       toStringValue(record.warehouseStatus),
@@ -137,6 +138,22 @@ export function mapOrderDto(dto: unknown): Order {
     shipmentStoppedAt: toNullableString(
       record.shipmentStoppedAt ?? record.heldAt,
     ),
+    reviewReasonCode,
+    reviewReasonLabel:
+      toNullableString(record.reviewReasonLabel) ||
+      getReviewReasonLabel(reviewReasonCode) ||
+      (orderStatus === "needs_review"
+        ? toNullableString(record.cancelReasonLabel) || cancelReason
+        : null),
+    reviewRequestedByName: toNullableString(record.reviewRequestedByName),
+    reviewRequestedAt: toNullableString(record.reviewRequestedAt),
+    reviewResolvedByName: toNullableString(record.reviewResolvedByName),
+    reviewResolvedAt: toNullableString(record.reviewResolvedAt),
+    reviewExpiresAt: toNullableString(record.reviewExpiresAt),
+    reviewRemainingMs:
+      record.reviewRemainingMs === null || record.reviewRemainingMs === undefined
+        ? null
+        : toNumberValue(record.reviewRemainingMs),
     sourceLabel: toNullableString(record.sourceLabel),
     notes: toNullableString(record.notes),
     cancelReasonCode,
@@ -147,6 +164,9 @@ export function mapOrderDto(dto: unknown): Order {
     cancelledByName: toNullableString(record.cancelledByName),
     cancelledAt: toNullableString(record.cancelledAt),
     cancelReason,
+    voidedBySystem: Boolean(record.voidedBySystem),
+    voidedAt: toNullableString(record.voidedAt),
+    voidReason: toNullableString(record.voidReason),
     returnReason: toNullableString(record.returnReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),

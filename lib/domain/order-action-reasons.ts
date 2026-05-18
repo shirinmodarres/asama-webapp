@@ -3,7 +3,7 @@ export interface OrderActionReason {
   label: string;
 }
 
-export const CANCEL_REASONS: OrderActionReason[] = [
+export const REVIEW_REASONS: OrderActionReason[] = [
   {
     code: "credit_limit_not_allowed",
     label: "سقف اعتباری مشتری مجاز نیست",
@@ -25,6 +25,8 @@ export const CANCEL_REASONS: OrderActionReason[] = [
     label: "کالا در سامانه ثبت نشده است",
   },
 ];
+
+export const CANCEL_REASONS = REVIEW_REASONS;
 
 export const SHIPMENT_STOP_REASONS: OrderActionReason[] = [
   {
@@ -48,6 +50,11 @@ export const SHIPMENT_STOP_REASONS: OrderActionReason[] = [
 export function getCancelReasonLabel(code?: string | null): string {
   if (!code) return "";
   return CANCEL_REASONS.find((reason) => reason.code === code)?.label ?? "";
+}
+
+export function getReviewReasonLabel(code?: string | null): string {
+  if (!code) return "";
+  return REVIEW_REASONS.find((reason) => reason.code === code)?.label ?? "";
 }
 
 export function getShipmentStopReasonLabel(code?: string | null): string {

@@ -53,7 +53,15 @@ export default function ExpertOrdersPage() {
   }, []);
 
   const statusOptions = useMemo(
-    () => Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))),
+    () =>
+      Array.from(
+        new Set([
+          "pending",
+          "needs_review",
+          "review_resolved",
+          ...orders.map((order) => order.orderStatus).filter(Boolean),
+        ]),
+      ),
     [orders],
   );
 
@@ -102,6 +110,14 @@ export default function ExpertOrdersPage() {
       render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
     },
     {
+      key: "review",
+      header: "مهلت بررسی",
+      render: (row) =>
+        row.orderStatus === "needs_review"
+          ? formatReviewRemaining(row.reviewRemainingMs, row.reviewExpiresAt)
+          : "-",
+    },
+    {
       key: "warehouse-status",
       header: "وضعیت انبار",
       render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
@@ -118,7 +134,7 @@ export default function ExpertOrdersPage() {
             >
               مشاهده جزئیات
             </Link>
-            {row.orderStatus === "pending" ? (
+            {isEditableOrderStatus(row.orderStatus) ? (
               <Link
                 href={`/expert/orders/${row.objectId}/edit`}
                 className="btn-primary rounded-xl px-3 py-1.5 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
@@ -129,7 +145,7 @@ export default function ExpertOrdersPage() {
               <button
                 type="button"
                 disabled
-                title="ویرایش فقط برای سفارش های در انتظار امکان پذیر است."
+                title="ویرایش فقط برای سفارش‌های در انتظار تأیید یا نیازمند بررسی امکان‌پذیر است."
                 className="cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#64748B]"
               >
                 ویرایش
@@ -196,4 +212,24 @@ export default function ExpertOrdersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isEditableOrderStatus(status: string): boolean {
+  return status === "pending" || status === "needs_review";
+}
+
+function formatReviewRemaining(
+  remainingMs: number | null,
+  expiresAt: string | null,
+): string {
+  if (remainingMs !== null) {
+    if (remainingMs <= 0) return "مهلت بررسی پایان یافته است.";
+
+    const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+    const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+
+    return `${formatNumber(hours)} ساعت و ${formatNumber(minutes)} دقیقه`;
+  }
+
+  return expiresAt ? `تا ${formatDate(expiresAt)}` : "-";
 }

@@ -55,6 +55,14 @@ export interface Order {
   shipmentStopReasonLabel: string | null;
   shipmentStoppedByName: string | null;
   shipmentStoppedAt: string | null;
+  reviewReasonCode: string | null;
+  reviewReasonLabel: string | null;
+  reviewRequestedByName: string | null;
+  reviewRequestedAt: string | null;
+  reviewResolvedByName: string | null;
+  reviewResolvedAt: string | null;
+  reviewExpiresAt: string | null;
+  reviewRemainingMs: number | null;
   sourceLabel: string | null;
   notes: string | null;
   cancelReasonCode: string | null;
@@ -62,6 +70,9 @@ export interface Order {
   cancelledByName: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  voidedBySystem: boolean;
+  voidedAt: string | null;
+  voidReason: string | null;
   returnReason: string | null;
   createdAt: string;
   updatedAt: string;
@@ -100,8 +111,16 @@ export interface UnlockShipmentPayload {
 }
 
 export interface CancelOrderPayload {
+  cancelledByName?: string;
+}
+
+export interface MarkOrderNeedsReviewPayload {
   reasonCode: string;
-  cancelledByName: string;
+  requestedByName: string;
+}
+
+export interface ResolveOrderReviewPayload {
+  resolvedByName: string;
 }
 
 export type StopShipmentPayload = LockShipmentPayload;

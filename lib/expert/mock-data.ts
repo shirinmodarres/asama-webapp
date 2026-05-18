@@ -12,8 +12,11 @@ import type {
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
   pending: "در انتظار تأیید",
+  needs_review: "نیازمند بررسی",
+  review_resolved: "مشکل برطرف شد",
   approved: "تأیید شده",
   cancelled: "لغو شده",
+  voided: "باطل شده",
   invoiced: "فاکتور شده",
   returned: "برگشتی",
   returnedAfterInvoice: "برگشتی پس از فاکتور",
