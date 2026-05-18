@@ -101,12 +101,6 @@ export default function WarehousePage() {
           title="حواله‌های خروج"
           description="پیگیری حواله‌های صادرشده و وضعیت تحویل"
         />
-        <ActionLinkCard
-          href="/warehouse/delivered"
-          icon="file-check"
-          title="تایید تحویل"
-          description="ثبت نهایی دریافت کالا توسط مشتری"
-        />
       </section>
     </DashboardLayout>
   );

@@ -82,7 +82,7 @@ export default function NajaCentersPage() {
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="جستجو بر اساس نام مرکز، کد مرکز، مسئول یا موقعیت"
+            placeholder="جستجو بر اساس نام مرکز، کدپستی مرکز، مسئول یا موقعیت"
             className="pr-10"
           />
         </div>
@@ -95,7 +95,10 @@ export default function NajaCentersPage() {
       ) : rows.length > 0 ? (
         <NajaCentersTable centers={rows} />
       ) : (
-        <EmptyState title="مرکز ناجا یافت نشد" description="هنوز مرکزی ثبت نشده یا عبارت جستجو نتیجه ای ندارد." />
+        <EmptyState
+          title="مرکز ناجا یافت نشد"
+          description="هنوز مرکزی ثبت نشده یا عبارت جستجو نتیجه ای ندارد."
+        />
       )}
     </DashboardLayout>
   );

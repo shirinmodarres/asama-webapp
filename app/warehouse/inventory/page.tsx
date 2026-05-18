@@ -8,11 +8,11 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
-import { ProductStatusBadge } from "@/components/support/product-status-badge";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
+import type { ProductWarehouseInventory } from "@/lib/models/warehouse.model";
 import { listWarehouseInventory } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
@@ -55,7 +55,9 @@ export default function WarehouseInventoryPage() {
     );
   }, [products, search]);
 
-  const columns: DataTableColumn<Product>[] = [
+  const groups = useMemo(() => groupProductsByWarehouse(rows), [rows]);
+
+  const columns: DataTableColumn<ProductInventoryRow>[] = [
     { key: "name", header: "کالا", render: (row) => row.name },
     {
       key: "sku",
@@ -68,16 +70,21 @@ export default function WarehouseInventoryPage() {
       render: (row) => [row.brand, row.model].filter(Boolean).join(" / ") || "-",
     },
     {
-      key: "warehouseStock",
-      header: "موجودی واقعی انبار",
-      render: (row) => formatNumber(row.warehouseStock),
+      key: "stock",
+      header: "موجودی",
+      render: (row) => formatNumber(row.inventory.stock),
+    },
+    {
+      key: "reserved",
+      header: "موجودی رزروشده",
+      render: (row) => formatNumber(row.inventory.reservedStock),
+    },
+    {
+      key: "available",
+      header: "موجودی قابل استفاده",
+      render: (row) => formatNumber(row.inventory.availableStock),
     },
     { key: "unit", header: "واحد", render: (row) => row.unit },
-    {
-      key: "status",
-      header: "وضعیت",
-      render: (row) => <ProductStatusBadge status={row.status} />,
-    },
   ];
 
   return (
@@ -98,8 +105,22 @@ export default function WarehouseInventoryPage() {
         <LoadingState title="در حال دریافت موجودی واقعی انبار" />
       ) : error ? (
         <PageErrorMessage title="دریافت موجودی انبار انجام نشد" message={error} />
-      ) : rows.length > 0 ? (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.objectId} />
+      ) : groups.length > 0 ? (
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <section key={group.warehouseId} className="space-y-3">
+              <h2 className="text-base font-semibold text-[#1F3A5F]">
+                {getWarehouseTypeLabel(group.warehouseType)}
+                {group.warehouseName ? ` - ${group.warehouseName}` : ""}
+              </h2>
+              <DataTable
+                columns={columns}
+                rows={group.rows}
+                rowKey={(row) => `${row.objectId}-${row.inventory.warehouseId}`}
+              />
+            </section>
+          ))}
+        </div>
       ) : (
         <EmptyState
           title="موجودی انبار یافت نشد"
@@ -108,4 +129,61 @@ export default function WarehouseInventoryPage() {
       )}
     </DashboardLayout>
   );
+}
+
+interface ProductInventoryRow extends Product {
+  inventory: ProductWarehouseInventory;
+}
+
+function groupProductsByWarehouse(products: Product[]) {
+  const groups = new Map<
+    string,
+    {
+      warehouseId: string;
+      warehouseName: string;
+      warehouseType: string;
+      rows: ProductInventoryRow[];
+    }
+  >();
+
+  for (const product of products) {
+    const inventories =
+      product.inventories.length > 0
+        ? product.inventories
+        : [
+            {
+              warehouseId: "default",
+              warehouseName: "انبار کل",
+              warehouseType: "general",
+              stock: product.warehouseStock,
+              reservedStock: product.reservedStock,
+              availableStock: product.warehouseAvailableStock,
+            },
+          ];
+
+    for (const inventory of inventories) {
+      const key = inventory.warehouseId || inventory.warehouseName || "default";
+      const group =
+        groups.get(key) ??
+        {
+          warehouseId: key,
+          warehouseName: inventory.warehouseName,
+          warehouseType: inventory.warehouseType,
+          rows: [],
+        };
+      group.rows.push({ ...product, inventory });
+      groups.set(key, group);
+    }
+  }
+
+  return Array.from(groups.values()).sort((a, b) =>
+    getWarehouseTypeLabel(a.warehouseType).localeCompare(
+      getWarehouseTypeLabel(b.warehouseType),
+      "fa",
+    ),
+  );
+}
+
+function getWarehouseTypeLabel(type: string) {
+  return type === "naja" ? "انبار ناجا" : "انبار عمومی";
 }

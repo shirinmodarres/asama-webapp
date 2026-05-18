@@ -23,8 +23,31 @@ export async function createNajaOrder(
       ...payload,
       customerNationalId: normalizeDigits(payload.customerNationalId),
       customerPhone: normalizePhone(payload.customerPhone),
+      warehouseId: payload.warehouseId
+        ? normalizeDigits(payload.warehouseId)
+        : payload.warehouseId,
       quantity: toNumber(payload.quantity),
     },
+  );
+  return mapOrderDto(data);
+}
+
+export async function approveNajaOrder(
+  orderObjectId: string,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/naja/orders/${orderObjectId}/approve`,
+  );
+  return mapOrderDto(data);
+}
+
+export async function rejectNajaOrder(
+  orderObjectId: string,
+  payload: { reason: string; rejectedByName?: string },
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/naja/orders/${orderObjectId}/reject`,
+    payload,
   );
   return mapOrderDto(data);
 }

@@ -102,7 +102,7 @@ export default function NajaDashboardPage() {
 
         <SectionCard title="دسترسی سریع" description="ثبت سفارش، مدیریت مراکز و پیگیری سفارش های ناجا">
           <div className="space-y-3">
-            <Link href="/naja/orders/new" className="block rounded-[18px] border border-[#DDEAE0] bg-[linear-gradient(180deg,rgba(247,251,248,1),rgba(255,255,255,1))] p-4 text-sm font-semibold text-[#102034]">
+            <Link href="/naja/orders/create" className="block rounded-[18px] border border-[#DDEAE0] bg-[linear-gradient(180deg,rgba(247,251,248,1),rgba(255,255,255,1))] p-4 text-sm font-semibold text-[#102034]">
               ثبت سفارش ناجا
               <p className="mt-1 text-sm font-normal leading-7 text-[#6B7280]">ایجاد سفارش جدید از موجودی اختصاصی ناجا</p>
             </Link>

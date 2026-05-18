@@ -23,7 +23,8 @@ export type SidebarIconName =
   | "layers"
   | "history"
   | "pencil"
-  | "users";
+  | "users"
+  | "warehouse";
 
 export interface Role {
   key: RoleKey;

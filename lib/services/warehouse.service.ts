@@ -6,10 +6,13 @@ import {
   mapExitSlipDto,
   mapExitSlipPdfDataDto,
   mapExitSlipListDto,
+  mapProductWarehouseInventoryListDto,
+  mapWarehouseDto,
   mapWarehouseInboundReceiptDto,
   mapWarehouseInboundReceiptListDto,
   mapWarehouseItemUnitDto,
   mapWarehouseItemUnitListDto,
+  mapWarehouseListDto,
 } from "@/lib/mappers/warehouse.mapper";
 import type { Order } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
@@ -19,12 +22,70 @@ import type {
   CreateInboundReceiptPayload,
   ExitSlip,
   ExitSlipPdfData,
+  ProductWarehouseInventory,
   UpdateInboundReceiptPayload,
   ValidateExitSlipScanPayload,
+  Warehouse,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
 } from "@/lib/models/warehouse.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
+
+export interface WarehousePayload {
+  name: string;
+  code: string;
+  type: string;
+  allowedOrderTypes: Array<"normal" | "naja">;
+  isDefault?: boolean;
+  status?: string;
+}
+
+export async function listWarehouses(): Promise<Warehouse[]> {
+  const data = await httpClient.get<unknown>("/api/warehouses");
+  return mapWarehouseListDto(data);
+}
+
+export async function getWarehouse(objectId: string): Promise<Warehouse> {
+  const data = await httpClient.get<unknown>(`/api/warehouses/${objectId}`);
+  return mapWarehouseDto(data);
+}
+
+export async function createWarehouse(
+  payload: WarehousePayload,
+): Promise<Warehouse> {
+  const data = await httpClient.post<unknown>(
+    "/api/warehouses",
+    normalizeWarehousePayload(payload),
+  );
+  return mapWarehouseDto(data);
+}
+
+export async function updateWarehouse(
+  objectId: string,
+  payload: Partial<WarehousePayload>,
+): Promise<Warehouse> {
+  const data = await httpClient.put<unknown>(
+    `/api/warehouses/${objectId}`,
+    normalizeWarehousePayload(payload),
+  );
+  return mapWarehouseDto(data);
+}
+
+export async function getWarehouseInventory(
+  filters?: Record<string, string | undefined>,
+): Promise<Product[]> {
+  const data = await httpClient.get<unknown>(buildWarehouseInventoryPath(filters));
+  return mapProductListDto(data);
+}
+
+export async function getProductWarehouseInventory(
+  productObjectId: string,
+): Promise<ProductWarehouseInventory[]> {
+  const data = await httpClient.get<unknown>(
+    `/api/products/${productObjectId}/warehouse-inventory`,
+  );
+  return mapProductWarehouseInventoryListDto(data);
+}
 
 export async function createInboundReceipt(
   payload: CreateInboundReceiptPayload,
@@ -169,11 +230,24 @@ function normalizeInboundPayload(
 ): CreateInboundReceiptPayload {
   return {
     ...payload,
+    warehouseId: payload.warehouseId
+      ? normalizeDigits(payload.warehouseId)
+      : payload.warehouseId,
     units: payload.units.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
     })),
+  };
+}
+
+function normalizeWarehousePayload(
+  payload: Partial<WarehousePayload>,
+): Record<string, unknown> {
+  return {
+    ...payload,
+    code: payload.code ? normalizeDigits(payload.code) : payload.code,
+    allowedOrderTypes: payload.allowedOrderTypes ?? [],
   };
 }
 
@@ -202,4 +276,17 @@ function buildWarehouseUnitsPath(
   });
   const query = params.toString();
   return query ? `/api/warehouse/units?${query}` : "/api/warehouse/units";
+}
+
+function buildWarehouseInventoryPath(
+  filters?: Record<string, string | undefined>,
+): string {
+  if (!filters) return "/api/warehouse/inventory";
+
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.toString();
+  return query ? `/api/warehouse/inventory?${query}` : "/api/warehouse/inventory";
 }

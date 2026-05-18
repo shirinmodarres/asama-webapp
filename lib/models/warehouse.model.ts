@@ -5,6 +5,29 @@ export type WarehouseUnitStatus =
   | "delivered"
   | "returned";
 
+export type WarehouseType = "general" | "naja" | "other" | string;
+export type WarehouseOrderType = "normal" | "naja";
+
+export interface Warehouse {
+  objectId: string;
+  id: string;
+  name: string;
+  code: string;
+  type: WarehouseType;
+  allowedOrderTypes: WarehouseOrderType[];
+  isDefault: boolean;
+  status: "active" | "inactive" | string;
+}
+
+export interface ProductWarehouseInventory {
+  warehouseId: string;
+  warehouseName: string;
+  warehouseType: WarehouseType;
+  stock: number;
+  reservedStock: number;
+  availableStock: number;
+}
+
 export interface WarehouseItemUnit {
   objectId: string;
   id: string;
@@ -41,6 +64,24 @@ export interface WarehouseInboundReceipt {
   updatedAt: string;
 }
 
+export interface ExitSlipItemUnit {
+  unitObjectId: string;
+  productIdentifier: string;
+  serialNumber: string;
+  trackingCode: string;
+  status: WarehouseUnitStatus | string;
+}
+
+export interface ExitSlipItemGroup {
+  productObjectId: string;
+  productSku: string;
+  productName: string;
+  productBrand: string;
+  productModel: string | null;
+  quantity: number;
+  units: ExitSlipItemUnit[];
+}
+
 export interface ExitSlip {
   objectId: string;
   id: string;
@@ -66,6 +107,7 @@ export interface ExitSlip {
   deliveryCounty: string | null;
   deliveryAddress: string | null;
   notes: string | null;
+  items: ExitSlipItemGroup[];
   units: WarehouseItemUnit[];
   createdAt: string;
   updatedAt: string;
@@ -91,13 +133,15 @@ export interface ExitSlipPdfData {
     fullAddress: string | null;
     formatted: string | null;
   };
-  items: WarehouseItemUnit[];
+  items: ExitSlipItemGroup[];
+  units: WarehouseItemUnit[];
   deliveryCode: string | null;
   notes: string | null;
 }
 
 export interface CreateInboundReceiptPayload {
   productObjectId: string;
+  warehouseId?: string;
   units: Array<{
     productIdentifier: string;
     serialNumber: string;

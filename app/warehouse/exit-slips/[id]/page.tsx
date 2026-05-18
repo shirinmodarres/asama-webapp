@@ -5,17 +5,16 @@ import { Copy, FileText } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { ExitSlipProductGroups } from "@/components/warehouse/exit-slip-product-groups";
 import { SlipDetailsCard } from "@/components/warehouse/slip-details-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
-import type { ExitSlip, WarehouseItemUnit } from "@/lib/models/warehouse.model";
+import type { ExitSlip } from "@/lib/models/warehouse.model";
 import { getExitSlip } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
@@ -51,45 +50,13 @@ export default function ExitSlipDetailsPage() {
     };
   }, [params.id]);
 
-  const unitColumns: DataTableColumn<WarehouseItemUnit>[] = [
-    {
-      key: "productName",
-      header: "کالا",
-      render: (row) => row.productName || "-",
-    },
-    {
-      key: "productSku",
-      header: "کد کالا",
-      render: (row) => (row.productSku ? formatFaDigits(row.productSku) : "-"),
-    },
-    {
-      key: "quantity",
-      header: "تعداد",
-      render: (row) => formatNumber(row.quantity || 1),
-    },
-    {
-      key: "productIdentifier",
-      header: "شناسه محصول",
-      render: (row) =>
-        row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
-    },
-    {
-      key: "serialNumber",
-      header: "سریال",
-      render: (row) =>
-        row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
-    },
-    {
-      key: "trackingCode",
-      header: "کد رهگیری",
-      render: (row) =>
-        row.trackingCode ? formatFaDigits(row.trackingCode) : "-",
-    },
-  ];
-
   const deliveryLink =
     slip?.deliveryLink ||
     (slip?.deliveryToken ? `/delivery/${slip.deliveryToken}` : "");
+  const totalQuantity =
+    slip?.items.reduce((sum, item) => sum + item.quantity, 0) ??
+    slip?.units.length ??
+    0;
 
   const getAbsoluteDeliveryLink = () =>
     typeof window !== "undefined" && deliveryLink.startsWith("/")
@@ -183,7 +150,7 @@ export default function ExitSlipDetailsPage() {
               />
               <InfoItem
                 label="تعداد کالا"
-                value={formatNumber(slip.units.length)}
+                value={formatNumber(totalQuantity)}
               />
             </dl>
           </section>
@@ -240,12 +207,8 @@ export default function ExitSlipDetailsPage() {
               </p>
             )}
           </section>
-          {slip.units.length > 0 ? (
-            <DataTable
-              columns={unitColumns}
-              rows={slip.units}
-              rowKey={(row) => row.objectId || row.id}
-            />
+          {slip.items.length > 0 ? (
+            <ExitSlipProductGroups items={slip.items} />
           ) : null}
         </>
       )}

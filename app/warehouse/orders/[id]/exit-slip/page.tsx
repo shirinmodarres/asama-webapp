@@ -76,7 +76,19 @@ export default function ExitSlipCreatePage() {
 
   const expectedRows = useMemo<ExpectedRow[]>(() => {
     if (!order) return [];
-    return order.items.map((item) => {
+    const itemsByProduct = new Map<string, OrderItem>();
+
+    for (const item of order.items) {
+      const key = getOrderItemProductKey(item);
+      const existing = itemsByProduct.get(key);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        itemsByProduct.set(key, { ...item });
+      }
+    }
+
+    return Array.from(itemsByProduct.values()).map((item) => {
       const scannedQuantity = scannedUnits.filter((unit) =>
         unitMatchesOrderItem(unit, item),
       ).length;
@@ -344,4 +356,10 @@ function unitMatchesOrderItem(
     item.productName &&
     unit.productName.trim() === item.productName.trim(),
   );
+}
+
+function getOrderItemProductKey(item: OrderItem): string {
+  if (item.productId) return item.productId;
+  if (item.productSku) return `sku:${item.productSku}`;
+  return `name:${item.productName}`;
 }

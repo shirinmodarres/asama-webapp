@@ -17,6 +17,8 @@ export interface NajaCenterFormInput {
   name: string;
   responsibleName: string;
   phone: string;
+  secondaryPhone?: string | null;
+  landlinePhone?: string | null;
   province: string;
   city: string;
   county: string;
@@ -48,6 +50,12 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
   const [phone, setPhone] = useState(
     props.mode === "edit" ? props.initialValues.phone : "",
   );
+  const [secondaryPhone, setSecondaryPhone] = useState(
+    props.mode === "edit" ? (props.initialValues.secondaryPhone ?? "") : "",
+  );
+  const [landlinePhone, setLandlinePhone] = useState(
+    props.mode === "edit" ? (props.initialValues.landlinePhone ?? "") : "",
+  );
   const [province, setProvince] = useState(
     props.mode === "edit" ? props.initialValues.province : "",
   );
@@ -75,6 +83,8 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
           name,
           responsibleName,
           phone,
+          secondaryPhone: secondaryPhone.trim() || null,
+          landlinePhone: landlinePhone.trim() || null,
           province,
           city,
           county,
@@ -93,12 +103,23 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
             value={responsibleName}
             onChange={setResponsibleName}
           />
-          <InputField label="تلفن" value={phone} onChange={setPhone} />
+          <InputField label="شماره همراه" value={phone} onChange={setPhone} />
+          <InputField
+            label="شماره همراه دوم (اختیاری)"
+            value={secondaryPhone}
+            onChange={setSecondaryPhone}
+            required={false}
+          />
+          <InputField
+            label="شماره تلفن ثابت"
+            value={landlinePhone}
+            onChange={setLandlinePhone}
+          />
           <InputField label="استان" value={province} onChange={setProvince} />
           <InputField label="شهر" value={city} onChange={setCity} />
           <InputField label="شهرستان" value={county} onChange={setCounty} />
           <InputField
-            label="کد مرکز"
+            label="کدپستی مرکز"
             value={centerCode}
             onChange={setCenterCode}
           />
@@ -153,10 +174,12 @@ function InputField({
   label,
   value,
   onChange,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
 }) {
   return (
     <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -164,7 +187,7 @@ function InputField({
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required
+        required={required}
       />
     </label>
   );

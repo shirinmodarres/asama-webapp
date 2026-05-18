@@ -45,4 +45,5 @@ export const sidebarIconMap: Record<SidebarIconName, LucideIcon> = {
   history: History,
   pencil: PencilLine,
   users: Users,
+  warehouse: Warehouse,
 };

@@ -15,6 +15,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   ORDER_NOT_APPROVED: "سفارش هنوز تأیید نشده است.",
   WAREHOUSE_UNIT_NOT_FOUND: "کد اسکن‌شده در انبار پیدا نشد.",
   WAREHOUSE_UNIT_NOT_AVAILABLE: "این کالا برای خروج در دسترس نیست.",
+  WAREHOUSE_UNIT_WAREHOUSE_MISMATCH:
+    "کالای اسکن‌شده متعلق به انبار این سفارش نیست.",
   SCANNED_PRODUCT_NOT_IN_ORDER: "کالای اسکن‌شده در این سفارش وجود ندارد.",
   SCANNED_QUANTITY_EXCEEDED: "تعداد اسکن‌شده بیشتر از تعداد سفارش است.",
   EXIT_SLIP_QUANTITY_MISMATCH: "تعداد کالاهای اسکن‌شده با سفارش برابر نیست.",

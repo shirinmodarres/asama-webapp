@@ -64,6 +64,15 @@ export function mapOrderDto(dto: unknown): Order {
     customerAddressObjectId: toNullableString(
       record.customerAddressObjectId ?? addressRecord.objectId,
     ),
+    warehouseId: toNullableString(
+      record.warehouseId ?? record.warehouseObjectId ?? toRecord(record.warehouse).objectId,
+    ),
+    warehouseName: toNullableString(
+      record.warehouseName ?? toRecord(record.warehouse).name,
+    ),
+    warehouseType: toNullableString(
+      record.warehouseType ?? toRecord(record.warehouse).type,
+    ),
     customerNationalId: normalizeNullableDigits(
       record.customerNationalId ?? record.nationalId ?? customerRecord.nationalId,
     ),

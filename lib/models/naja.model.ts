@@ -4,6 +4,7 @@ export interface CreateNajaOrderPayload {
   customerNationalId: string;
   customerPhone: string;
   centerObjectId: string;
+  warehouseId?: string;
   productObjectId: string;
   quantity: number;
   notes?: string;

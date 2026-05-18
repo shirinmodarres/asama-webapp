@@ -12,14 +12,21 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
-import { listWarehouseOrders } from "@/lib/services/warehouse.service";
+import type { Warehouse } from "@/lib/models/warehouse.model";
+import {
+  listWarehouseOrders,
+  listWarehouses,
+} from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function WarehouseOutboundPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouseId, setWarehouseId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -31,8 +38,13 @@ export default function WarehouseOutboundPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listWarehouseOrders();
-        if (isMounted) setOrders(data);
+        const [orderData, warehouseData] = await Promise.all([
+          listWarehouseOrders(),
+          listWarehouses(),
+        ]);
+        if (!isMounted) return;
+        setOrders(orderData);
+        setWarehouses(warehouseData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -49,7 +61,12 @@ export default function WarehouseOutboundPage() {
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return orders
-      .filter((order) => order.orderType === "normal")
+      .filter(
+        (order) =>
+          warehouseId === "all" ||
+          !order.warehouseId ||
+          order.warehouseId === warehouseId,
+      )
       .filter((order) => {
         if (!query) return true;
         return (
@@ -58,7 +75,18 @@ export default function WarehouseOutboundPage() {
           (order.receiverFullName ?? "").toLowerCase().includes(query)
         );
       });
-  }, [orders, search]);
+  }, [orders, search, warehouseId]);
+
+  const warehouseOptions = useMemo(
+    () => [
+      { value: "all", label: "همه انبارها" },
+      ...warehouses.map((warehouse) => ({
+        value: warehouse.objectId,
+        label: warehouse.name,
+      })),
+    ],
+    [warehouses],
+  );
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -84,6 +112,11 @@ export default function WarehouseOutboundPage() {
       key: "items",
       header: "تعداد آیتم",
       render: (row) => formatNumber(row.items.length),
+    },
+    {
+      key: "warehouse",
+      header: "انبار",
+      render: (row) => row.warehouseName || "-",
     },
     {
       key: "warehouseStatus",
@@ -112,10 +145,13 @@ export default function WarehouseOutboundPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => {
+        const warehouseMatches =
+          warehouseId === "all" || !row.warehouseId || row.warehouseId === warehouseId;
         const canCreateExitSlip =
           row.orderStatus === "approved" &&
           row.warehouseStatus === "reviewing" &&
-          row.fulfillmentStatus !== "onHold";
+          row.fulfillmentStatus !== "onHold" &&
+          warehouseMatches;
 
         return canCreateExitSlip ? (
           <Button asChild size="sm">
@@ -135,6 +171,7 @@ export default function WarehouseOutboundPage() {
   return (
     <DashboardLayout role="warehouse" title="خروج کالا">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-2">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
           <Input
@@ -142,6 +179,15 @@ export default function WarehouseOutboundPage() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="جستجو بر اساس کد سفارش، مشتری یا گیرنده"
             className="pr-10"
+          />
+        </div>
+          <SearchableSelect
+            value={warehouseId}
+            onValueChange={setWarehouseId}
+            options={warehouseOptions}
+            placeholder="انتخاب انبار"
+            searchPlaceholder="جستجو در انبارها"
+            emptyMessage="انباری پیدا نشد"
           />
         </div>
       </section>

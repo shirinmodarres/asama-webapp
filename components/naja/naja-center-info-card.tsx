@@ -27,7 +27,10 @@ export function NajaCenterInfoCard({
       {center ? (
         <dl className="mt-5 grid gap-3 sm:grid-cols-2 text-sm">
           <InfoItem label="نام مرکز" value={center.name} />
-          <InfoItem label="کد مرکز" value={formatFaDigits(center.centerCode)} />
+          <InfoItem
+            label="کدپستی مرکز"
+            value={formatFaDigits(center.centerCode)}
+          />
           <InfoItem label="مسئول" value={center.responsibleName} />
           <InfoItem label="تلفن" value={formatFaDigits(center.phone)} />
           <InfoItem label="استان" value={center.province} />

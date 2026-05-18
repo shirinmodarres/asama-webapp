@@ -150,59 +150,71 @@ export default function ExitSlipPdfPage() {
                 />
               </section>
 
-              <table className="w-full border-collapse text-right text-sm">
-                <thead>
-                  <tr className="bg-[#F8FBFD]">
-                    {[
-                      "کالا",
-                      "کد کالا",
-                      "تعداد",
-                      "شناسه محصول",
-                      "سریال",
-                      "کد رهگیری",
-                    ].map((header) => (
-                      <th
-                        key={header}
-                        className="border border-[#D7DEE6] px-3 py-2 font-semibold text-[#1F3A5F]"
-                      >
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((item, index) => (
-                    <tr key={`${item.productIdentifier}-${index}`}>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {item.productName || "-"}
-                      </td>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {item.productSku
-                          ? formatFaDigits(item.productSku)
-                          : "-"}
-                      </td>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {formatNumber(item.quantity || 1)}
-                      </td>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {item.productIdentifier
-                          ? formatFaDigits(item.productIdentifier)
-                          : "-"}
-                      </td>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {item.serialNumber
-                          ? formatFaDigits(item.serialNumber)
-                          : "-"}
-                      </td>
-                      <td className="border border-[#D7DEE6] px-3 py-2">
-                        {item.trackingCode
-                          ? formatFaDigits(item.trackingCode)
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <section className="space-y-4">
+                {data.items.map((item) => (
+                  <div
+                    key={item.productObjectId || item.productSku || item.productName}
+                    className="rounded-lg border border-[#D7DEE6] p-3"
+                  >
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Info label="کالا" value={item.productName || "-"} />
+                      <Info
+                        label="کد کالا"
+                        value={
+                          item.productSku ? formatFaDigits(item.productSku) : "-"
+                        }
+                      />
+                      <Info label="تعداد" value={formatNumber(item.quantity)} />
+                    </div>
+
+                    <p className="mt-4 text-sm font-semibold text-[#1F3A5F]">
+                      شناسه‌های ثبت‌شده:
+                    </p>
+                    <table className="mt-2 w-full border-collapse text-right text-sm">
+                      <thead>
+                        <tr className="bg-[#F8FBFD]">
+                          {["شناسه محصول", "سریال", "کد رهگیری"].map(
+                            (header) => (
+                              <th
+                                key={header}
+                                className="border border-[#D7DEE6] px-3 py-2 font-semibold text-[#1F3A5F]"
+                              >
+                                {header}
+                              </th>
+                            ),
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {item.units.map((unit, index) => (
+                          <tr
+                            key={
+                              unit.unitObjectId ||
+                              `${item.productSku}-${index}`
+                            }
+                          >
+                            <td className="border border-[#D7DEE6] px-3 py-2">
+                              {unit.productIdentifier
+                                ? formatFaDigits(unit.productIdentifier)
+                                : "-"}
+                            </td>
+                            <td className="border border-[#D7DEE6] px-3 py-2">
+                              {unit.serialNumber
+                                ? formatFaDigits(unit.serialNumber)
+                                : "-"}
+                            </td>
+                            <td className="border border-[#D7DEE6] px-3 py-2">
+                              {unit.trackingCode
+                                ? formatFaDigits(unit.trackingCode)
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+              </section>
 
               <section className="grid gap-3 sm:grid-cols-2">
                 <Info

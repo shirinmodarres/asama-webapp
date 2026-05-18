@@ -6,6 +6,8 @@ export interface NajaCenter {
   name: string;
   responsibleName: string;
   phone: string;
+  secondaryPhone: string | null;
+  landlinePhone: string | null;
   province: string;
   city: string;
   county: string;
@@ -21,6 +23,8 @@ export interface CreateNajaCenterPayload {
   name: string;
   responsibleName: string;
   phone: string;
+  secondaryPhone?: string | null;
+  landlinePhone?: string | null;
   province: string;
   city: string;
   county: string;

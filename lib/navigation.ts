@@ -49,7 +49,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
     },
     {
       label: "ثبت سفارش ناجا",
-      href: "/naja/orders/new",
+      href: "/naja/orders/create",
       icon: "plus-circle",
       description: "ایجاد سفارش جدید از موجودی اختصاصی ناجا",
     },
@@ -192,6 +192,18 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/naja-inventory",
       icon: "package",
       description: "مدیریت موجودی اختصاصی سفارش های ناجا",
+    },
+    {
+      label: "انبارها",
+      href: "/support/warehouses",
+      icon: "warehouse",
+      description: "مدیریت انبارهای عمومی و ناجا",
+    },
+    {
+      label: "مراکز ناجا",
+      href: "/support/naja-centers",
+      icon: "layers",
+      description: "تعریف و ویرایش مراکز ناجا",
     },
     {
       label: "کاربران",

@@ -230,6 +230,23 @@ export function OrderForm({
       return;
     }
 
+    const requestedByProduct = new Map<string, number>();
+    normalizedItems.forEach((item) => {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    });
+    const insufficientProduct = Array.from(requestedByProduct.entries()).find(
+      ([productId, quantity]) =>
+        quantity > (productsById[productId]?.availableStock ?? 0),
+    );
+    if (insufficientProduct) {
+      const product = productsById[insufficientProduct[0]];
+      setError(`موجودی قابل فروش برای «${product?.name ?? "کالا"}» کافی نیست.`);
+      return;
+    }
+
     if (selectedCustomerId && !selectedAddressId) {
       setError("برای مشتری انتخاب شده باید آدرس تحویل انتخاب شود.");
       return;
@@ -377,10 +394,16 @@ export function OrderForm({
                     onValueChange={(value) =>
                       updateRow(item.rowId, { productId: value })
                     }
-                    options={products.map((option) => ({
-                      value: option.objectId,
-                      label: `${option.name} - ${option.brand}`,
-                    }))}
+                    options={products
+                      .filter(
+                        (option) =>
+                          option.availableStock > 0 ||
+                          option.objectId === item.productId,
+                      )
+                      .map((option) => ({
+                        value: option.objectId,
+                        label: `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
+                      }))}
                     placeholder="انتخاب کالا"
                     searchPlaceholder="جستجو در کالاها"
                     emptyMessage="کالایی پیدا نشد"

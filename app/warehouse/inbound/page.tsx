@@ -15,10 +15,14 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
+import type { Warehouse } from "@/lib/models/warehouse.model";
 import type { Product } from "@/lib/models/product.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
-import { createInboundReceipt } from "@/lib/services/warehouse.service";
+import {
+  createInboundReceipt,
+  listWarehouses,
+} from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
 interface DraftUnit {
@@ -30,6 +34,8 @@ interface DraftUnit {
 
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [warehouseId, setWarehouseId] = useState("");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [productIdentifier, setProductIdentifier] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
@@ -48,8 +54,17 @@ export default function WarehouseInboundPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listProducts("warehouse");
-        if (isMounted) setProducts(data);
+        const [productData, warehouseData] = await Promise.all([
+          listProducts("warehouse"),
+          listWarehouses(),
+        ]);
+        if (!isMounted) return;
+        setProducts(productData);
+        setWarehouses(warehouseData);
+        const defaultWarehouse =
+          warehouseData.find((warehouse) => warehouse.isDefault) ??
+          warehouseData.find((warehouse) => warehouse.status !== "inactive");
+        if (defaultWarehouse) setWarehouseId(defaultWarehouse.objectId);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -65,6 +80,9 @@ export default function WarehouseInboundPage() {
 
   const selectedProduct = products.find(
     (product) => product.objectId === selectedProductId,
+  );
+  const selectedWarehouse = warehouses.find(
+    (warehouse) => warehouse.objectId === warehouseId,
   );
 
   const columns: DataTableColumn<DraftUnit>[] = [
@@ -160,6 +178,10 @@ export default function WarehouseInboundPage() {
       setError("انتخاب کالا الزامی است.");
       return;
     }
+    if (!warehouseId) {
+      setError("انبار مقصد را انتخاب کنید.");
+      return;
+    }
     if (units.length === 0) {
       setError("حداقل یک کالا برای ثبت ورود اضافه کنید.");
       return;
@@ -169,6 +191,7 @@ export default function WarehouseInboundPage() {
     try {
       const receipt = await createInboundReceipt({
         productObjectId: selectedProductId,
+        warehouseId,
         units: units.map(({ productIdentifier, serialNumber, trackingCode }) => ({
           productIdentifier,
           serialNumber,
@@ -177,7 +200,13 @@ export default function WarehouseInboundPage() {
         notes: notes.trim() || undefined,
         createdByName: getStoredCurrentUser()?.fullName ?? undefined,
       });
-      setMessage(`رسید ورود ${formatFaDigits(receipt.receiptCode)} ثبت شد.`);
+      const stockMessage =
+        selectedWarehouse?.type === "naja"
+          ? "موجودی ناجا برای این کالا افزایش یافت."
+          : "موجودی فروش / انبار عمومی برای این کالا افزایش یافت.";
+      setMessage(
+        `رسید ورود ${formatFaDigits(receipt.receiptCode)} ثبت شد. ${stockMessage}`,
+      );
       setUnits([]);
       setNotes("");
       const refreshedProducts = await listProducts("warehouse");
@@ -197,6 +226,16 @@ export default function WarehouseInboundPage() {
       })),
     [products],
   );
+  const warehouseOptions = useMemo(
+    () =>
+      warehouses
+        .filter((warehouse) => warehouse.status !== "inactive")
+        .map((warehouse) => ({
+          value: warehouse.objectId,
+          label: `${warehouse.name} - ${getWarehouseTypeLabel(warehouse.type)}`,
+        })),
+    [warehouses],
+  );
 
   return (
     <DashboardLayout role="warehouse" title="ورود کالا">
@@ -213,6 +252,18 @@ export default function WarehouseInboundPage() {
 
           <Card className="p-5">
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
+              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                <span>انبار مقصد</span>
+                <SearchableSelect
+                  value={warehouseId || undefined}
+                  onValueChange={setWarehouseId}
+                  options={warehouseOptions}
+                  placeholder="انتخاب انبار مقصد"
+                  searchPlaceholder="جستجو در انبارها"
+                  emptyMessage="انباری پیدا نشد"
+                />
+              </label>
+
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کالا</span>
                 <div className="relative">
@@ -318,6 +369,12 @@ export default function WarehouseInboundPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function getWarehouseTypeLabel(type: string) {
+  if (type === "naja") return "انبار ناجا";
+  if (type === "other") return "سایر";
+  return "انبار عمومی";
 }
 
 function InfoItem({ label, value }: { label: string; value: string }) {

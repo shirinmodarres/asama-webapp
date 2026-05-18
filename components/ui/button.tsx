@@ -9,7 +9,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border border-[#1F3A5F] bg-[#1F3A5F] text-white shadow-[0_16px_30px_rgba(31,58,95,0.16)] hover:bg-[#28496F] hover:shadow-[0_18px_34px_rgba(31,58,95,0.2)]",
+          "border border-[#1F3A5F] bg-[#1F3A5F] !text-white shadow-[0_16px_30px_rgba(31,58,95,0.16)] hover:bg-[#28496F] hover:shadow-[0_18px_34px_rgba(31,58,95,0.2)] disabled:!text-[#94A3B8] [&_*]:!text-inherit",
         secondary:
           "border border-[#D7E2DF] bg-[#F6FAF7] text-[#315D3D] shadow-[0_10px_24px_rgba(108,174,117,0.12)] hover:bg-[#EDF5EF]",
         outline:
@@ -17,9 +17,9 @@ const buttonVariants = cva(
         ghost:
           "border border-transparent bg-transparent text-[#516176] hover:bg-[#EFF4F8] hover:text-[#1F3A5F]",
         destructive:
-          "border border-[#E9C8C8] bg-[#8F2C2C] text-white shadow-[0_14px_28px_rgba(143,44,44,0.18)] hover:bg-[#7B2525]",
+          "border border-[#E9C8C8] bg-[#8F2C2C] !text-white shadow-[0_14px_28px_rgba(143,44,44,0.18)] hover:bg-[#7B2525] disabled:!text-[#94A3B8] [&_*]:!text-inherit",
         success:
-          "border border-[#6CAE75] bg-[#6CAE75] text-white shadow-[0_14px_28px_rgba(108,174,117,0.18)] hover:bg-[#609B69]",
+          "border border-[#6CAE75] bg-[#6CAE75] !text-white shadow-[0_14px_28px_rgba(108,174,117,0.18)] hover:bg-[#609B69] disabled:!text-[#94A3B8] [&_*]:!text-inherit",
       },
       size: {
         default: "h-11 px-4 py-2.5",

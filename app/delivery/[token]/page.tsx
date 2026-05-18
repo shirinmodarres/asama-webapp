@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -13,7 +11,7 @@ import { AsamaLogo } from "@/components/branding/asama-logo";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
-import type { ExitSlip, WarehouseItemUnit } from "@/lib/models/warehouse.model";
+import type { ExitSlip } from "@/lib/models/warehouse.model";
 import {
   confirmDelivery,
   getDeliveryByToken,
@@ -55,27 +53,6 @@ export default function DeliveryConfirmationPage() {
       isMounted = false;
     };
   }, [params.token]);
-
-  const columns: DataTableColumn<WarehouseItemUnit>[] = [
-    { key: "productName", header: "کالا", render: (row) => row.productName },
-    {
-      key: "quantity",
-      header: "تعداد",
-      render: (row) => formatNumber(row.quantity || 1),
-    },
-    {
-      key: "productIdentifier",
-      header: "شناسه محصول",
-      render: (row) =>
-        row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
-    },
-    {
-      key: "serialNumber",
-      header: "سریال",
-      render: (row) =>
-        row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
-    },
-  ];
 
   const submitConfirmation = async () => {
     setError("");
@@ -157,12 +134,41 @@ export default function DeliveryConfirmationPage() {
               </dl>
             </Card>
 
-            {delivery.units.length > 0 ? (
-              <DataTable
-                columns={columns}
-                rows={delivery.units}
-                rowKey={(row) => row.objectId || row.id}
-              />
+            {delivery.items.length > 0 ? (
+              <Card className="p-5">
+                <h2 className="text-base font-semibold text-[#1F3A5F]">
+                  کالاها
+                </h2>
+                <div className="mt-4 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                  <table className="min-w-full border-collapse text-right text-sm">
+                    <thead>
+                      <tr className="bg-[#F8FBFD] text-[#1F3A5F]">
+                        <th className="px-3 py-2 font-semibold">کالا</th>
+                        <th className="px-3 py-2 font-semibold">تعداد</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {delivery.items.map((item) => (
+                        <tr
+                          key={
+                            item.productObjectId ||
+                            item.productSku ||
+                            item.productName
+                          }
+                          className="border-t border-[#E5E7EB]"
+                        >
+                          <td className="px-3 py-2">
+                            {item.productName || item.productSku || "-"}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatNumber(item.quantity)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             ) : null}
 
             <Card className="p-5">

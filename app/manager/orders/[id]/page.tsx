@@ -17,6 +17,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -32,6 +33,10 @@ import {
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
+import {
+  approveNajaOrder,
+  rejectNajaOrder,
+} from "@/lib/services/naja.service";
 import {
   approveOrder,
   cancelOrder,
@@ -53,6 +58,7 @@ export default function ManagerOrderReviewPage() {
   const [decision, setDecision] = useState<DecisionType>(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [cancelReasonCode, setCancelReasonCode] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
@@ -105,9 +111,8 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const canApprove = order.orderStatus === "pending" && order.orderType === "normal";
+  const canApprove = order.orderStatus === "pending";
   const canCancel =
-    order.orderType === "normal" &&
     !["cancelled", "invoiced", "returned", "returnedAfterInvoice"].includes(
       order.orderStatus,
     ) &&
@@ -150,9 +155,14 @@ export default function ManagerOrderReviewPage() {
 
     const currentUserName = getStoredCurrentUser()?.fullName ?? "";
 
-    if (decision === "cancel" && !cancelReasonCode) {
+    if (decision === "cancel" && order.orderType === "normal" && !cancelReasonCode) {
       setMessageType("error");
       setMessage("لطفاً دلیل لغو سفارش را انتخاب کنید.");
+      return;
+    }
+    if (decision === "cancel" && order.orderType === "naja" && !rejectReason.trim()) {
+      setMessageType("error");
+      setMessage("لطفاً دلیل رد سفارش را وارد کنید.");
       return;
     }
 
@@ -162,20 +172,30 @@ export default function ManagerOrderReviewPage() {
     try {
       const updated =
         decision === "approve"
-          ? await approveOrder(order.objectId)
-          : await cancelOrder(order.objectId, {
-              reasonCode: cancelReasonCode,
-              cancelledByName: currentUserName,
-            });
+          ? order.orderType === "naja"
+            ? await approveNajaOrder(order.objectId)
+            : await approveOrder(order.objectId)
+          : order.orderType === "naja"
+            ? await rejectNajaOrder(order.objectId, {
+                reason: rejectReason.trim(),
+                rejectedByName: currentUserName,
+              })
+            : await cancelOrder(order.objectId, {
+                reasonCode: cancelReasonCode,
+                cancelledByName: currentUserName,
+              });
       setOrder(updated);
       setMessageType("success");
       setMessage(
         decision === "approve"
           ? "سفارش با موفقیت تأیید شد."
-          : "سفارش با موفقیت لغو شد.",
+          : order.orderType === "naja"
+            ? "سفارش با موفقیت رد شد."
+            : "سفارش با موفقیت لغو شد.",
       );
       setDecision(null);
       setCancelReasonCode("");
+      setRejectReason("");
       if (decision === "approve") {
         setTimeout(() => router.push("/manager/order-tracking"), 700);
       }
@@ -372,7 +392,7 @@ export default function ManagerOrderReviewPage() {
                   onClick={() => setDecision("cancel")}
                 >
                   <XCircle className="size-4" />
-                  لغو سفارش
+                  {order.orderType === "naja" ? "رد سفارش" : "لغو سفارش"}
                 </Button>
               ) : null}
             </div>
@@ -429,22 +449,37 @@ export default function ManagerOrderReviewPage() {
 
       <ConfirmationModal
         open={decision !== null}
-        title={decision === "approve" ? "تایید سفارش" : "لغو سفارش"}
+        title={
+          decision === "approve"
+            ? "تایید سفارش"
+            : order.orderType === "naja"
+              ? "رد سفارش"
+              : "لغو سفارش"
+        }
         message={
           decision === "approve"
             ? "با تایید، سفارش وارد فرآیند انبار می شود."
-            : "برای لغو سفارش، دلیل لغو را انتخاب کنید."
+            : order.orderType === "naja"
+              ? "برای رد سفارش، دلیل را وارد کنید."
+              : "برای لغو سفارش، دلیل لغو را انتخاب کنید."
         }
-        confirmText={decision === "approve" ? "تایید نهایی" : "ثبت لغو سفارش"}
+        confirmText={
+          decision === "approve"
+            ? "تایید نهایی"
+            : order.orderType === "naja"
+              ? "ثبت رد سفارش"
+              : "ثبت لغو سفارش"
+        }
         tone={decision === "approve" ? "success" : "danger"}
         busy={isSubmitting}
         onConfirm={confirmDecision}
         onCancel={() => {
           setDecision(null);
           setCancelReasonCode("");
+          setRejectReason("");
         }}
       >
-        {decision === "cancel" ? (
+        {decision === "cancel" && order.orderType === "normal" ? (
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>دلیل لغو</span>
             <Select
@@ -463,6 +498,16 @@ export default function ManagerOrderReviewPage() {
                 ))}
               </SelectContent>
             </Select>
+          </label>
+        ) : null}
+        {decision === "cancel" && order.orderType === "naja" ? (
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>دلیل رد سفارش</span>
+            <Textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              disabled={isSubmitting}
+            />
           </label>
         ) : null}
       </ConfirmationModal>

@@ -1,3 +1,5 @@
+import type { ProductWarehouseInventory } from "@/lib/models/warehouse.model";
+
 export type ProductStatus = "active" | "inactive";
 
 export interface Product {
@@ -20,6 +22,7 @@ export interface Product {
   availableStock: number;
   warehouseAvailableStock: number;
   najaInventoryQty: number;
+  inventories: ProductWarehouseInventory[];
   createdAt: string;
   updatedAt: string;
 }

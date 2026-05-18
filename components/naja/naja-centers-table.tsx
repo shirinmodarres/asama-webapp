@@ -24,9 +24,21 @@ export function NajaCentersTable({
         <span className="font-semibold text-[#1F3A5F]">{row.name}</span>
       ),
     },
-    { key: "centerCode", header: "کد مرکز", render: (row) => formatFaDigits(row.centerCode) },
-    { key: "responsibleName", header: "مسئول", render: (row) => row.responsibleName },
-    { key: "phone", header: "تلفن", render: (row) => formatFaDigits(row.phone) },
+    {
+      key: "centerCode",
+      header: "کدپستی مرکز",
+      render: (row) => formatFaDigits(row.centerCode),
+    },
+    {
+      key: "responsibleName",
+      header: "مسئول",
+      render: (row) => row.responsibleName,
+    },
+    {
+      key: "phone",
+      header: "تلفن",
+      render: (row) => formatFaDigits(row.phone),
+    },
     { key: "province", header: "استان", render: (row) => row.province },
     { key: "city", header: "شهر", render: (row) => row.city },
     { key: "county", header: "شهرستان", render: (row) => row.county },
@@ -55,5 +67,11 @@ export function NajaCentersTable({
     });
   }
 
-  return <DataTable columns={columns} rows={centers} rowKey={(row) => row.objectId} />;
+  return (
+    <DataTable
+      columns={columns}
+      rows={centers}
+      rowKey={(row) => row.objectId}
+    />
+  );
 }

@@ -8,7 +8,11 @@ import {
 } from "@/lib/mappers/mapper-utils";
 import type {
   ExitSlip,
+  ExitSlipItemGroup,
+  ExitSlipItemUnit,
   ExitSlipPdfData,
+  ProductWarehouseInventory,
+  Warehouse,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
   WarehouseUnitStatus,
@@ -23,20 +27,97 @@ const UNIT_STATUS_LABELS: Record<WarehouseUnitStatus, string> = {
   returned: "برگشتی",
 };
 
+export function mapWarehouseDto(dto: unknown): Warehouse {
+  const record = toRecord(dto);
+  return {
+    objectId: toStringValue(record.objectId),
+    id: toStringValue(record.id) || toStringValue(record.objectId),
+    name: toStringValue(record.name),
+    code: normalizeDigits(toStringValue(record.code)),
+    type: toStringValue(record.type) || "general",
+    allowedOrderTypes: toArray(record.allowedOrderTypes)
+      .map((value) => toStringValue(value))
+      .filter((value): value is "normal" | "naja" =>
+        value === "normal" || value === "naja",
+      ),
+    isDefault: toBooleanValue(record.isDefault),
+    status: toStringValue(record.status) || "active",
+  };
+}
+
+export function mapWarehouseListDto(dto: unknown): Warehouse[] {
+  const record = toRecord(dto);
+  const source = Array.isArray(dto)
+    ? dto
+    : toArray(record.items).length
+      ? record.items
+      : toArray(record.data).length
+        ? record.data
+        : record.results;
+  return toArray(source).map(mapWarehouseDto);
+}
+
+export function mapProductWarehouseInventoryDto(
+  dto: unknown,
+): ProductWarehouseInventory {
+  const record = toRecord(dto);
+  const warehouse = toRecord(record.warehouse);
+  const stock = toNumberValue(record.stock ?? record.warehouseStock);
+  const reservedStock = toNumberValue(record.reservedStock);
+  return {
+    warehouseId: toStringValue(
+      record.warehouseId ?? record.warehouseObjectId ?? warehouse.objectId,
+    ),
+    warehouseName: toStringValue(record.warehouseName ?? warehouse.name),
+    warehouseType: toStringValue(record.warehouseType ?? warehouse.type) || "general",
+    stock,
+    reservedStock,
+    availableStock:
+      record.availableStock === undefined
+        ? stock - reservedStock
+        : toNumberValue(record.availableStock),
+  };
+}
+
+export function mapProductWarehouseInventoryListDto(
+  dto: unknown,
+): ProductWarehouseInventory[] {
+  return toArray(dto).map(mapProductWarehouseInventoryDto);
+}
+
 export function mapWarehouseItemUnitDto(dto: unknown): WarehouseItemUnit {
   const wrapper = toRecord(dto);
   const nestedUnit = toRecord(wrapper.unit);
   const record = Object.keys(nestedUnit).length ? nestedUnit : wrapper;
+  const productRecord = toRecord(record.product ?? wrapper.product);
   const status = toStringValue(record.status) || "in_stock";
 
   return {
-    objectId: toStringValue(record.objectId),
-    id: toStringValue(record.id) || toStringValue(record.objectId),
-    productObjectId: toStringValue(record.productObjectId),
-    productSku: normalizeDigits(toStringValue(record.productSku)),
-    productName: toStringValue(record.productName),
-    productBrand: toStringValue(record.productBrand ?? record.brand),
-    productModel: toNullableString(record.productModel ?? record.model),
+    objectId: toStringValue(record.objectId ?? record.unitObjectId),
+    id:
+      toStringValue(record.id) ||
+      toStringValue(record.objectId ?? record.unitObjectId),
+    productObjectId: toStringValue(
+      record.productObjectId ?? productRecord.objectId ?? wrapper.productObjectId,
+    ),
+    productSku: normalizeDigits(
+      toStringValue(record.productSku ?? productRecord.sku ?? wrapper.productSku),
+    ),
+    productName: toStringValue(
+      record.productName ?? productRecord.name ?? wrapper.productName,
+    ),
+    productBrand: toStringValue(
+      record.productBrand ??
+        record.brand ??
+        productRecord.brand ??
+        wrapper.productBrand,
+    ),
+    productModel: toNullableString(
+      record.productModel ??
+        record.model ??
+        productRecord.model ??
+        wrapper.productModel,
+    ),
     productIdentifier: normalizeDigits(toStringValue(record.productIdentifier)),
     serialNumber: normalizeDigits(toStringValue(record.serialNumber)),
     trackingCode: normalizeDigits(toStringValue(record.trackingCode)),
@@ -56,6 +137,85 @@ export function mapWarehouseItemUnitDto(dto: unknown): WarehouseItemUnit {
 
 export function mapWarehouseItemUnitListDto(dto: unknown): WarehouseItemUnit[] {
   return toArray(dto).map(mapWarehouseItemUnitDto);
+}
+
+export function mapExitSlipItemGroupDto(dto: unknown): ExitSlipItemGroup {
+  const record = toRecord(dto);
+  const productRecord = toRecord(record.product);
+  const rawUnits = toArray(record.units);
+  const units = rawUnits.map(mapExitSlipItemUnitDto);
+  const firstUnit = rawUnits.length ? mapWarehouseItemUnitDto(rawUnits[0]) : null;
+
+  return {
+    productObjectId: toStringValue(
+      record.productObjectId ?? productRecord.objectId ?? firstUnit?.productObjectId,
+    ),
+    productSku: normalizeDigits(
+      toStringValue(record.productSku ?? productRecord.sku ?? firstUnit?.productSku),
+    ),
+    productName: toStringValue(
+      record.productName ?? productRecord.name ?? firstUnit?.productName,
+    ),
+    productBrand: toStringValue(
+      record.productBrand ?? record.brand ?? productRecord.brand ?? firstUnit?.productBrand,
+    ),
+    productModel: toNullableString(
+      record.productModel ?? record.model ?? productRecord.model ?? firstUnit?.productModel,
+    ),
+    quantity: toNumberValue(record.quantity) || units.length,
+    units,
+  };
+}
+
+export function mapExitSlipItemGroupListDto(dto: unknown): ExitSlipItemGroup[] {
+  return toArray(dto).map(mapExitSlipItemGroupDto);
+}
+
+function mapExitSlipItemUnitDto(dto: unknown): ExitSlipItemUnit {
+  const unit = mapWarehouseItemUnitDto(dto);
+  return {
+    unitObjectId: unit.objectId,
+    productIdentifier: unit.productIdentifier,
+    serialNumber: unit.serialNumber,
+    trackingCode: unit.trackingCode,
+    status: unit.status,
+  };
+}
+
+function groupUnitsByProduct(units: WarehouseItemUnit[]): ExitSlipItemGroup[] {
+  const groups = new Map<string, ExitSlipItemGroup>();
+
+  for (const unit of units) {
+    const key =
+      unit.productObjectId ||
+      (unit.productSku ? `sku:${unit.productSku}` : `unknown:${unit.productName}`);
+    const existing = groups.get(key);
+    const itemUnit: ExitSlipItemUnit = {
+      unitObjectId: unit.objectId,
+      productIdentifier: unit.productIdentifier,
+      serialNumber: unit.serialNumber,
+      trackingCode: unit.trackingCode,
+      status: unit.status,
+    };
+
+    if (existing) {
+      existing.units.push(itemUnit);
+      existing.quantity = existing.units.length;
+      continue;
+    }
+
+    groups.set(key, {
+      productObjectId: unit.productObjectId,
+      productSku: unit.productSku,
+      productName: unit.productName,
+      productBrand: unit.productBrand,
+      productModel: unit.productModel,
+      quantity: 1,
+      units: [itemUnit],
+    });
+  }
+
+  return Array.from(groups.values());
 }
 
 export function mapWarehouseInboundReceiptDto(
@@ -95,6 +255,14 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
       deliveryAddress.formatted ??
       deliveryAddress.fullAddress,
   );
+  const groupedSourceItems = hasGroupedItems(source.items);
+  const sourceUnits = toArray(source.units);
+  const units = mapWarehouseItemUnitListDto(
+    sourceUnits.length ? source.units : groupedSourceItems ? [] : source.items,
+  );
+  const items = groupedSourceItems
+    ? mapExitSlipItemGroupListDto(source.items)
+    : groupUnitsByProduct(units);
 
   return {
     objectId: toStringValue(source.objectId),
@@ -139,7 +307,8 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     ),
     deliveryAddress: fullAddress,
     notes: toNullableString(source.notes),
-    units: mapWarehouseItemUnitListDto(source.units ?? source.items),
+    items: items.length ? items : groupUnitsByProduct(units),
+    units,
     createdAt: toStringValue(source.createdAt),
     updatedAt: toStringValue(source.updatedAt),
   };
@@ -154,6 +323,15 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
   const customer = toRecord(record.customer);
   const receiver = toRecord(record.receiver);
   const deliveryAddress = toRecord(record.deliveryAddress);
+
+  const groupedSourceItems = hasGroupedItems(record.items);
+  const sourceUnits = toArray(record.units);
+  const units = mapWarehouseItemUnitListDto(
+    sourceUnits.length ? record.units : groupedSourceItems ? [] : record.items,
+  );
+  const items = groupedSourceItems
+    ? mapExitSlipItemGroupListDto(record.items)
+    : groupUnitsByProduct(units);
 
   return {
     companyName: toStringValue(record.companyName) || "آساما",
@@ -175,10 +353,15 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
       fullAddress: toNullableString(deliveryAddress.fullAddress),
       formatted: toNullableString(deliveryAddress.formatted),
     },
-    items: mapWarehouseItemUnitListDto(record.items),
+    items: items.length ? items : groupUnitsByProduct(units),
+    units,
     deliveryCode: record.deliveryCode
       ? normalizeDigits(toStringValue(record.deliveryCode))
       : null,
     notes: toNullableString(record.notes),
   };
+}
+
+function hasGroupedItems(value: unknown): boolean {
+  return toArray(value).some((item) => Array.isArray(toRecord(item).units));
 }

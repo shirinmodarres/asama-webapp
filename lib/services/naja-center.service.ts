@@ -47,6 +47,12 @@ function normalizeNajaCenterPayload(
   return {
     ...payload,
     phone: payload.phone ? normalizePhone(payload.phone) : payload.phone,
+    secondaryPhone: payload.secondaryPhone
+      ? normalizePhone(payload.secondaryPhone)
+      : payload.secondaryPhone,
+    landlinePhone: payload.landlinePhone
+      ? normalizeDigits(payload.landlinePhone)
+      : payload.landlinePhone,
     centerCode: payload.centerCode
       ? normalizeDigits(payload.centerCode)
       : payload.centerCode,

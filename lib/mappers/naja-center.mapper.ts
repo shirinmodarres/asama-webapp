@@ -30,6 +30,12 @@ function mapCenterRecord(record: Record<string, unknown>): NajaCenter {
     phone: normalizePhone(
       toStringValue(record.phone) || toStringValue(record.phoneNumber),
     ),
+    secondaryPhone: toNullableString(record.secondaryPhone)
+      ? normalizePhone(toStringValue(record.secondaryPhone))
+      : null,
+    landlinePhone: toNullableString(record.landlinePhone)
+      ? normalizeDigits(toStringValue(record.landlinePhone))
+      : null,
     province: toStringValue(record.province),
     city: toStringValue(record.city),
     county: toStringValue(record.county),

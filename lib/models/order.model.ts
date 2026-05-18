@@ -26,6 +26,9 @@ export interface Order {
   customer: Customer | null;
   customerObjectId: string | null;
   customerAddressObjectId: string | null;
+  warehouseId: string | null;
+  warehouseName: string | null;
+  warehouseType: string | null;
   customerNationalId: string | null;
   customerPhone: string | null;
   deliveryAddressTitle: string | null;

@@ -104,7 +104,7 @@ export default function SupportProductsPage() {
     },
     {
       key: "warehouseStock",
-      header: "موجودی واقعی انبار",
+      header: "موجودی کل انبارها",
       render: (row) => formatNumber(row.warehouseStock),
     },
     { key: "unit", header: "واحد", render: (row) => row.unit },

@@ -11,17 +11,14 @@ import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { createNajaCenter } from "@/lib/services/naja-center.service";
 
-export default function NajaCreateCenterPage() {
+export default function SupportCreateNajaCenterPage() {
   const router = useRouter();
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">("error");
+  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = async (input: NajaCenterFormInput) => {
+  const submit = async (input: NajaCenterFormInput) => {
+    setError("");
     setIsSubmitting(true);
-    setMessage("");
-    setMessageType("error");
-
     try {
       await createNajaCenter({
         name: input.name.trim(),
@@ -36,34 +33,22 @@ export default function NajaCreateCenterPage() {
         fullAddress: input.fullAddress.trim(),
         status: input.status,
       });
-
-      setMessageType("success");
-      setMessage("مرکز ناجا با موفقیت ثبت شد.");
-      setTimeout(() => {
-        router.push("/naja/centers");
-        router.refresh();
-      }, 700);
-    } catch (error) {
-      setMessageType("error");
-      setMessage(getErrorMessage(error));
+      router.push("/support/naja-centers");
+    } catch (submitError) {
+      setError(getErrorMessage(submitError));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <DashboardLayout role="naja" title="تعریف مرکز ناجا">
-      {message && messageType === "success" ? (
-        <div className="asama-banner px-4 py-3 text-sm">{message}</div>
-      ) : null}
-      {message && messageType === "error" ? (
-        <InlineErrorMessage message={message} />
-      ) : null}
+    <DashboardLayout role="support" title="تعریف مرکز ناجا">
+      {error ? <InlineErrorMessage message={error} /> : null}
       <NajaCenterForm
         mode="create"
-        onSubmit={onSubmit}
+        onSubmit={submit}
         isSubmitting={isSubmitting}
-        onCancel={() => router.push("/naja/centers")}
+        onCancel={() => router.push("/support/naja-centers")}
       />
     </DashboardLayout>
   );
