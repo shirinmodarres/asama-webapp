@@ -94,7 +94,7 @@ export function SearchableSelect({
         top,
         left: rect.left,
         width: rect.width,
-        zIndex: 80,
+        zIndex: 120,
       });
     };
 
@@ -119,7 +119,7 @@ export function SearchableSelect({
           setQuery("");
         }}
         className={cn(
-          "flex h-11 w-full items-center justify-between gap-3 rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-sm text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex h-11 w-full items-center justify-between gap-3 rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
           !selectedOption && "text-[#94A3B8]",
           triggerClassName,
         )}
@@ -148,7 +148,7 @@ export function SearchableSelect({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={searchPlaceholder}
-                  className="pr-10"
+                  className="pr-10 text-xs"
                   autoFocus
                 />
               </div>
@@ -169,7 +169,7 @@ export function SearchableSelect({
                             setQuery("");
                           }}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 rounded-[12px] px-3 py-2.5 text-right text-sm transition-colors",
+                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-right text-xs transition-colors",
                             isSelected
                               ? "bg-[#F3F7FB] text-[#1F3A5F]"
                               : "text-[#334155] hover:bg-[#EFF4F8]",
@@ -184,7 +184,7 @@ export function SearchableSelect({
                     })}
                   </div>
                 ) : (
-                  <div className="px-3 py-4 text-sm text-[#6B7280]">
+                  <div className="px-3 py-4 text-xs text-[#6B7280]">
                     {emptyMessage}
                   </div>
                 )}

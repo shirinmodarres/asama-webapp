@@ -66,7 +66,7 @@ export function DateRangeFilter({
       </button>
 
       {isOpen ? (
-        <div className="absolute top-full right-0 z-30 mt-2 w-[280px] rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
+        <div className="absolute top-full right-0 z-[120] mt-2 w-[280px] rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
           <div className="grid gap-3">
             <label className="grid gap-2 text-xs font-medium text-[#334155]">
               <span>از تاریخ</span>

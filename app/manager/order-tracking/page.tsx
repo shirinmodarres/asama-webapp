@@ -1,6 +1,6 @@
 "use client";
 
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -80,7 +80,9 @@ export default function ManagerOrderTrackingPage() {
         const matchesSearch =
           order.code.toLowerCase().includes(search.toLowerCase()) ||
           order.createdByName.toLowerCase().includes(search.toLowerCase()) ||
-          (order.customerName ?? "").toLowerCase().includes(search.toLowerCase());
+          (order.customerName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
 
         if (!matchesSearch) return false;
         if (filter === "all") return true;
@@ -93,6 +95,12 @@ export default function ManagerOrderTrackingPage() {
       })
       .filter((order) => isWithinDateRange(order.updatedAt, dateFrom, dateTo));
   }, [dateFrom, dateTo, filter, orders, search]);
+
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    filter !== "all" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -108,7 +116,11 @@ export default function ManagerOrderTrackingPage() {
       render: (row) => (row.orderType === "naja" ? "ناجا" : "عادی"),
     },
     { key: "creator", header: "ثبت کننده", render: (row) => row.createdByName },
-    { key: "customer", header: "مشتری", render: (row) => row.customerName ?? "-" },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.customerName ?? "-",
+    },
     {
       key: "order-status",
       header: "وضعیت سفارش",
@@ -117,7 +129,9 @@ export default function ManagerOrderTrackingPage() {
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
+      render: (row) => (
+        <StatusBadge type="warehouse" status={row.warehouseStatus} />
+      ),
     },
     {
       key: "updated",
@@ -169,16 +183,34 @@ export default function ManagerOrderTrackingPage() {
                 options={[
                   { value: "all", label: "همه وضعیت‌ها" },
                   { value: "pending", label: getOrderStatusLabel("pending") },
-                  { value: "needs_review", label: getOrderStatusLabel("needs_review") },
-                  { value: "review_resolved", label: getOrderStatusLabel("review_resolved") },
+                  {
+                    value: "needs_review",
+                    label: getOrderStatusLabel("needs_review"),
+                  },
+                  {
+                    value: "review_resolved",
+                    label: getOrderStatusLabel("review_resolved"),
+                  },
                   { value: "approved", label: getOrderStatusLabel("approved") },
-                  { value: "cancelled", label: getOrderStatusLabel("cancelled") },
+                  {
+                    value: "cancelled",
+                    label: getOrderStatusLabel("cancelled"),
+                  },
                   { value: "voided", label: getOrderStatusLabel("voided") },
-                  { value: "dispatchIssued", label: getWarehouseStatusLabel("dispatchIssued") },
-                  { value: "delivered", label: getWarehouseStatusLabel("delivered") },
+                  {
+                    value: "dispatchIssued",
+                    label: getWarehouseStatusLabel("dispatchIssued"),
+                  },
+                  {
+                    value: "delivered",
+                    label: getWarehouseStatusLabel("delivered"),
+                  },
                   { value: "invoiced", label: getOrderStatusLabel("invoiced") },
                   { value: "returned", label: getOrderStatusLabel("returned") },
-                  { value: "returnedAfterInvoice", label: getOrderStatusLabel("returnedAfterInvoice") },
+                  {
+                    value: "returnedAfterInvoice",
+                    label: getOrderStatusLabel("returnedAfterInvoice"),
+                  },
                 ]}
                 placeholder="همه وضعیت‌ها"
                 searchPlaceholder="جستجو در وضعیت‌ها"
@@ -194,19 +226,22 @@ export default function ManagerOrderTrackingPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setFilter("all");
-              setDateFrom("");
-              setDateTo("");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setFilter("all");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -230,11 +265,17 @@ export default function ManagerOrderTrackingPage() {
   );
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
-  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime())
+    return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime())
+    return false;
   return true;
 }

@@ -14,13 +14,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
-import {
-  formatDate,
-  formatNumber,
-} from "@/lib/expert/utils";
+import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -66,12 +63,24 @@ export default function ManagerPendingOrdersPage() {
         const matchesSearch =
           order.code.toLowerCase().includes(search.toLowerCase()) ||
           order.createdByName.toLowerCase().includes(search.toLowerCase()) ||
-          (order.customerName ?? "").toLowerCase().includes(search.toLowerCase());
+          (order.customerName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
         const matchesStatus =
           statusFilter === "all" ? true : order.orderStatus === statusFilter;
-        return matchesSearch && matchesStatus && isWithinDateRange(order.createdAt, dateFrom, dateTo);
+        return (
+          matchesSearch &&
+          matchesStatus &&
+          isWithinDateRange(order.createdAt, dateFrom, dateTo)
+        );
       });
   }, [dateFrom, dateTo, orders, search, statusFilter]);
+
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    statusFilter !== "pending" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
 
   const statusOptions = useMemo(
     () =>
@@ -95,7 +104,11 @@ export default function ManagerPendingOrdersPage() {
       ),
     },
     { key: "creator", header: "ثبت کننده", render: (row) => row.createdByName },
-    { key: "customer", header: "مشتری", render: (row) => row.customerName ?? "-" },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.customerName ?? "-",
+    },
     {
       key: "date",
       header: "تاریخ",
@@ -104,27 +117,21 @@ export default function ManagerPendingOrdersPage() {
     {
       key: "items",
       header: "تعداد آیتم",
-      render: (row) => formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
+      render: (row) =>
+        formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
     },
     {
       key: "order-status",
       header: "وضعیت سفارش",
       render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
     },
-    {
-      key: "review",
-      header: "بررسی",
-      render: (row) =>
-        row.orderStatus === "needs_review"
-          ? row.reviewReasonLabel || "نیازمند بررسی"
-          : row.orderStatus === "review_resolved"
-            ? "مشکل برطرف شد"
-            : "-",
-    },
+
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
+      render: (row) => (
+        <StatusBadge type="warehouse" status={row.warehouseStatus} />
+      ),
     },
     {
       key: "actions",
@@ -132,7 +139,7 @@ export default function ManagerPendingOrdersPage() {
       render: (row) => (
         <Link
           href={`/manager/orders/${row.objectId}`}
-          className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs !text-white"
+          className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs text-white!"
         >
           بررسی سفارش
         </Link>
@@ -176,11 +183,16 @@ export default function ManagerPendingOrdersPage() {
                   ...statusOptions
                     .filter(
                       (value) =>
-                        !["pending", "needs_review", "review_resolved"].includes(
-                          value,
-                        ),
+                        ![
+                          "pending",
+                          "needs_review",
+                          "review_resolved",
+                        ].includes(value),
                     )
-                    .map((value) => ({ value, label: getOrderStatusLabel(value) })),
+                    .map((value) => ({
+                      value,
+                      label: getOrderStatusLabel(value),
+                    })),
                 ]}
                 placeholder="همه وضعیت‌ها"
                 searchPlaceholder="جستجو در وضعیت‌ها"
@@ -196,19 +208,22 @@ export default function ManagerPendingOrdersPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("pending");
-              setDateFrom("");
-              setDateTo("");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("pending");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -232,11 +247,17 @@ export default function ManagerPendingOrdersPage() {
   );
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
-  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime())
+    return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime())
+    return false;
   return true;
 }
