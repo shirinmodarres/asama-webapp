@@ -111,9 +111,10 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
             required={false}
           />
           <InputField
-            label="شماره تلفن ثابت"
+            label="شماره تلفن ثابت (اختیاری)"
             value={landlinePhone}
             onChange={setLandlinePhone}
+            required={false}
           />
           <InputField label="استان" value={province} onChange={setProvince} />
           <InputField label="شهر" value={city} onChange={setCity} />

@@ -212,12 +212,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "کاربران و نقش‌ها",
     },
     {
-      label: "تاریخچه موجودی",
-      href: "/support/inventory-history",
-      icon: "history",
-      description: "ردیابی ثبت‌های انبار",
-    },
-    {
       label: "ویرایش سفارش",
       href: "/support/orders",
       icon: "pencil",

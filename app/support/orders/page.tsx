@@ -15,7 +15,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -59,15 +59,23 @@ export default function SupportOrdersPage() {
         (order) =>
           order.code.toLowerCase().includes(search.toLowerCase()) ||
           order.createdByName.toLowerCase().includes(search.toLowerCase()) ||
-          (order.customerName ?? "").toLowerCase().includes(search.toLowerCase()),
+          (order.customerName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase()),
       )
-      .filter((order) => statusFilter === "all" || order.orderStatus === statusFilter);
+      .filter(
+        (order) => statusFilter === "all" || order.orderStatus === statusFilter,
+      );
   }, [orders, search, statusFilter]);
+
+  const hasActiveFilters = search.trim().length > 0 || statusFilter !== "all";
 
   const statusOptions = useMemo(
     () => [
       { value: "all", label: "همه وضعیت‌ها" },
-      ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((status) => ({
+      ...Array.from(
+        new Set(orders.map((order) => order.orderStatus).filter(Boolean)),
+      ).map((status) => ({
         value: status,
         label: getOrderStatusLabel(status),
       })),
@@ -84,7 +92,11 @@ export default function SupportOrdersPage() {
       ),
     },
     { key: "creator", header: "ثبت کننده", render: (row) => row.createdByName },
-    { key: "customer", header: "مشتری", render: (row) => row.customerName ?? "-" },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.customerName ?? "-",
+    },
     {
       key: "status",
       header: "وضعیت سفارش",
@@ -93,7 +105,9 @@ export default function SupportOrdersPage() {
     {
       key: "warehouse",
       header: "وضعیت انبار",
-      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
+      render: (row) => (
+        <StatusBadge type="warehouse" status={row.warehouseStatus} />
+      ),
     },
     {
       key: "actions",
@@ -125,7 +139,7 @@ export default function SupportOrdersPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
+                placeholder="جستجو بر اساس نام مشتری یا ثبت کننده"
                 className="pr-10"
               />
             </div>
@@ -145,9 +159,20 @@ export default function SupportOrdersPage() {
               />
             </div>
           </label>
-          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setStatusFilter("all"); }}>
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 

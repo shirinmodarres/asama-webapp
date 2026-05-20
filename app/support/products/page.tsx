@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -10,8 +8,8 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ProductStatusBadge } from "@/components/support/product-status-badge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,7 +21,9 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import { listProducts } from "@/lib/services/product.service";
-import { Search, Tags } from "lucide-react";
+import { PlusCircle, Search, Tags, X } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 export default function SupportProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -101,6 +101,12 @@ export default function SupportProductsPage() {
     });
   }, [brandFilter, categoryFilter, products, search, statusFilter]);
 
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    brandFilter !== "all" ||
+    categoryFilter !== "all" ||
+    statusFilter !== "all";
+
   const columns: DataTableColumn<Product>[] = [
     {
       key: "name",
@@ -159,9 +165,10 @@ export default function SupportProductsPage() {
         actions={
           <Link
             href="/support/products/new"
-            className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm !text-white"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
           >
-            تعریف کالای جدید
+            <PlusCircle className="size-4" />
+            <span>تعریف کالای جدید</span>
           </Link>
         }
       />
@@ -228,19 +235,22 @@ export default function SupportProductsPage() {
               </SelectContent>
             </Select>
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setBrandFilter("all");
-              setCategoryFilter("all");
-              setStatusFilter("all");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setBrandFilter("all");
+                setCategoryFilter("all");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 

@@ -21,7 +21,7 @@ interface DataTableProps<T> {
 export function DataTable<T>({ columns, rows, rowKey }: DataTableProps<T>) {
   return (
     <Card className="overflow-hidden">
-      <div className="overflow-x-auto overscroll-x-contain">
+      <div className="max-h-[70vh] overflow-auto overscroll-contain">
         <table className="min-w-full text-right">
           <thead className="border-b border-[#E9EEF3] bg-[#F8FBFD]">
             <tr>
@@ -29,13 +29,13 @@ export function DataTable<T>({ columns, rows, rowKey }: DataTableProps<T>) {
                 <th
                   key={column.key}
                   className={cn(
-                    "whitespace-nowrap px-5 py-4 text-xs font-semibold tracking-wide text-[#5B6B7F]",
+                    "sticky top-0 z-30 whitespace-nowrap bg-[#F8FBFD] px-5 py-4 text-xs font-semibold tracking-wide text-[#5B6B7F]",
                     column.className,
                     column.headerClassName,
                     column.sticky === "left" &&
-                      "sticky left-0 z-20 bg-[#F8FBFD] shadow-[-10px_0_20px_rgba(15,23,42,0.04)]",
+                      "left-0 z-40 shadow-[-10px_0_20px_rgba(15,23,42,0.04)]",
                     column.sticky === "right" &&
-                      "sticky right-0 z-20 bg-[#F8FBFD] shadow-[10px_0_20px_rgba(15,23,42,0.04)]",
+                      "right-0 z-40 shadow-[10px_0_20px_rgba(15,23,42,0.04)]",
                   )}
                 >
                   {column.header}

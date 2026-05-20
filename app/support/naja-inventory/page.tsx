@@ -28,7 +28,9 @@ export default function SupportNajaInventoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [modalChangeType, setModalChangeType] = useState<"increase" | "decrease">("increase");
+  const [modalChangeType, setModalChangeType] = useState<
+    "increase" | "decrease"
+  >("increase");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
 
@@ -73,7 +75,11 @@ export default function SupportNajaInventoryPage() {
   const columns: DataTableColumn<Product>[] = [
     { key: "name", header: "کالا", render: (row) => row.name },
     { key: "brand", header: "برند", render: (row) => row.brand },
-    { key: "sku", header: "شناسه کالا", render: (row) => row.id || row.sku || "-" },
+    {
+      key: "sku",
+      header: "شناسه کالا",
+      render: (row) => row.id || row.sku || "-",
+    },
     {
       key: "naja",
       header: "موجودی ناجا",
@@ -88,19 +94,14 @@ export default function SupportNajaInventoryPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => (
-        <div className="flex gap-2">
-          <Button type="button" size="sm" onClick={() => openModal(row, "increase")}>
-            افزایش موجودی ناجا
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={() => openModal(row, "decrease")}
-          >
-            کاهش موجودی ناجا
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => openModal(row, "increase")}
+        >
+          مدیریت موجودی
+        </Button>
       ),
     },
   ];
@@ -133,18 +134,28 @@ export default function SupportNajaInventoryPage() {
       <SectionHeader
         title="فهرست موجودی ناجا"
         description="مدیریت موجودی اختصاصی سفارش‌های ناجا"
-        actions={<Badge variant="warning">موجودی ناجا</Badge>}
       />
 
-      {message && messageType === "success" ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
-      {message && messageType === "error" ? <InlineErrorMessage message={message} /> : null}
+      {message && messageType === "success" ? (
+        <div className="asama-banner px-4 py-3 text-sm">{message}</div>
+      ) : null}
+      {message && messageType === "error" ? (
+        <InlineErrorMessage message={message} />
+      ) : null}
 
       {isLoading ? (
         <LoadingState title="در حال دریافت موجودی ناجا" />
       ) : rows.length > 0 ? (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.objectId || row.id} />
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.objectId || row.id}
+        />
       ) : (
-        <EmptyState title="کالایی یافت نشد" description="هنوز کالایی برای موجودی ناجا ثبت نشده است." />
+        <EmptyState
+          title="کالایی یافت نشد"
+          description="هنوز کالایی برای موجودی ناجا ثبت نشده است."
+        />
       )}
 
       <InventoryUpdateModal

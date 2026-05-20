@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { NajaCentersTable } from "@/components/naja/naja-centers-table";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -48,7 +48,9 @@ export default function SupportNajaCentersPage() {
   const provinceOptions = useMemo(
     () => [
       { value: "all", label: "همه استان‌ها" },
-      ...Array.from(new Set(centers.map((center) => center.province).filter(Boolean))).map((province) => ({
+      ...Array.from(
+        new Set(centers.map((center) => center.province).filter(Boolean)),
+      ).map((province) => ({
         value: province,
         label: province,
       })),
@@ -80,15 +82,24 @@ export default function SupportNajaCentersPage() {
       .sort((a, b) => compareText(a.name, b.name));
   }, [centers, provinceFilter, search, statusFilter]);
 
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    provinceFilter !== "all" ||
+    statusFilter !== "all";
+
   return (
     <DashboardLayout role="support" title="مراکز ناجا">
       <SectionHeader
         title="فهرست مراکز ناجا"
         description="مشاهده، جستجو و ویرایش مراکز ناجا"
         actions={
-          <Button asChild>
-            <Link href="/support/naja-centers/new">تعریف مرکز ناجا</Link>
-          </Button>
+          <Link
+            href="/support/naja-centers/new"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
+          >
+            <PlusCircle className="size-4" />
+            <span>تعریف مرکز ناجا</span>
+          </Link>
         }
       />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -100,7 +111,7 @@ export default function SupportNajaCentersPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="جستجو بر اساس نام مرکز، کد مرکز، مسئول یا موقعیت"
+                placeholder="جستجو بر اساس نام مرکز"
                 className="pr-10"
               />
             </div>
@@ -109,16 +120,47 @@ export default function SupportNajaCentersPage() {
             <span>فیلتر استان</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-              <SearchableSelect value={provinceFilter} onValueChange={setProvinceFilter} options={provinceOptions} placeholder="همه استان‌ها" searchPlaceholder="جستجو در استان‌ها" emptyMessage="استانی پیدا نشد" triggerClassName="pr-10" />
+              <SearchableSelect
+                value={provinceFilter}
+                onValueChange={setProvinceFilter}
+                options={provinceOptions}
+                placeholder="همه استان‌ها"
+                searchPlaceholder="جستجو در استان‌ها"
+                emptyMessage="استانی پیدا نشد"
+                triggerClassName="pr-10"
+              />
             </div>
           </label>
           <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
-            <SearchableSelect value={statusFilter} onValueChange={setStatusFilter} options={[{ value: "all", label: "همه وضعیت‌ها" }, { value: "active", label: "فعال" }, { value: "inactive", label: "غیرفعال" }]} placeholder="همه وضعیت‌ها" searchPlaceholder="جستجو در وضعیت‌ها" emptyMessage="وضعیتی پیدا نشد" />
+            <SearchableSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={[
+                { value: "all", label: "همه وضعیت‌ها" },
+                { value: "active", label: "فعال" },
+                { value: "inactive", label: "غیرفعال" },
+              ]}
+              placeholder="همه وضعیت‌ها"
+              searchPlaceholder="جستجو در وضعیت‌ها"
+              emptyMessage="وضعیتی پیدا نشد"
+            />
           </label>
-          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setProvinceFilter("all"); setStatusFilter("all"); }}>
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setProvinceFilter("all");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
       {isLoading ? (
@@ -126,9 +168,15 @@ export default function SupportNajaCentersPage() {
       ) : error ? (
         <PageErrorMessage title="دریافت مراکز انجام نشد" message={error} />
       ) : rows.length > 0 ? (
-        <NajaCentersTable centers={rows} actionBasePath="/support/naja-centers" />
+        <NajaCentersTable
+          centers={rows}
+          actionBasePath="/support/naja-centers"
+        />
       ) : (
-        <EmptyState title="مرکزی ثبت نشده است" description="مرکز ناجا تعریف کنید." />
+        <EmptyState
+          title="مرکزی ثبت نشده است"
+          description="مرکز ناجا تعریف کنید."
+        />
       )}
     </DashboardLayout>
   );

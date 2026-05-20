@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -79,13 +79,22 @@ export default function SupportUsersPage() {
     });
   }, [roleFilter, search, statusFilter, users]);
 
+  const hasActiveFilters =
+    search.trim().length > 0 || roleFilter !== "all" || statusFilter !== "all";
+
   const columns: DataTableColumn<User>[] = [
     {
       key: "fullName",
       header: "نام",
-      render: (row) => <span className="font-medium text-[#1F3A5F]">{row.fullName}</span>,
+      render: (row) => (
+        <span className="font-medium text-[#1F3A5F]">{row.fullName}</span>
+      ),
     },
-    { key: "phone", header: "شماره موبایل", render: (row) => formatFaDigits(row.phone) },
+    {
+      key: "phone",
+      header: "شماره موبایل",
+      render: (row) => formatFaDigits(row.phone),
+    },
     { key: "role", header: "نقش", render: (row) => row.roleLabel },
     {
       key: "status",
@@ -118,9 +127,10 @@ export default function SupportUsersPage() {
         actions={
           <Link
             href="/support/users/new"
-            className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm !text-white"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
           >
-            تعریف کاربر جدید
+            <PlusCircle className="size-4" />
+            <span>تعریف کاربر جدید</span>
           </Link>
         }
       />
@@ -169,29 +179,42 @@ export default function SupportUsersPage() {
               emptyMessage="وضعیتی پیدا نشد"
             />
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setRoleFilter("all");
-              setStatusFilter("all");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setRoleFilter("all");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
       {isLoading ? (
-        <LoadingState title="در حال دریافت کاربران" description="فهرست کاربران از سرور دریافت می شود." />
+        <LoadingState
+          title="در حال دریافت کاربران"
+          description="فهرست کاربران از سرور دریافت می شود."
+        />
       ) : error ? (
         <PageErrorMessage title="دریافت کاربران انجام نشد" message={error} />
       ) : rows.length > 0 ? (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.objectId} />
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.objectId}
+        />
       ) : (
-        <EmptyState title="کاربری یافت نشد" description="هنوز کاربری ثبت نشده است." />
+        <EmptyState
+          title="کاربری یافت نشد"
+          description="هنوز کاربری ثبت نشده است."
+        />
       )}
     </DashboardLayout>
   );

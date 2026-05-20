@@ -20,10 +20,7 @@ import {
   listProducts,
   updateProductStock,
 } from "@/lib/services/product.service";
-import {
-  compareText,
-  formatNumber,
-} from "@/lib/expert/utils";
+import { compareText, formatNumber } from "@/lib/expert/utils";
 
 export default function SupportInventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -105,23 +102,14 @@ export default function SupportInventoryPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => (
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => openModal(row, "increase")}
-          >
-            افزایش موجودی فروش
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={() => openModal(row, "decrease")}
-          >
-            کاهش موجودی فروش
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => openModal(row, "increase")}
+        >
+          مدیریت موجودی
+        </Button>
       ),
     },
   ];

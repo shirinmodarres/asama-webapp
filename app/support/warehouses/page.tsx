@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -61,6 +61,9 @@ export default function SupportWarehousesPage() {
     });
   }, [search, statusFilter, typeFilter, warehouses]);
 
+  const hasActiveFilters =
+    search.trim().length > 0 || typeFilter !== "all" || statusFilter !== "all";
+
   const columns: DataTableColumn<Warehouse>[] = [
     { key: "name", header: "نام انبار", render: (row) => row.name },
     {
@@ -68,7 +71,11 @@ export default function SupportWarehousesPage() {
       header: "کد",
       render: (row) => (row.code ? formatFaDigits(row.code) : "-"),
     },
-    { key: "type", header: "نوع", render: (row) => getWarehouseTypeLabel(row.type) },
+    {
+      key: "type",
+      header: "نوع",
+      render: (row) => getWarehouseTypeLabel(row.type),
+    },
     {
       key: "allowed",
       header: "سفارش مجاز",
@@ -102,9 +109,13 @@ export default function SupportWarehousesPage() {
         title="فهرست انبارها"
         description="مشاهده، جستجو و ویرایش انبارهای عمومی و ناجا"
         actions={
-          <Button asChild>
-            <Link href="/support/warehouses/create">تعریف انبار</Link>
-          </Button>
+          <Link
+            href="/support/warehouses/create"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
+          >
+            <PlusCircle className="size-4" />
+            <span>تعریف انبار</span>
+          </Link>
         }
       />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -116,7 +127,7 @@ export default function SupportWarehousesPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="جستجو بر اساس نام یا کد انبار"
+                placeholder="جستجو بر اساس نام انبار"
                 className="pr-10"
               />
             </div>
@@ -156,18 +167,21 @@ export default function SupportWarehousesPage() {
               emptyMessage="وضعیتی پیدا نشد"
             />
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setTypeFilter("all");
-              setStatusFilter("all");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setTypeFilter("all");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
       {isLoading ? (
@@ -181,7 +195,10 @@ export default function SupportWarehousesPage() {
           rowKey={(row) => row.objectId}
         />
       ) : (
-        <EmptyState title="انباری ثبت نشده است" description="انبار جدید تعریف کنید." />
+        <EmptyState
+          title="انباری ثبت نشده است"
+          description="انبار جدید تعریف کنید."
+        />
       )}
     </DashboardLayout>
   );

@@ -40,8 +40,6 @@ export function NajaCentersTable({
       render: (row) => formatFaDigits(row.phone),
     },
     { key: "province", header: "استان", render: (row) => row.province },
-    { key: "city", header: "شهر", render: (row) => row.city },
-    { key: "county", header: "شهرستان", render: (row) => row.county },
     {
       key: "status",
       header: "وضعیت",
