@@ -15,7 +15,7 @@ import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { WarehouseInboundReceipt } from "@/lib/models/warehouse.model";
 import { listInboundReceipts } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import Link from "next/link";
 
 export default function WarehouseInboundReceiptsPage() {
@@ -50,14 +50,21 @@ export default function WarehouseInboundReceiptsPage() {
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return receipts.filter(
-      (receipt) =>
-        !query ||
-        receipt.receiptCode.toLowerCase().includes(query) ||
-        receipt.productName.toLowerCase().includes(query) ||
-        receipt.productSku.toLowerCase().includes(query),
-    ).filter((receipt) => isWithinDateRange(receipt.createdAt, dateFrom, dateTo));
+    return receipts
+      .filter(
+        (receipt) =>
+          !query ||
+          receipt.receiptCode.toLowerCase().includes(query) ||
+          receipt.productName.toLowerCase().includes(query) ||
+          receipt.productSku.toLowerCase().includes(query),
+      )
+      .filter((receipt) =>
+        isWithinDateRange(receipt.createdAt, dateFrom, dateTo),
+      );
   }, [dateFrom, dateTo, receipts, search]);
+
+  const hasActiveFilters =
+    search.trim().length > 0 || dateFrom.length > 0 || dateTo.length > 0;
 
   const columns: DataTableColumn<WarehouseInboundReceipt>[] = [
     {
@@ -98,7 +105,7 @@ export default function WarehouseInboundReceiptsPage() {
           </Link>
           <Link
             href={`/warehouse/inbound/receipts/${row.objectId || row.id}/edit`}
-            className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs !text-white"
+            className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs text-white!"
           >
             ویرایش
           </Link>
@@ -130,18 +137,21 @@ export default function WarehouseInboundReceiptsPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setDateFrom("");
-              setDateTo("");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -165,11 +175,17 @@ export default function WarehouseInboundReceiptsPage() {
   );
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+export function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
-  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime())
+    return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime())
+    return false;
   return true;
 }

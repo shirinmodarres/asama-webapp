@@ -16,7 +16,7 @@ import { formatDateTime } from "@/lib/expert/utils";
 import type { ExitSlip } from "@/lib/models/warehouse.model";
 import { listExitSlips } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -69,8 +69,10 @@ export default function WarehouseExitSlipsPage() {
         );
       })
       .filter((row) => {
-        if (deliveryStatusFilter === "confirmed") return row.slip.deliveryConfirmed;
-        if (deliveryStatusFilter === "pending") return !row.slip.deliveryConfirmed;
+        if (deliveryStatusFilter === "confirmed")
+          return row.slip.deliveryConfirmed;
+        if (deliveryStatusFilter === "pending")
+          return !row.slip.deliveryConfirmed;
         return true;
       })
       .filter((row) => isWithinDateRange(row.slip.createdAt, dateFrom, dateTo))
@@ -80,6 +82,12 @@ export default function WarehouseExitSlipsPage() {
           Number(new Date(a.slip.createdAt)),
       );
   }, [dateFrom, dateTo, deliveryStatusFilter, exitSlips, search]);
+
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    deliveryStatusFilter !== "all" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
 
   const columns: DataTableColumn<ExitSlipRow>[] = [
     {
@@ -91,8 +99,16 @@ export default function WarehouseExitSlipsPage() {
         </span>
       ),
     },
-    { key: "order", header: "سفارش مرتبط", render: (row) => formatFa(row.slip.orderCode) || "-" },
-    { key: "customer", header: "مشتری", render: (row) => row.slip.customerName || "-" },
+    {
+      key: "order",
+      header: "سفارش مرتبط",
+      render: (row) => formatFa(row.slip.orderCode) || "-",
+    },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.slip.customerName || "-",
+    },
     {
       key: "receiver",
       header: "گیرنده بار",
@@ -168,19 +184,22 @@ export default function WarehouseExitSlipsPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setDeliveryStatusFilter("all");
-              setDateFrom("");
-              setDateTo("");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setDeliveryStatusFilter("all");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -208,11 +227,17 @@ function formatFa(value: string): string {
   return formatFaDigits(value);
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
-  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime())
+    return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime())
+    return false;
   return true;
 }

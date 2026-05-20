@@ -62,7 +62,7 @@ export default function WarehousePage() {
         <ManagerSummaryCard
           title="سفارش های ناجا"
           value={najaPendingCount}
-          hint="منتظر ثبت شناسه کالا و کد رهگیری"
+          hint="نیازمند شناسه و رهگیری"
         />
         <ManagerSummaryCard
           title="حواله های خروج صادرشده"
@@ -93,13 +93,13 @@ export default function WarehousePage() {
           href="/warehouse/outbound"
           icon="package"
           title="خروج کالا"
-          description="صدور حواله خروج برای سفارش‌های مجاز"
+          description="صدور حواله سفارش‌ها"
         />
         <ActionLinkCard
           href="/warehouse/exit-slips"
           icon="truck"
           title="حواله‌های خروج"
-          description="پیگیری حواله‌های صادرشده و وضعیت تحویل"
+          description="پیگیری حواله و تحویل"
         />
       </section>
     </DashboardLayout>
