@@ -11,6 +11,7 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ProductStatusBadge } from "@/components/support/product-status-badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,8 @@ export default function SupportProductsPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -71,6 +74,18 @@ export default function SupportProductsPage() {
     [products],
   );
 
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          products
+            .map((product) => product.category)
+            .filter((category) => category.trim().length > 0),
+        ),
+      ),
+    [products],
+  );
+
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch = product.name
@@ -78,9 +93,13 @@ export default function SupportProductsPage() {
         .includes(search.toLowerCase());
       const matchesBrand =
         brandFilter === "all" || product.brand === brandFilter;
-      return matchesSearch && matchesBrand;
+      const matchesCategory =
+        categoryFilter === "all" || product.category === categoryFilter;
+      const matchesStatus =
+        statusFilter === "all" || product.status === statusFilter;
+      return matchesSearch && matchesBrand && matchesCategory && matchesStatus;
     });
-  }, [brandFilter, products, search]);
+  }, [brandFilter, categoryFilter, products, search, statusFilter]);
 
   const columns: DataTableColumn<Product>[] = [
     {
@@ -148,32 +167,80 @@ export default function SupportProductsPage() {
       />
 
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجو بر اساس نام کالا"
-              className="pr-10"
-            />
-          </div>
-          <div className="relative">
-            <Tags className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger className="pr-10">
-                <SelectValue placeholder="همه برندها" />
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در کالاها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس نام کالا"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر برند</span>
+            <div className="relative">
+              <Tags className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger className="pr-10">
+                  <SelectValue placeholder="همه برندها" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">همه برندها</SelectItem>
+                  {brands.map((brand) => (
+                    <SelectItem key={`brand-${brand}`} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر دسته‌بندی</span>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="همه دسته‌بندی‌ها" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">همه برندها</SelectItem>
-                {brands.map((brand) => (
-                  <SelectItem key={`brand-${brand}`} value={brand}>
-                    {brand}
+                <SelectItem value="all">همه دسته‌بندی‌ها</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={`category-${category}`} value={category}>
+                    {category}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="همه وضعیت‌ها" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+                <SelectItem value="active">فعال</SelectItem>
+                <SelectItem value="inactive">غیرفعال</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setBrandFilter("all");
+              setCategoryFilter("all");
+              setStatusFilter("all");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 

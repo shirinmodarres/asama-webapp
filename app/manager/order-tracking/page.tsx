@@ -6,12 +6,14 @@ import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
+import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
   getOrderStatusLabel,
@@ -24,8 +26,11 @@ import { listOrders } from "@/lib/services/order.service";
 type TrackingFilter =
   | "all"
   | "pending"
+  | "needs_review"
+  | "review_resolved"
   | "approved"
   | "cancelled"
+  | "voided"
   | "dispatchIssued"
   | "delivered"
   | "invoiced"
@@ -38,6 +43,8 @@ export default function ManagerOrderTrackingPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TrackingFilter>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -82,8 +89,9 @@ export default function ManagerOrderTrackingPage() {
           return order.warehouseStatus === "delivered";
         if (filter === "invoiced") return order.orderStatus === "invoiced";
         return order.orderStatus === filter;
-      });
-  }, [filter, orders, search]);
+      })
+      .filter((order) => isWithinDateRange(order.updatedAt, dateFrom, dateTo));
+  }, [dateFrom, dateTo, filter, orders, search]);
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -132,38 +140,67 @@ export default function ManagerOrderTrackingPage() {
   return (
     <DashboardLayout role="manager" title="روند سفارش ها">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
-              className="pr-10"
-            />
-          </div>
-          <div className="relative">
-            <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <SearchableSelect
-              value={filter}
-              onValueChange={(value) => setFilter(value as TrackingFilter)}
-              options={[
-                { value: "all", label: "همه وضعیت ها" },
-                { value: "pending", label: getOrderStatusLabel("pending") },
-                { value: "approved", label: getOrderStatusLabel("approved") },
-                { value: "cancelled", label: getOrderStatusLabel("cancelled") },
-                { value: "dispatchIssued", label: getWarehouseStatusLabel("dispatchIssued") },
-                { value: "delivered", label: getWarehouseStatusLabel("delivered") },
-                { value: "invoiced", label: getOrderStatusLabel("invoiced") },
-                { value: "returned", label: getOrderStatusLabel("returned") },
-                { value: "returnedAfterInvoice", label: getOrderStatusLabel("returnedAfterInvoice") },
-              ]}
-              placeholder="فیلتر وضعیت"
-              searchPlaceholder="جستجو در وضعیت ها"
-              emptyMessage="وضعیتی پیدا نشد"
-              triggerClassName="pr-10"
-            />
-          </div>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در سفارش‌ها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={filter}
+                onValueChange={(value) => setFilter(value as TrackingFilter)}
+                options={[
+                  { value: "all", label: "همه وضعیت‌ها" },
+                  { value: "pending", label: getOrderStatusLabel("pending") },
+                  { value: "needs_review", label: getOrderStatusLabel("needs_review") },
+                  { value: "review_resolved", label: getOrderStatusLabel("review_resolved") },
+                  { value: "approved", label: getOrderStatusLabel("approved") },
+                  { value: "cancelled", label: getOrderStatusLabel("cancelled") },
+                  { value: "voided", label: getOrderStatusLabel("voided") },
+                  { value: "dispatchIssued", label: getWarehouseStatusLabel("dispatchIssued") },
+                  { value: "delivered", label: getWarehouseStatusLabel("delivered") },
+                  { value: "invoiced", label: getOrderStatusLabel("invoiced") },
+                  { value: "returned", label: getOrderStatusLabel("returned") },
+                  { value: "returnedAfterInvoice", label: getOrderStatusLabel("returnedAfterInvoice") },
+                ]}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <DateRangeFilter
+            value={{ from: dateFrom, to: dateTo }}
+            onChange={(range) => {
+              setDateFrom(range.from ?? "");
+              setDateTo(range.to ?? "");
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setFilter("all");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 
@@ -185,4 +222,13 @@ export default function ManagerOrderTrackingPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+  if (!dateFrom && !dateTo) return true;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  return true;
 }

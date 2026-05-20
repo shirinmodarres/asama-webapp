@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ListFilter, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -11,6 +11,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { compareText } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
@@ -24,6 +25,7 @@ export default function ExpertCustomersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -56,8 +58,12 @@ export default function ExpertCustomersPage() {
           value.toLowerCase().includes(query),
         );
       })
+      .filter(
+        (customer) =>
+          statusFilter === "all" || customer.status === statusFilter,
+      )
       .sort((a, b) => compareText(a.fullName, b.fullName));
-  }, [customers, search]);
+  }, [customers, search, statusFilter]);
 
   const columns: DataTableColumn<Customer>[] = [
     {
@@ -118,19 +124,54 @@ export default function ExpertCustomersPage() {
 
   return (
     <DashboardLayout role="expert" title="مشتری‌ها">
-      <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:max-w-sm">
-          <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="جستجو بر اساس نام مشتری "
-            className="pr-10"
-          />
-        </div>
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در مشتری‌ها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس نام مشتری یا موبایل"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={[
+                  { value: "all", label: "همه وضعیت‌ها" },
+                  { value: "active", label: "فعال" },
+                  { value: "inactive", label: "غیرفعال" },
+                ]}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setStatusFilter("all");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
         <Button className="!text-white" asChild>
           <Link href="/expert/customers/new">تعریف مشتری</Link>
         </Button>
+        </div>
       </section>
       {isLoading ? (
         <LoadingState title="در حال دریافت مشتری‌ها" />

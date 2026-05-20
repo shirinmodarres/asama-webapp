@@ -8,10 +8,13 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
-import { Search } from "lucide-react";
+import { ListFilter, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -20,6 +23,7 @@ export default function SupportOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -55,8 +59,20 @@ export default function SupportOrdersPage() {
           order.code.toLowerCase().includes(search.toLowerCase()) ||
           order.createdByName.toLowerCase().includes(search.toLowerCase()) ||
           (order.customerName ?? "").toLowerCase().includes(search.toLowerCase()),
-      );
-  }, [orders, search]);
+      )
+      .filter((order) => statusFilter === "all" || order.orderStatus === statusFilter);
+  }, [orders, search, statusFilter]);
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "all", label: "همه وضعیت‌ها" },
+      ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((status) => ({
+        value: status,
+        label: getOrderStatusLabel(status),
+      })),
+    ],
+    [orders],
+  );
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -95,14 +111,37 @@ export default function SupportOrdersPage() {
   return (
     <DashboardLayout role="support" title="ویرایش سفارش">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
-            className="pr-10"
-          />
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در سفارش‌ها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={statusOptions}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setStatusFilter("all"); }}>
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 

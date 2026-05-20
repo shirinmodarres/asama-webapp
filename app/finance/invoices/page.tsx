@@ -2,16 +2,19 @@
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InvoiceTable } from "@/components/finance/invoice-table";
+import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/expert/utils";
 import type { Invoice } from "@/lib/models/invoice.model";
 import { listInvoices } from "@/lib/services/invoice.service";
-import { Search } from "lucide-react";
+import { ListFilter, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -27,6 +30,9 @@ export default function FinanceInvoicesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -71,8 +77,13 @@ export default function FinanceInvoicesPage() {
           row.orderCode.toLowerCase().includes(query) ||
           row.createdBy.toLowerCase().includes(query)
         );
-      });
-  }, [invoices, search]);
+      })
+      .filter(
+        (row) =>
+          statusFilter === "all" || row.invoice.status === statusFilter,
+      )
+      .filter((row) => isWithinDateRange(row.invoice.createdAt, dateFrom, dateTo));
+  }, [dateFrom, dateTo, invoices, search, statusFilter]);
 
   const columns: DataTableColumn<InvoiceRow>[] = [
     {
@@ -114,14 +125,48 @@ export default function FinanceInvoicesPage() {
   return (
     <DashboardLayout role="finance" title="فاکتورها">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="جستجو بر اساس شماره فاکتور، کد سفارش، مشتری یا ثبت کننده"
-            className="pr-10"
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در فاکتورها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس شماره فاکتور، کد سفارش، مشتری یا ثبت کننده"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={[
+                  { value: "all", label: "همه وضعیت‌ها" },
+                  { value: "issued", label: "صادر شده" },
+                  { value: "needs_follow_up", label: "نیازمند پیگیری" },
+                ]}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <DateRangeFilter
+            value={{ from: dateFrom, to: dateTo }}
+            onChange={(range) => {
+              setDateFrom(range.from ?? "");
+              setDateTo(range.to ?? "");
+            }}
           />
+          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setStatusFilter("all"); setDateFrom(""); setDateTo(""); }}>
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 
@@ -139,4 +184,13 @@ export default function FinanceInvoicesPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+  if (!dateFrom && !dateTo) return true;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  return true;
 }

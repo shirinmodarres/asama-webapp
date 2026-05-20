@@ -3,12 +3,14 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
+import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import {
@@ -27,6 +29,8 @@ export default function ManagerPendingOrdersPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -64,9 +68,9 @@ export default function ManagerPendingOrdersPage() {
           (order.customerName ?? "").toLowerCase().includes(search.toLowerCase());
         const matchesStatus =
           statusFilter === "all" ? true : order.orderStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+        return matchesSearch && matchesStatus && isWithinDateRange(order.createdAt, dateFrom, dateTo);
       });
-  }, [orders, search, statusFilter]);
+  }, [dateFrom, dateTo, orders, search, statusFilter]);
 
   const statusOptions = useMemo(
     () =>
@@ -138,41 +142,67 @@ export default function ManagerPendingOrdersPage() {
   return (
     <DashboardLayout role="manager" title="سفارش های در انتظار تایید">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجو بر اساس کد سفارش، مشتری یا نام ثبت کننده"
-              className="pr-10"
-            />
-          </div>
-          <div className="relative">
-            <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <SearchableSelect
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              options={[
-                { value: "pending", label: "در انتظار تایید" },
-                { value: "needs_review", label: "نیازمند بررسی" },
-                { value: "review_resolved", label: "مشکل برطرف شد" },
-                { value: "all", label: "همه وضعیت ها" },
-                ...statusOptions
-                  .filter(
-                    (value) =>
-                      !["pending", "needs_review", "review_resolved"].includes(
-                        value,
-                      ),
-                  )
-                  .map((value) => ({ value, label: getOrderStatusLabel(value) })),
-              ]}
-              placeholder="فیلتر وضعیت"
-              searchPlaceholder="جستجو در وضعیت ها"
-              emptyMessage="وضعیتی پیدا نشد"
-              triggerClassName="pr-10"
-            />
-          </div>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در سفارش‌ها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس کد سفارش، مشتری یا نام ثبت کننده"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={[
+                  { value: "pending", label: "در انتظار تایید" },
+                  { value: "needs_review", label: "نیازمند بررسی" },
+                  { value: "review_resolved", label: "مشکل برطرف شد" },
+                  { value: "all", label: "همه وضعیت‌ها" },
+                  ...statusOptions
+                    .filter(
+                      (value) =>
+                        !["pending", "needs_review", "review_resolved"].includes(
+                          value,
+                        ),
+                    )
+                    .map((value) => ({ value, label: getOrderStatusLabel(value) })),
+                ]}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <DateRangeFilter
+            value={{ from: dateFrom, to: dateTo }}
+            onChange={(range) => {
+              setDateFrom(range.from ?? "");
+              setDateTo(range.to ?? "");
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setStatusFilter("pending");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 
@@ -194,4 +224,13 @@ export default function ManagerPendingOrdersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+  if (!dateFrom && !dateTo) return true;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  return true;
 }

@@ -1,16 +1,18 @@
 "use client";
 
-import { CalendarDays, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InvoiceTable } from "@/components/finance/invoice-table";
+import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -31,7 +33,8 @@ export default function FinanceReadyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [deliveredDateFilter, setDeliveredDateFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -99,15 +102,10 @@ export default function FinanceReadyPage() {
           (row.order.customerName ?? "").toLowerCase().includes(query) ||
           row.slipNumber.toLowerCase().includes(query);
 
-        const deliveredDate = row.deliveredAt
-          ? new Date(row.deliveredAt).toISOString().slice(0, 10)
-          : "";
-        const matchesDate = deliveredDateFilter
-          ? deliveredDate === deliveredDateFilter
-          : true;
+        const matchesDate = isWithinDateRange(row.deliveredAt, dateFrom, dateTo);
         return matchesSearch && matchesDate;
       });
-  }, [orders, exitSlips, search, deliveredDateFilter]);
+  }, [orders, exitSlips, search, dateFrom, dateTo]);
 
   const columns: DataTableColumn<ReadyOrderRow>[] = [
     {
@@ -185,26 +183,30 @@ export default function FinanceReadyPage() {
   return (
     <DashboardLayout role="finance" title="آماده فاکتور">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجو بر اساس کد سفارش، مشتری، ثبت کننده یا شماره حواله"
-              className="pr-10"
-            />
-          </div>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در سفارش‌ها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس کد سفارش، مشتری، ثبت کننده یا شماره حواله"
+                className="pr-10"
+              />
+            </div>
+          </label>
 
-          <div className="relative">
-            <CalendarDays className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-            <Input
-              type="date"
-              value={deliveredDateFilter}
-              onChange={(event) => setDeliveredDateFilter(event.target.value)}
-              className="pr-10"
-            />
-          </div>
+          <DateRangeFilter
+            value={{ from: dateFrom, to: dateTo }}
+            onChange={(range) => {
+              setDateFrom(range.from ?? "");
+              setDateTo(range.to ?? "");
+            }}
+          />
+          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }}>
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 
@@ -222,4 +224,13 @@ export default function FinanceReadyPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+  if (!dateFrom && !dateTo) return true;
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  return true;
 }

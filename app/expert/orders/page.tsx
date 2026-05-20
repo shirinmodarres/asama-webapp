@@ -3,12 +3,14 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
+import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import {
@@ -27,6 +29,8 @@ export default function ExpertOrdersPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -77,9 +81,10 @@ export default function ExpertOrdersPage() {
           (order.customerName ?? "").toLowerCase().includes(search.toLowerCase());
         const matchesStatus =
           statusFilter === "all" || order.orderStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesDate = isWithinDateRange(order.createdAt, dateFrom, dateTo);
+        return matchesSearch && matchesStatus && matchesDate;
       });
-  }, [orders, search, statusFilter]);
+  }, [dateFrom, dateTo, orders, search, statusFilter]);
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -160,8 +165,8 @@ export default function ExpertOrdersPage() {
   return (
     <DashboardLayout role="expert" title="سفارش های من">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
             <span>جستجو در سفارش ها</span>
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
@@ -191,6 +196,26 @@ export default function ExpertOrdersPage() {
               />
             </div>
           </label>
+          <DateRangeFilter
+            value={{ from: dateFrom, to: dateTo }}
+            onChange={(range) => {
+              setDateFrom(range.from ?? "");
+              setDateTo(range.to ?? "");
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setStatusFilter("all");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
         </div>
       </section>
 
@@ -216,6 +241,30 @@ export default function ExpertOrdersPage() {
 
 function isEditableOrderStatus(status: string): boolean {
   return status === "pending" || status === "needs_review";
+}
+
+function isWithinDateRange(
+  value: string | null | undefined,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
+  if (!dateFrom && !dateTo) return true;
+  if (!value) return false;
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return false;
+
+  if (dateFrom) {
+    const from = new Date(`${dateFrom}T00:00:00`).getTime();
+    if (timestamp < from) return false;
+  }
+
+  if (dateTo) {
+    const to = new Date(`${dateTo}T23:59:59`).getTime();
+    if (timestamp > to) return false;
+  }
+
+  return true;
 }
 
 function formatReviewRemaining(

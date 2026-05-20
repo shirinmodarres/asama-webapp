@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ListFilter, Search } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -11,6 +12,8 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Warehouse } from "@/lib/models/warehouse.model";
 import { listWarehouses } from "@/lib/services/warehouse.service";
@@ -20,6 +23,9 @@ export default function SupportWarehousesPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -40,6 +46,20 @@ export default function SupportWarehousesPage() {
       isMounted = false;
     };
   }, []);
+
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return warehouses.filter((warehouse) => {
+      const matchesSearch =
+        !query ||
+        warehouse.name.toLowerCase().includes(query) ||
+        warehouse.code.toLowerCase().includes(query);
+      const matchesType = typeFilter === "all" || warehouse.type === typeFilter;
+      const matchesStatus =
+        statusFilter === "all" || warehouse.status === statusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    });
+  }, [search, statusFilter, typeFilter, warehouses]);
 
   const columns: DataTableColumn<Warehouse>[] = [
     { key: "name", header: "نام انبار", render: (row) => row.name },
@@ -87,14 +107,77 @@ export default function SupportWarehousesPage() {
           </Button>
         }
       />
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+            <span>جستجو در انبارها</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس نام یا کد انبار"
+                className="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر نوع انبار</span>
+            <div className="relative">
+              <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+              <SearchableSelect
+                value={typeFilter}
+                onValueChange={setTypeFilter}
+                options={[
+                  { value: "all", label: "همه نوع‌ها" },
+                  { value: "general", label: "انبار عمومی" },
+                  { value: "naja", label: "انبار ناجا" },
+                  { value: "other", label: "سایر" },
+                ]}
+                placeholder="همه نوع‌ها"
+                searchPlaceholder="جستجو در نوع انبار"
+                emptyMessage="نوعی پیدا نشد"
+                triggerClassName="pr-10"
+              />
+            </div>
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>فیلتر وضعیت</span>
+            <SearchableSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={[
+                { value: "all", label: "همه وضعیت‌ها" },
+                { value: "active", label: "فعال" },
+                { value: "inactive", label: "غیرفعال" },
+              ]}
+              placeholder="همه وضعیت‌ها"
+              searchPlaceholder="جستجو در وضعیت‌ها"
+              emptyMessage="وضعیتی پیدا نشد"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit shrink-0"
+            onClick={() => {
+              setSearch("");
+              setTypeFilter("all");
+              setStatusFilter("all");
+            }}
+          >
+            پاک کردن فیلترها
+          </Button>
+        </div>
+      </section>
       {isLoading ? (
         <LoadingState title="در حال دریافت انبارها" />
       ) : error ? (
         <PageErrorMessage title="دریافت انبارها انجام نشد" message={error} />
-      ) : warehouses.length > 0 ? (
+      ) : rows.length > 0 ? (
         <DataTable
           columns={columns}
-          rows={warehouses}
+          rows={rows}
           rowKey={(row) => row.objectId}
         />
       ) : (

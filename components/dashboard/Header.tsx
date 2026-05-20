@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,10 @@ interface HeaderProps {
   title: string;
   role: RoleKey;
   user: AuthUser;
+  onMenuClick?: () => void;
 }
 
-export function Header({ title, role, user }: HeaderProps) {
+export function Header({ title, role, user, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentSection =
@@ -34,6 +35,16 @@ export function Header({ title, role, user }: HeaderProps) {
     <header className="sticky top-4 z-20 rounded-[22px] border border-[#DDE5ED] bg-white/90 px-4 py-4 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur md:px-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="باز کردن منو"
+            className="shrink-0 rounded-[14px] xl:hidden"
+            onClick={onMenuClick}
+          >
+            <Menu className="size-4 text-[#1F3A5F]" />
+          </Button>
           <div className="min-w-0">
             <h1 className="mt-3 truncate text-2xl font-bold tracking-tight text-[#102034]">
               {title}

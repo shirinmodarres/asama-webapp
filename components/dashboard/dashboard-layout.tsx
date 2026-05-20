@@ -22,6 +22,7 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,8 +85,30 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
       <div className="mx-auto flex min-h-screen w-full max-w-[1540px] flex-col gap-6 px-4 py-5 xl:flex-row xl:px-6 xl:py-6">
         <Sidebar items={sidebarByRole[role]} />
 
+        {isSidebarOpen ? (
+          <div className="fixed inset-0 z-40 xl:hidden">
+            <button
+              type="button"
+              aria-label="بستن منو"
+              className="absolute inset-0 bg-[#0F172A]/40"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <Sidebar
+              items={sidebarByRole[role]}
+              isMobile
+              onNavigate={() => setIsSidebarOpen(false)}
+              onClose={() => setIsSidebarOpen(false)}
+            />
+          </div>
+        ) : null}
+
         <main className="min-w-0 flex-1">
-          <Header title={title} role={role} user={currentUser} />
+          <Header
+            title={title}
+            role={role}
+            user={currentUser}
+            onMenuClick={() => setIsSidebarOpen(true)}
+          />
           <div className="mt-6 space-y-6 pb-8">{children}</div>
         </main>
       </div>

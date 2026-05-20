@@ -4,22 +4,37 @@ import { sidebarIconMap } from "@/components/shared/app-icons";
 import { Card } from "@/components/ui/card";
 import type { SidebarItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AsamaLogo } from "../branding/asama-logo";
 
 interface SidebarProps {
   items: SidebarItem[];
+  isMobile?: boolean;
+  onClose?: () => void;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ items }: SidebarProps) {
+export function Sidebar({
+  items,
+  isMobile = false,
+  onClose,
+  onNavigate,
+}: SidebarProps) {
   const pathname = usePathname();
   const activeHref = getActiveItemHref(items, pathname);
 
   return (
-    <aside className="w-full xl:max-w-[300px] xl:shrink-0">
-      <div className="xl:sticky xl:top-6">
-        <Card className="h-[calc(100vh-3rem)] overflow-hidden border-[#D7E0E8] bg-[linear-gradient(180deg,rgba(252,253,255,0.98),rgba(246,249,252,0.98))] p-5">
+    <aside
+      className={cn(
+        isMobile
+          ? "fixed inset-y-0 right-0 z-50 w-[86vw] max-w-[320px] p-4"
+          : "hidden w-full xl:block xl:max-w-[300px] xl:shrink-0",
+      )}
+    >
+      <div className={cn(!isMobile && "xl:sticky xl:top-6")}>
+        <Card className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden border-[#D7E0E8] bg-[linear-gradient(180deg,rgba(252,253,255,0.98),rgba(246,249,252,0.98))] p-5 xl:h-[calc(100vh-3rem)]">
           {/*  <div className="rounded-[20px] border border-[#DCE4EC] bg-[#102034] p-4 text-white shadow-[0_24px_60px_rgba(16,32,52,0.22)]">
            <div className="flex items-start justify-between gap-3">
               <div>
@@ -45,8 +60,20 @@ export function Sidebar({ items }: SidebarProps) {
             </div>
           </div>
 */}
-          <AsamaLogo compact className="h-12 w-[320px] px-4" />
-          <div className="mt-5">
+          <div className="flex shrink-0 items-center justify-between gap-3">
+            <AsamaLogo compact className="h-12 w-[220px] px-4" />
+            {isMobile ? (
+              <button
+                type="button"
+                aria-label="بستن منو"
+                className="rounded-xl border border-[#E5E7EB] p-2 text-[#334155]"
+                onClick={onClose}
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-5 min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {/* <p className="mb-3 px-1 text-[11px] font-semibold tracking-[0.16em] text-[#6B7280]">
               دسترسی ها
             </p> */}
@@ -59,6 +86,7 @@ export function Sidebar({ items }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onNavigate}
                     className={cn(
                       "group rounded-2xl border px-4 py-3 transition-all duration-200",
                       isActive
@@ -115,6 +143,7 @@ export function Sidebar({ items }: SidebarProps) {
 }
 
 function isSidebarItemActive(itemHref: string, pathname: string): boolean {
+  if (itemHref === "/") return pathname === "/";
   return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
 }
 
