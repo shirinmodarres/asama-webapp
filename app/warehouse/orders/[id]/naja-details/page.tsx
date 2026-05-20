@@ -88,7 +88,7 @@ export default function WarehouseNajaDetailsPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout role="warehouse" title="تکمیل اطلاعات انبار ناجا">
+      <DashboardLayout role="warehouse" title="اطلاعات ناجا">
         <LoadingState title="در حال دریافت سفارش ناجا" />
       </DashboardLayout>
     );
@@ -96,7 +96,7 @@ export default function WarehouseNajaDetailsPage() {
 
   if (error && !order) {
     return (
-      <DashboardLayout role="warehouse" title="تکمیل اطلاعات انبار ناجا">
+      <DashboardLayout role="warehouse" title="اطلاعات ناجا">
         <PageErrorMessage title="دریافت سفارش ناجا انجام نشد" message={error} />
       </DashboardLayout>
     );
@@ -104,14 +104,14 @@ export default function WarehouseNajaDetailsPage() {
 
   if (!order || order.orderType !== "naja") {
     return (
-      <DashboardLayout role="warehouse" title="تکمیل اطلاعات انبار ناجا">
+      <DashboardLayout role="warehouse" title="اطلاعات ناجا">
         <EmptyState title="سفارش ناجا یافت نشد" description="این شناسه مربوط به جریان ناجا نیست." />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout role="warehouse" title="تکمیل اطلاعات انبار ناجا">
+    <DashboardLayout role="warehouse" title="اطلاعات ناجا">
       <SectionHeader
         title={`تکمیل اطلاعات ${order.code}`}
         description="برای سفارش های ناجا، شناسه کالا و کد رهگیری باید قبل از ارسال به مالی ثبت شوند."

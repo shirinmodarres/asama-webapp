@@ -28,7 +28,7 @@ export default function NewExpertOrderPage() {
   };
 
   return (
-    <DashboardLayout role="expert" title="ثبت سفارش جدید">
+    <DashboardLayout role="expert" title="ثبت سفارش">
       <OrderForm
         mode="create"
         submitLabel="ثبت سفارش"

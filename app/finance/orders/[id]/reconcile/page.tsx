@@ -39,7 +39,7 @@ export default function FinanceReconciliationPage() {
   }, [params.id]);
 
   return (
-    <DashboardLayout role="finance" title="تطبیق سفارش و حواله">
+    <DashboardLayout role="finance" title="تطبیق سفارش">
       {isLoading ? (
         <LoadingState title="در حال دریافت سفارش" />
       ) : error ? (

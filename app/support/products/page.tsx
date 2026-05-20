@@ -155,7 +155,7 @@ export default function SupportProductsPage() {
     <DashboardLayout role="support" title="کالاها">
       <SectionHeader
         title="فهرست کالاها"
-        description="مدیریت اطلاعات پایه کالا و وضعیت فعال بودن"
+        description="مشاهده، جستجو و ویرایش کالاها"
         actions={
           <Link
             href="/support/products/new"
@@ -180,7 +180,7 @@ export default function SupportProductsPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر برند</span>
             <div className="relative">
               <Tags className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
@@ -199,7 +199,7 @@ export default function SupportProductsPage() {
               </Select>
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر دسته‌بندی</span>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger>
@@ -215,7 +215,7 @@ export default function SupportProductsPage() {
               </SelectContent>
             </Select>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>

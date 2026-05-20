@@ -47,9 +47,12 @@ export default function SupportPage() {
       Math.max(5, Math.floor(product.salesStock * 0.2)),
   ).length;
   const orderNeedsEditCount = orders.filter(
-    (order) => order.orderStatus === "pending" || order.orderStatus === "approved",
+    (order) =>
+      order.orderStatus === "pending" || order.orderStatus === "approved",
   ).length;
-  const najaInventoryCount = products.filter((product) => product.najaInventoryQty > 0).length;
+  const najaInventoryCount = products.filter(
+    (product) => product.najaInventoryQty > 0,
+  ).length;
 
   return (
     <DashboardLayout role="support" title="داشبورد پشتیبانی">
@@ -74,7 +77,7 @@ export default function SupportPage() {
         <ManagerSummaryCard
           title="اقلام دارای موجودی ناجا"
           value={najaInventoryCount}
-          hint="کالاهای قابل ثبت در مسیر ناجا"
+          hint="اقلام قابل ثبت در ناجا"
         />
       </section>
 

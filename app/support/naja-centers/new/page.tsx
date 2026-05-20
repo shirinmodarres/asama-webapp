@@ -8,6 +8,7 @@ import {
   type NajaCenterFormInput,
 } from "@/components/naja/naja-center-form";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { createNajaCenter } from "@/lib/services/naja-center.service";
 
@@ -43,6 +44,11 @@ export default function SupportCreateNajaCenterPage() {
 
   return (
     <DashboardLayout role="support" title="تعریف مرکز ناجا">
+      <SectionHeader
+        title="ثبت مرکز ناجا"
+        description="اطلاعات مرکز، مسئول و آدرس مرکز ناجا را وارد کنید"
+      />
+
       {error ? <InlineErrorMessage message={error} /> : null}
       <NajaCenterForm
         mode="create"

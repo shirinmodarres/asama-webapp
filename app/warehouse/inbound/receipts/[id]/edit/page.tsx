@@ -218,7 +218,7 @@ export default function WarehouseInboundReceiptEditPage() {
   };
 
   return (
-    <DashboardLayout role="warehouse" title="ویرایش رسید ورود">
+    <DashboardLayout role="warehouse" title="ویرایش رسید">
       {isLoading ? (
         <LoadingState title="در حال دریافت رسید ورود" />
       ) : error && !receipt ? (

@@ -82,7 +82,7 @@ export default function FinanceNajaInvoicePage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout role="finance" title="صدور فاکتور ناجا">
+      <DashboardLayout role="finance" title="فاکتور ناجا">
         <LoadingState title="در حال دریافت سفارش ناجا" />
       </DashboardLayout>
     );
@@ -90,7 +90,7 @@ export default function FinanceNajaInvoicePage() {
 
   if (error && !order) {
     return (
-      <DashboardLayout role="finance" title="صدور فاکتور ناجا">
+      <DashboardLayout role="finance" title="فاکتور ناجا">
         <PageErrorMessage title="دریافت سفارش ناجا انجام نشد" message={error} />
       </DashboardLayout>
     );
@@ -98,7 +98,7 @@ export default function FinanceNajaInvoicePage() {
 
   if (!order || order.orderType !== "naja") {
     return (
-      <DashboardLayout role="finance" title="صدور فاکتور ناجا">
+      <DashboardLayout role="finance" title="فاکتور ناجا">
         <EmptyState title="سفارش ناجا یافت نشد" description="این رکورد مربوط به مسیر اختصاصی ناجا نیست." />
       </DashboardLayout>
     );
@@ -110,7 +110,7 @@ export default function FinanceNajaInvoicePage() {
     order.orderStatus === "returnedAfterInvoice";
 
   return (
-    <DashboardLayout role="finance" title="صدور فاکتور ناجا">
+    <DashboardLayout role="finance" title="فاکتور ناجا">
       <SectionHeader
         title={`فاکتور ناجا برای ${order.code}`}
         description="این مسیر بدون تطبیق حواله خروج، مستقیما فاکتور را به نام ناجا صادر می کند."

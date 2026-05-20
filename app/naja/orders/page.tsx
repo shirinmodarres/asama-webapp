@@ -131,7 +131,7 @@ export default function NajaOrdersPage() {
   ];
 
   return (
-    <DashboardLayout role="naja" title="سفارش های ناجا">
+    <DashboardLayout role="naja" title="سفارش‌ها">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
@@ -141,7 +141,7 @@ export default function NajaOrdersPage() {
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجو بر اساس کد سفارش، مشتری، کد ملی یا موبایل" className="pr-10" />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />

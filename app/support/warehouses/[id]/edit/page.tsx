@@ -60,7 +60,10 @@ export default function EditWarehousePage() {
 
   return (
     <DashboardLayout role="support" title="ویرایش انبار">
-      <SectionHeader title="ویرایش انبار" description="اصلاح نوع، وضعیت و سفارش‌های مجاز" />
+      <SectionHeader
+        title="ویرایش اطلاعات انبار"
+        description="نوع، وضعیت و سفارش‌های مجاز انبار را به‌روزرسانی کنید"
+      />
       {isLoading ? (
         <LoadingState title="در حال دریافت انبار" />
       ) : error && !warehouse ? (

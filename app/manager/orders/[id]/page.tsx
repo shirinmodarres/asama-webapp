@@ -93,7 +93,7 @@ export default function ManagerOrderReviewPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout role="manager" title="بررسی سفارش">
+      <DashboardLayout role="manager" title="سفارش‌ها">
         <LoadingState title="در حال دریافت سفارش" />
       </DashboardLayout>
     );
@@ -101,7 +101,7 @@ export default function ManagerOrderReviewPage() {
 
   if (!order) {
     return (
-      <DashboardLayout role="manager" title="بررسی سفارش">
+      <DashboardLayout role="manager" title="سفارش‌ها">
         {message ? <InlineErrorMessage message={message} /> : null}
         <EmptyState
           title="سفارش یافت نشد"
@@ -252,9 +252,9 @@ export default function ManagerOrderReviewPage() {
   };
 
   return (
-    <DashboardLayout role="manager" title="بررسی سفارش">
+    <DashboardLayout role="manager" title="سفارش‌ها">
       <SectionHeader
-        title={`بررسی ${order.code || order.id}`}
+        title="بررسی جزئیات سفارش"
         description="ثبت تصمیم نهایی مدیر فروش برای شروع یا توقف فرآیند انبار"
         actions={
           <Link

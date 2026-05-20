@@ -13,6 +13,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Product } from "@/lib/models/product.model";
 import {
@@ -150,7 +151,12 @@ export default function SupportInventoryPage() {
   };
 
   return (
-    <DashboardLayout role="support" title="به روزرسانی موجودی">
+    <DashboardLayout role="support" title="موجودی">
+      <SectionHeader
+        title="ثبت موجودی"
+        description="افزایش یا کاهش کنترل‌شده موجودی فروش"
+      />
+
       {message && messageType === "success" ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}

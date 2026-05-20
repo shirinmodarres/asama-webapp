@@ -7,6 +7,7 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -140,7 +141,12 @@ export default function ManagerPendingOrdersPage() {
   ];
 
   return (
-    <DashboardLayout role="manager" title="سفارش های در انتظار تایید">
+    <DashboardLayout role="manager" title="سفارش‌ها">
+      <SectionHeader
+        title="صف تصمیم‌گیری سفارش‌ها"
+        description="بررسی سفارش‌های در انتظار تأیید، نیازمند بررسی و مشکل برطرف‌شده"
+      />
+
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
@@ -155,7 +161,7 @@ export default function ManagerPendingOrdersPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />

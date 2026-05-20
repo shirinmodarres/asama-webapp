@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
+import { SectionHeader } from "@/components/shared/section-header";
 import { UserForm, type UpdateUserFormInput } from "@/components/support/user-form";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { User } from "@/lib/models/user.model";
@@ -58,6 +59,11 @@ export default function SupportEditUserPage() {
 
   return (
     <DashboardLayout role="support" title="ویرایش کاربر">
+      <SectionHeader
+        title="ویرایش اطلاعات کاربر"
+        description="اطلاعات هویتی، نقش و وضعیت دسترسی کاربر را به‌روزرسانی کنید"
+      />
+
       {isLoading ? (
         <LoadingState title="در حال دریافت اطلاعات کاربر" description="جزئیات کاربر از سرور دریافت می شود." />
       ) : !user ? (

@@ -125,7 +125,7 @@ export default function NajaOrderDetailsPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+      <DashboardLayout role="naja" title="جزئیات سفارش">
         <LoadingState title="در حال دریافت جزئیات سفارش ناجا" />
       </DashboardLayout>
     );
@@ -133,7 +133,7 @@ export default function NajaOrderDetailsPage() {
 
   if (error) {
     return (
-      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+      <DashboardLayout role="naja" title="جزئیات سفارش">
         <PageErrorMessage title="دریافت جزئیات سفارش انجام نشد" message={error} />
       </DashboardLayout>
     );
@@ -141,14 +141,14 @@ export default function NajaOrderDetailsPage() {
 
   if (!order || order.orderType !== "naja") {
     return (
-      <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+      <DashboardLayout role="naja" title="جزئیات سفارش">
         <EmptyState title="سفارش ناجا یافت نشد" description="این شناسه در جریان اختصاصی ناجا وجود ندارد." />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout role="naja" title="جزئیات سفارش ناجا">
+    <DashboardLayout role="naja" title="جزئیات سفارش">
       <SectionHeader
         title={`سفارش ${order.code}`}
         description="مشاهده اطلاعات مشتری، مرکز ناجا، وضعیت انبار و فاکتور سفارش"

@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
   ProductForm,
@@ -110,6 +111,11 @@ export default function SupportEditProductPage() {
 
   return (
     <DashboardLayout role="support" title="ویرایش کالا">
+      <SectionHeader
+        title="ویرایش اطلاعات کالا"
+        description="اطلاعات پایه، موجودی و وضعیت کالا را به‌روزرسانی کنید"
+      />
+
       {message && messageType === "success" ? (
         <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-sm text-[#1D4ED8]">
           {message}

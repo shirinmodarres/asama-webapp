@@ -83,8 +83,8 @@ export default function SupportNajaCentersPage() {
   return (
     <DashboardLayout role="support" title="مراکز ناجا">
       <SectionHeader
-        title="مراکز ناجا"
-        description="تعریف و ویرایش مراکز ناجا"
+        title="فهرست مراکز ناجا"
+        description="مشاهده، جستجو و ویرایش مراکز ناجا"
         actions={
           <Button asChild>
             <Link href="/support/naja-centers/new">تعریف مرکز ناجا</Link>
@@ -105,14 +105,14 @@ export default function SupportNajaCentersPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر استان</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <SearchableSelect value={provinceFilter} onValueChange={setProvinceFilter} options={provinceOptions} placeholder="همه استان‌ها" searchPlaceholder="جستجو در استان‌ها" emptyMessage="استانی پیدا نشد" triggerClassName="pr-10" />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <SearchableSelect value={statusFilter} onValueChange={setStatusFilter} options={[{ value: "all", label: "همه وضعیت‌ها" }, { value: "active", label: "فعال" }, { value: "inactive", label: "غیرفعال" }]} placeholder="همه وضعیت‌ها" searchPlaceholder="جستجو در وضعیت‌ها" emptyMessage="وضعیتی پیدا نشد" />
           </label>

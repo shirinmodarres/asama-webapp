@@ -131,8 +131,8 @@ export default function SupportNajaInventoryPage() {
   return (
     <DashboardLayout role="support" title="موجودی ناجا">
       <SectionHeader
-        title="موجودی ناجا"
-        description="مدیریت موجودی اختصاصی سفارش هایی که با منبع ثبت ناجا وارد سیستم می شوند."
+        title="فهرست موجودی ناجا"
+        description="مدیریت موجودی اختصاصی سفارش‌های ناجا"
         actions={<Badge variant="warning">موجودی ناجا</Badge>}
       />
 

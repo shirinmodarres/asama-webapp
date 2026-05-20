@@ -111,10 +111,10 @@ export default function SupportUsersPage() {
   ];
 
   return (
-    <DashboardLayout role="support" title="کاربران سامانه">
+    <DashboardLayout role="support" title="کاربران">
       <SectionHeader
-        title="مدیریت کاربران"
-        description="فهرست کاربران، نقش ها و وضعیت دسترسی پنل ها"
+        title="فهرست کاربران"
+        description="مشاهده، جستجو و ویرایش کاربران سامانه"
         actions={
           <Link
             href="/support/users/new"
@@ -139,7 +139,7 @@ export default function SupportUsersPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر نقش</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
@@ -154,7 +154,7 @@ export default function SupportUsersPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <SearchableSelect
               value={statusFilter}

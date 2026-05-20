@@ -99,8 +99,8 @@ export default function SupportWarehousesPage() {
   return (
     <DashboardLayout role="support" title="انبارها">
       <SectionHeader
-        title="مدیریت انبارها"
-        description="تعریف انبار عمومی، انبار ناجا و محدوده سفارش‌های مجاز"
+        title="فهرست انبارها"
+        description="مشاهده، جستجو و ویرایش انبارهای عمومی و ناجا"
         actions={
           <Button asChild>
             <Link href="/support/warehouses/create">تعریف انبار</Link>
@@ -121,7 +121,7 @@ export default function SupportWarehousesPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر نوع انبار</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
@@ -141,7 +141,7 @@ export default function SupportWarehousesPage() {
               />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <SearchableSelect
               value={statusFilter}

@@ -53,7 +53,7 @@ export default function WarehouseOrderDetailsPage() {
   );
 
   return (
-    <DashboardLayout role="warehouse" title="جزئیات سفارش انبار">
+    <DashboardLayout role="warehouse" title="جزئیات سفارش">
       {isLoading ? (
         <LoadingState title="در حال دریافت جزئیات سفارش" />
       ) : error ? (

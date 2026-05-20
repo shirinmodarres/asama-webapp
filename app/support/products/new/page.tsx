@@ -6,6 +6,7 @@ import {
   type CreateProductFormInput,
 } from "@/components/support/product-form";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { createProduct } from "@/lib/services/product.service";
 import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
@@ -51,7 +52,12 @@ export default function SupportCreateProductPage() {
   };
 
   return (
-    <DashboardLayout role="support" title="تعریف کالای جدید">
+    <DashboardLayout role="support" title="تعریف کالا">
+      <SectionHeader
+        title="تعریف کالای جدید"
+        description="اطلاعات پایه و تنظیمات اولیه کالا را وارد کنید"
+      />
+
       {message && messageType === "success" ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}

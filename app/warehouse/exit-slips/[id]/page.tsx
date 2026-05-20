@@ -70,7 +70,7 @@ export default function ExitSlipDetailsPage() {
   };
 
   return (
-    <DashboardLayout role="warehouse" title="جزئیات حواله خروج">
+    <DashboardLayout role="warehouse" title="جزئیات حواله">
       {isLoading ? (
         <LoadingState title="در حال دریافت حواله خروج" />
       ) : error ? (

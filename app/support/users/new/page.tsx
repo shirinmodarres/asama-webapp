@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { UserForm, type CreateUserFormInput } from "@/components/support/user-form";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { createUser } from "@/lib/services/user.service";
@@ -36,7 +37,12 @@ export default function SupportCreateUserPage() {
   };
 
   return (
-    <DashboardLayout role="support" title="تعریف کاربر جدید">
+    <DashboardLayout role="support" title="تعریف کاربر">
+      <SectionHeader
+        title="تعریف کاربر جدید"
+        description="اطلاعات کاربر، نقش و وضعیت دسترسی را وارد کنید"
+      />
+
       {message && messageType === "success" ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}

@@ -8,6 +8,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
@@ -83,7 +84,12 @@ export default function ManagerInventoryPage() {
   ];
 
   return (
-    <DashboardLayout role="manager" title="مقایسه موجودی فروش و انبار">
+    <DashboardLayout role="manager" title="موجودی">
+      <SectionHeader
+        title="مقایسه موجودی فروش و انبار"
+        description="مشاهده موجودی فروش، موجودی واقعی انبار و موجودی قابل استفاده"
+      />
+
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />

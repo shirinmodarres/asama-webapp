@@ -52,7 +52,7 @@ export default function NajaCreateCenterPage() {
   };
 
   return (
-    <DashboardLayout role="naja" title="تعریف مرکز ناجا">
+    <DashboardLayout role="naja" title="تعریف مرکز">
       {message && messageType === "success" ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}

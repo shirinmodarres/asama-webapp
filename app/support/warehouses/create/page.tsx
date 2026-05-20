@@ -32,7 +32,10 @@ export default function CreateWarehousePage() {
 
   return (
     <DashboardLayout role="support" title="تعریف انبار">
-      <SectionHeader title="تعریف انبار" description="ثبت انبار جدید برای موجودی چندانباره" />
+      <SectionHeader
+        title="تعریف انبار جدید"
+        description="نوع انبار، وضعیت و محدوده سفارش‌های مجاز را وارد کنید"
+      />
       {error ? <InlineErrorMessage message={error} /> : null}
       <WarehouseForm
         mode="create"

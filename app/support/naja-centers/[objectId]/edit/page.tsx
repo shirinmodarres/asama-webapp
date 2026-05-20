@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { NajaCenter } from "@/lib/models/naja-center.model";
 import {
@@ -74,6 +75,11 @@ export default function SupportEditNajaCenterPage() {
 
   return (
     <DashboardLayout role="support" title="ویرایش مرکز ناجا">
+      <SectionHeader
+        title="ویرایش اطلاعات مرکز ناجا"
+        description="اطلاعات مرکز، مسئول و آدرس مرکز ناجا را به‌روزرسانی کنید"
+      />
+
       {isLoading ? (
         <LoadingState title="در حال دریافت مرکز ناجا" />
       ) : error && !center ? (

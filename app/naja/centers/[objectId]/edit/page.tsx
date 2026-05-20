@@ -53,7 +53,7 @@ export default function NajaEditCenterPage() {
 
   if (isLoading) {
     return (
-      <DashboardLayout role="naja" title="ویرایش مرکز ناجا">
+      <DashboardLayout role="naja" title="ویرایش مرکز">
         <LoadingState title="در حال دریافت مرکز ناجا" description="اطلاعات مرکز از سرور دریافت می شود." />
       </DashboardLayout>
     );
@@ -61,7 +61,7 @@ export default function NajaEditCenterPage() {
 
   if (!center && message) {
     return (
-      <DashboardLayout role="naja" title="ویرایش مرکز ناجا">
+      <DashboardLayout role="naja" title="ویرایش مرکز">
         <InlineErrorMessage message={message} />
       </DashboardLayout>
     );
@@ -69,7 +69,7 @@ export default function NajaEditCenterPage() {
 
   if (!center) {
     return (
-      <DashboardLayout role="naja" title="ویرایش مرکز ناجا">
+      <DashboardLayout role="naja" title="ویرایش مرکز">
         <EmptyState title="مرکز ناجا یافت نشد" description="شناسه مرکز معتبر نیست." />
       </DashboardLayout>
     );
@@ -109,7 +109,7 @@ export default function NajaEditCenterPage() {
   };
 
   return (
-    <DashboardLayout role="naja" title="ویرایش مرکز ناجا">
+    <DashboardLayout role="naja" title="ویرایش مرکز">
       {message && messageType === "success" ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}

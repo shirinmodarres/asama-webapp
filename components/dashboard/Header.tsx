@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,12 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const currentSection =
     sidebarByRole[role]
-      .filter(
-        (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-      )
+      .filter((item) => isActiveRoute(item.href, pathname))
       .sort((a, b) => b.href.length - a.href.length)[0] ?? null;
+  const locationLabel = buildLocationLabel(
+    role,
+    currentSection?.label ?? title,
+  );
 
   const handleLogout = async () => {
     await logout();
@@ -50,17 +52,13 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
               {title}
             </h1>
             <p className="mt-1 text-sm leading-7 text-[#6B7280]">
-              {currentSection?.description ?? user.roleLabel}
+              {locationLabel}
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-3 rounded-2xl border border-[#D8E1EA] bg-[#F8FBFD] px-3 py-2.5 text-right transition-colors hover:border-[#C8D3DF] hover:bg-white"
-          >
+          <div className="flex items-center gap-3 rounded-2xl border border-[#D8E1EA] bg-[#F8FBFD] px-3 py-2.5 text-right">
             <Avatar>
               <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
             </Avatar>
@@ -68,13 +66,9 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
               <div className="text-sm font-semibold text-[#102034]">
                 {user.fullName}
               </div>
-              <div className="flex items-center gap-1 text-xs text-[#6B7280]">
-                <span>{user.roleLabel}</span>
-                <span>•</span>
-                <span>خروج</span>
-              </div>
+              <div className="text-xs text-[#6B7280]">{user.roleLabel}</div>
             </div>
-          </button>
+          </div>
           <Button
             variant="outline"
             size="icon"
@@ -86,8 +80,37 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
               ۳
             </span>
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="خروج از حساب"
+            title="خروج از حساب"
+            className="rounded-[14px]"
+            onClick={handleLogout}
+          >
+            <LogOut className="size-4 text-[#8F2C2C]" />
+          </Button>
         </div>
       </div>
     </header>
   );
 }
+
+function isActiveRoute(itemHref: string, pathname: string): boolean {
+  if (itemHref === "/") return pathname === "/";
+  return pathname === itemHref || pathname.startsWith(`${itemHref}/`);
+}
+
+function buildLocationLabel(role: RoleKey, sectionLabel: string): string {
+  return `${PANEL_LOCATION_LABELS[role]} / ${sectionLabel}`;
+}
+
+const PANEL_LOCATION_LABELS: Record<RoleKey, string> = {
+  expert: "کارشناس",
+  manager: "مدیریت",
+  warehouse: "انبار",
+  finance: "مالی",
+  support: "پشتیبان",
+  naja: "ناجا",
+};

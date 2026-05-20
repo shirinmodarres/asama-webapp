@@ -51,12 +51,12 @@ export function DateRangeFilter({
   return (
     <label
       ref={containerRef}
-      className="relative grid gap-2 text-sm font-medium text-[#334155]"
+      className="relative grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56"
     >
       <span>{label}</span>
       <button
         type="button"
-        className="flex h-10 min-w-[220px] items-center justify-between gap-3 rounded-xl border border-[#D8E1EA] bg-white px-3 text-right text-sm text-[#334155] transition-colors hover:border-[#C8D3DF]"
+        className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-[#D8E1EA] bg-white px-3 text-right text-sm text-[#334155] transition-colors hover:border-[#C8D3DF]"
         onClick={() => setIsOpen((current) => !current)}
       >
         <span className={value.from || value.to ? "" : "text-[#64748B]"}>

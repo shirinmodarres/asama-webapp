@@ -117,7 +117,7 @@ export default function ExpertInventoryPage() {
   ];
 
   return (
-    <DashboardLayout role="expert" title="موجودی کالاها">
+    <DashboardLayout role="expert" title="موجودی">
       <section className="grid gap-4 md:grid-cols-3">
         <InventorySummaryCard
           title="موجودی فروش"

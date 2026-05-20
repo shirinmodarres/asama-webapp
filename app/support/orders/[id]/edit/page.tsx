@@ -60,7 +60,7 @@ export default function SupportOrderEditPage() {
   };
 
   return (
-    <DashboardLayout role="support" title="ویرایش ویژه سفارش">
+    <DashboardLayout role="support" title="ویرایش سفارش">
       {isLoading ? (
         <LoadingState
           title="در حال دریافت سفارش"
@@ -91,8 +91,8 @@ export default function SupportOrderEditPage() {
       ) : (
         <>
           <SectionHeader
-            title={`ویرایش ${order.code}`}
-            description="فیلدهای این فرم با ثبت سفارش جدید یکسان است."
+            title="ویرایش اطلاعات سفارش"
+            description={`اصلاح سفارش ${order.code} با همان فیلدهای ثبت سفارش`}
             actions={
               <Link
                 href="/support/orders"

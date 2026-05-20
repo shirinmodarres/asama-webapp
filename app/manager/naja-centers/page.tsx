@@ -79,8 +79,8 @@ export default function ManagerNajaCentersPage() {
   return (
     <DashboardLayout role="manager" title="مراکز ناجا">
       <SectionHeader
-        title="مراکز ناجا"
-        description="نمای read-only مراکز تعریف شده برای سفارش های اختصاصی ناجا"
+        title="فهرست مراکز ناجا"
+        description="مشاهده و جستجوی مراکز تعریف‌شده برای سفارش‌های ناجا"
       />
 
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -92,14 +92,14 @@ export default function ManagerNajaCentersPage() {
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجو بر اساس نام مرکز، کد مرکز، مسئول یا موقعیت" className="pr-10" />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر استان</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <SearchableSelect value={provinceFilter} onValueChange={setProvinceFilter} options={provinceOptions} placeholder="همه استان‌ها" searchPlaceholder="جستجو در استان‌ها" emptyMessage="استانی پیدا نشد" triggerClassName="pr-10" />
             </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <SearchableSelect value={statusFilter} onValueChange={setStatusFilter} options={[{ value: "all", label: "همه وضعیت‌ها" }, { value: "active", label: "فعال" }, { value: "inactive", label: "غیرفعال" }]} placeholder="همه وضعیت‌ها" searchPlaceholder="جستجو در وضعیت‌ها" emptyMessage="وضعیتی پیدا نشد" />
           </label>

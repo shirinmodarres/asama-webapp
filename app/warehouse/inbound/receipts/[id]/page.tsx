@@ -67,7 +67,7 @@ export default function WarehouseInboundReceiptDetailPage() {
   ];
 
   return (
-    <DashboardLayout role="warehouse" title="جزئیات رسید ورود">
+    <DashboardLayout role="warehouse" title="جزئیات رسید">
       {isLoading ? (
         <LoadingState title="در حال دریافت رسید ورود" />
       ) : error ? (

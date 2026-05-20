@@ -126,7 +126,7 @@ export default function WarehouseDeliveredPage() {
   ];
 
   return (
-    <DashboardLayout role="warehouse" title="سفارش های تحویل شده">
+    <DashboardLayout role="warehouse" title="تحویل‌شده‌ها">
       {isLoading ? (
         <LoadingState title="در حال دریافت سفارش های تحویل شده" />
       ) : error ? (

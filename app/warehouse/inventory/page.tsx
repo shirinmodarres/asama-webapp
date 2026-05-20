@@ -88,7 +88,7 @@ export default function WarehouseInventoryPage() {
   ];
 
   return (
-    <DashboardLayout role="warehouse" title="موجودی واقعی انبار">
+    <DashboardLayout role="warehouse" title="موجودی">
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
