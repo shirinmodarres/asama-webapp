@@ -13,13 +13,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
-import {
-  formatDate,
-  formatNumber,
-} from "@/lib/expert/utils";
+import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -75,16 +72,27 @@ export default function ExpertOrdersPage() {
         (a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt)),
       )
       .filter((order) => {
-        const matchesSearch = order.code
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-          (order.customerName ?? "").toLowerCase().includes(search.toLowerCase());
+        const matchesSearch =
+          order.code.toLowerCase().includes(search.toLowerCase()) ||
+          (order.customerName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase());
         const matchesStatus =
           statusFilter === "all" || order.orderStatus === statusFilter;
-        const matchesDate = isWithinDateRange(order.createdAt, dateFrom, dateTo);
+        const matchesDate = isWithinDateRange(
+          order.createdAt,
+          dateFrom,
+          dateTo,
+        );
         return matchesSearch && matchesStatus && matchesDate;
       });
   }, [dateFrom, dateTo, orders, search, statusFilter]);
+
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    statusFilter !== "all" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -107,7 +115,8 @@ export default function ExpertOrdersPage() {
     {
       key: "items",
       header: "تعداد آیتم",
-      render: (row) => formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
+      render: (row) =>
+        formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
     },
     {
       key: "order-status",
@@ -116,7 +125,7 @@ export default function ExpertOrdersPage() {
     },
     {
       key: "review",
-      header: "مهلت بررسی",
+      header: "مهلت",
       render: (row) =>
         row.orderStatus === "needs_review"
           ? formatReviewRemaining(row.reviewRemainingMs, row.reviewExpiresAt)
@@ -125,24 +134,26 @@ export default function ExpertOrdersPage() {
     {
       key: "warehouse-status",
       header: "وضعیت انبار",
-      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
+      render: (row) => (
+        <StatusBadge type="warehouse" status={row.warehouseStatus} />
+      ),
     },
     {
       key: "actions",
       header: "عملیات",
       render: (row) => {
         return (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <Link
               href={`/expert/orders/${row.objectId}`}
-              className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155] hover:border-[#CBD5E1]"
+              className="inline-flex h-9 min-w-16 shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] px-3 text-xs font-medium text-[#334155] hover:border-[#CBD5E1]"
             >
-              مشاهده جزئیات
+              مشاهده
             </Link>
             {isEditableOrderStatus(row.orderStatus) ? (
               <Link
                 href={`/expert/orders/${row.objectId}/edit`}
-                className="btn-primary rounded-xl px-3 py-1.5 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
+                className="btn-primary inline-flex h-9 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-xs font-medium text-white visited:text-white hover:text-white focus:text-white"
               >
                 ویرایش
               </Link>
@@ -151,7 +162,7 @@ export default function ExpertOrdersPage() {
                 type="button"
                 disabled
                 title="ویرایش فقط برای سفارش‌های در انتظار تأیید یا نیازمند بررسی امکان‌پذیر است."
-                className="cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-sm text-[#64748B]"
+                className="inline-flex h-9 min-w-16 shrink-0 cursor-not-allowed items-center justify-center rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 text-xs font-medium text-[#64748B]"
               >
                 ویرایش
               </button>
@@ -187,7 +198,10 @@ export default function ExpertOrdersPage() {
                 onValueChange={setStatusFilter}
                 options={[
                   { value: "all", label: "همه وضعیت ها" },
-                  ...statusOptions.map((value) => ({ value, label: getOrderStatusLabel(value) })),
+                  ...statusOptions.map((value) => ({
+                    value,
+                    label: getOrderStatusLabel(value),
+                  })),
                 ]}
                 placeholder="همه وضعیت ها"
                 searchPlaceholder="جستجو در وضعیت ها"
@@ -203,19 +217,22 @@ export default function ExpertOrdersPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("all");
-              setDateFrom("");
-              setDateTo("");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -272,13 +289,15 @@ function formatReviewRemaining(
   expiresAt: string | null,
 ): string {
   if (remainingMs !== null) {
-    if (remainingMs <= 0) return "مهلت بررسی پایان یافته است.";
+    if (remainingMs <= 0) return "پایان‌یافته";
 
     const hours = Math.floor(remainingMs / (60 * 60 * 1000));
     const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
 
-    return `${formatNumber(hours)} ساعت و ${formatNumber(minutes)} دقیقه`;
+    if (hours <= 0) return `${formatNumber(minutes)} دقیقه`;
+
+    return `${formatNumber(hours)} ساعت`;
   }
 
-  return expiresAt ? `تا ${formatDate(expiresAt)}` : "-";
+  return expiresAt ? formatDate(expiresAt) : "-";
 }

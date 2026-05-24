@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Tags } from "lucide-react";
+import { Search, Tags, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -9,8 +9,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InventorySummaryCard } from "@/components/shared/inventory-summary-card";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
@@ -65,6 +67,8 @@ export default function ExpertInventoryPage() {
     });
   }, [brand, products, search]);
 
+  const hasActiveFilters = search.trim().length > 0 || brand !== "all";
+
   const summary = useMemo(() => {
     return products.reduce(
       (acc, product) => {
@@ -118,6 +122,10 @@ export default function ExpertInventoryPage() {
 
   return (
     <DashboardLayout role="expert" title="موجودی">
+      <SectionHeader
+        title="موجودی کالاها"
+        description="موجودی فروش، رزروشده و قابل فروش کالاها را مشاهده کنید."
+      />
       <section className="grid gap-4 md:grid-cols-3">
         <InventorySummaryCard
           title="موجودی فروش"
@@ -137,7 +145,7 @@ export default function ExpertInventoryPage() {
       </section>
 
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(240px,320px)_auto] xl:items-end">
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>جستجو در کالاها</span>
             <div className="relative">
@@ -168,6 +176,20 @@ export default function ExpertInventoryPage() {
               />
             </div>
           </label>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setBrand("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 

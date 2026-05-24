@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -9,6 +9,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -65,6 +66,8 @@ export default function ExpertCustomersPage() {
       .sort((a, b) => compareText(a.fullName, b.fullName));
   }, [customers, search, statusFilter]);
 
+  const hasActiveFilters = search.trim().length > 0 || statusFilter !== "all";
+
   const columns: DataTableColumn<Customer>[] = [
     {
       key: "name",
@@ -86,18 +89,21 @@ export default function ExpertCustomersPage() {
       render: (row) => (row.nationalId ? formatFaDigits(row.nationalId) : "-"),
     },
     {
-      key: "city",
-      header: "شهر",
-      render: (row) => row.defaultAddress?.city || "-",
+      key: "province",
+      header: "استان",
+      render: (row) => row.defaultAddress?.province || "-",
     },
     {
       key: "address",
       header: "آدرس ",
       cellClassName: "max-w-[360px] whitespace-normal leading-7",
-      render: (row) =>
-        row.defaultAddress
+      render: (row) => {
+        const address = row.defaultAddress
           ? formatDeliveryAddress(row.defaultAddress)
-          : "آدرس ثبت نشده است.",
+          : "آدرس ثبت نشده است.";
+
+        return <span title={address}>{truncateText(address, 52)}</span>;
+      },
     },
     {
       key: "status",
@@ -124,6 +130,19 @@ export default function ExpertCustomersPage() {
 
   return (
     <DashboardLayout role="expert" title="مشتری‌ها">
+      <SectionHeader
+        title="مشتری‌ها"
+        description="فهرست مشتری‌ها و آدرس‌های ثبت‌شده را مشاهده و ویرایش کنید."
+        actions={
+          <Link
+            href="/expert/customers/new"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
+          >
+            <PlusCircle className="size-4" />
+            <span>تعریف مشتری</span>
+          </Link>
+        }
+      />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
@@ -157,20 +176,20 @@ export default function ExpertCustomersPage() {
               />
             </div>
           </label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit shrink-0"
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("all");
-            }}
-          >
-            پاک کردن فیلترها
-          </Button>
-        <Button className="!text-white" asChild>
-          <Link href="/expert/customers/new">تعریف مشتری</Link>
-        </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
       {isLoading ? (
@@ -191,4 +210,8 @@ export default function ExpertCustomersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function truncateText(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }

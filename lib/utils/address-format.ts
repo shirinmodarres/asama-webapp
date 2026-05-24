@@ -32,11 +32,15 @@ type AddressLike =
   | undefined;
 
 export function getReceiverName(
-  address: Pick<CustomerAddress, "receiverType" | "receiverFullName"> | null | undefined,
+  address:
+    | Pick<CustomerAddress, "receiverType" | "receiverFullName">
+    | null
+    | undefined,
   customer: CustomerLike,
 ): string {
   if (!address) return customer?.fullName || "";
-  if (address.receiverType === "self") return customer?.fullName || address.receiverFullName || "";
+  if (address.receiverType === "self")
+    return customer?.fullName || address.receiverFullName || "";
   return address.receiverFullName || "";
 }
 
@@ -71,10 +75,23 @@ function getAddressValue(
   address: NonNullable<AddressLike>,
   key: "province" | "county" | "city" | "fullAddress" | "plaque" | "unit",
 ): string {
-  if (key === "province") return "province" in address ? address.province || "" : address.deliveryProvince || "";
-  if (key === "county") return "county" in address ? address.county || "" : address.deliveryCounty || "";
-  if (key === "city") return "city" in address ? address.city || "" : address.deliveryCity || "";
-  if (key === "fullAddress") return "fullAddress" in address ? address.fullAddress || "" : address.deliveryFullAddress || "";
-  if (key === "plaque") return "plaque" in address ? address.plaque || "" : address.deliveryPlaque || "";
+  if (key === "province")
+    return "province" in address
+      ? address.province || ""
+      : address.deliveryProvince || "";
+  if (key === "county")
+    return "county" in address
+      ? address.county || ""
+      : address.deliveryCounty || "";
+  if (key === "city")
+    return "city" in address ? address.city || "" : address.deliveryCity || "";
+  if (key === "fullAddress")
+    return "fullAddress" in address
+      ? address.fullAddress || ""
+      : address.deliveryFullAddress || "";
+  if (key === "plaque")
+    return "plaque" in address
+      ? address.plaque || ""
+      : address.deliveryPlaque || "";
   return "unit" in address ? address.unit || "" : address.deliveryUnit || "";
 }

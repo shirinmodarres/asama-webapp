@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { listOrders } from "@/lib/services/order.service";
 import type { Order } from "@/lib/models/order.model";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ExpertPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -27,7 +28,8 @@ export default function ExpertPage() {
       setError("");
       try {
         const data = await listOrders();
-        if (isMounted) setOrders(data.filter((order) => order.orderType === "normal"));
+        if (isMounted)
+          setOrders(data.filter((order) => order.orderType === "normal"));
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -43,12 +45,18 @@ export default function ExpertPage() {
   }, []);
 
   const stats = useMemo(() => {
-    const pendingOrders = orders.filter((order) => order.orderStatus === "pending");
+    const pendingOrders = orders.filter(
+      (order) => order.orderStatus === "pending",
+    );
     const needsReviewOrders = orders.filter(
       (order) => order.orderStatus === "needs_review",
     );
-    const approvedOrders = orders.filter((order) => order.orderStatus === "approved");
-    const invoicedOrders = orders.filter((order) => order.orderStatus === "invoiced");
+    const approvedOrders = orders.filter(
+      (order) => order.orderStatus === "approved",
+    );
+    const invoicedOrders = orders.filter(
+      (order) => order.orderStatus === "invoiced",
+    );
     const latestEditableOrder =
       orders.find((order) => isEditableOrderStatus(order.orderStatus)) ?? null;
 
@@ -57,32 +65,32 @@ export default function ExpertPage() {
         {
           id: "total",
           label: "کل سفارش های ثبت شده",
-          value: String(orders.length),
-          hint: "بر اساس اطلاعات دریافت شده از سرور",
+          value: formatFaDigits(orders.length),
+          hint: "کل سفارش‌های ثبت‌شده",
         },
         {
           id: "pending",
           label: "در انتظار تأیید",
-          value: String(pendingOrders.length),
-          hint: "منتظر بررسی مدیر فروش",
+          value: formatFaDigits(pendingOrders.length),
+          hint: "منتظر تأیید مدیر",
         },
         {
           id: "needs-review",
           label: "نیازمند بررسی",
-          value: String(needsReviewOrders.length),
-          hint: "قابل ویرایش برای رفع مشکل",
+          value: formatFaDigits(needsReviewOrders.length),
+          hint: "نیازمند اصلاح کارشناس",
         },
         {
           id: "approved",
           label: "تأیید شده",
-          value: String(approvedOrders.length),
-          hint: "آماده ادامه مسیر در انبار",
+          value: formatFaDigits(approvedOrders.length),
+          hint: "آماده ارسال به انبار",
         },
         {
           id: "invoiced",
           label: "فاکتور شده",
-          value: String(invoicedOrders.length),
-          hint: "نهایی شده در واحد مالی",
+          value: formatFaDigits(invoicedOrders.length),
+          hint: "ثبت‌شده در مالی",
         },
       ],
       latestEditableOrder,
@@ -93,84 +101,70 @@ export default function ExpertPage() {
   return (
     <DashboardLayout role="expert" title="داشبورد کارشناس">
       {isLoading ? (
-        <LoadingState title="در حال دریافت سفارش ها" description="اطلاعات داشبورد کارشناس از سرور بارگذاری می شود." />
+        <LoadingState
+          title="در حال دریافت سفارش ها"
+          description="اطلاعات داشبورد کارشناس از سرور بارگذاری می شود."
+        />
       ) : error ? (
         <PageErrorMessage title="دریافت داشبورد انجام نشد" message={error} />
-      ) : orders.length === 0 ? (
-        <EmptyState title="سفارشی ثبت نشده است" description="پس از ثبت اولین سفارش، خلاصه وضعیت اینجا نمایش داده می شود." />
       ) : (
         <>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {stats.cards.map((stat) => (
-              <SummaryCard key={stat.id} label={stat.label} value={stat.value} hint={stat.hint} />
+              <SummaryCard
+                key={stat.id}
+                label={stat.label}
+                value={stat.value}
+                hint={stat.hint}
+              />
             ))}
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <SectionCard title="دسترسی سریع" description="ورود مستقیم به ثبت سفارش یا آخرین سفارش قابل ویرایش">
-              <div className="space-y-3">
-                <div className="rounded-[18px] border border-[#DDEAE0] bg-[linear-gradient(180deg,rgba(247,251,248,1),rgba(255,255,255,1))] p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-[14px] bg-[#6CAE75] text-white shadow-[0_14px_28px_rgba(108,174,117,0.22)]">
-                      <PlusCircle className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-[#102034]">ثبت سفارش جدید</div>
-                      <p className="mt-1 text-sm leading-7 text-[#6B7280]">ثبت سفارش جدید فروش با اطلاعات واقعی backend.</p>
-                    </div>
-                  </div>
-                  <Button asChild variant="success" fullWidth className="mt-4">
-                    <Link href="/expert/orders/new">
-                      ورود به فرم ثبت سفارش
-                      <ArrowLeft className="size-4" />
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="rounded-[18px] border border-[#E7EDF3] bg-white p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-[14px] bg-[#EEF4FA] text-[#1F3A5F]">
-                      <FilePenLine className="size-5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold text-[#102034]">ویرایش آخرین سفارش</div>
-                      <p className="mt-1 text-sm leading-7 text-[#6B7280]">
-                        {stats.latestEditableOrder
-                          ? `آخرین سفارش قابل ویرایش ${stats.latestEditableOrder.code} در وضعیت ${stats.latestEditableOrder.orderStatusLabel} قرار دارد.`
-                          : "در حال حاضر سفارشی در وضعیت قابل ویرایش وجود ندارد."}
-                      </p>
-                    </div>
-                  </div>
-                  {stats.latestEditableOrder ? (
-                    <Button asChild variant="outline" fullWidth className="mt-4">
-                      <Link href={`/expert/orders/${stats.latestEditableOrder.objectId}/edit`}>
-                        باز کردن سفارش {stats.latestEditableOrder.code}
-                        <ArrowLeft className="size-4" />
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button variant="outline" fullWidth className="mt-4" disabled>
-                      سفارشی برای ویرایش موجود نیست
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="آخرین سفارش ها" description="مرور آخرین سفارش های ثبت شده توسط کارشناس">
-              <div className="space-y-3">
-                {stats.recentOrders.map((order) => (
-                  <div key={order.objectId} className="rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-[#102034]">{order.code}</p>
-                        <p className="mt-1 text-sm text-[#6B7280]">{order.customerName || "بدون نام مشتری"}</p>
+          <section>
+            <SectionCard
+              title="آخرین سفارش ها"
+              description="مرور آخرین سفارش های ثبت شده توسط کارشناس"
+            >
+              {stats.recentOrders.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.recentOrders.map((order) => (
+                    <div
+                      key={order.objectId}
+                      className="rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-[#102034]">
+                            {order.code}
+                          </p>
+                          <p className="mt-1 text-sm text-[#6B7280]">
+                            {order.customerName || "بدون نام مشتری"}
+                          </p>
+                        </div>
+                        <span className="text-xs text-[#6B7280]">
+                          {order.orderStatusLabel}
+                        </span>
                       </div>
-                      <span className="text-xs text-[#6B7280]">{order.orderStatusLabel}</span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-[18px] border border-dashed border-[#DDEAE0] bg-[#FBFCFD] p-6 text-center">
+                  <p className="text-sm font-semibold text-[#102034]">
+                    هنوز سفارشی ثبت نشده
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-[#6B7280]">
+                    اولین سفارش را ثبت کنید تا این بخش به‌روزرسانی شود.
+                  </p>
+                  <Link
+                    href="/expert/orders/create"
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white!"
+                  >
+                    <PlusCircle className="size-4" />
+                    <span>ثبت اولین سفارش</span>
+                  </Link>
+                </div>
+              )}
             </SectionCard>
           </section>
         </>

@@ -27,18 +27,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "users",
       description: "مشتری‌ها و آدرس‌ها",
     },
-    {
-      label: "تعریف مشتری",
-      href: "/expert/customers/new",
-      icon: "plus-circle",
-      description: "ثبت مشتری جدید",
-    },
-    {
-      label: "ثبت سفارش",
-      href: "/expert/orders/new",
-      icon: "plus-circle",
-      description: "ثبت سفارش فروش",
-    },
   ],
   naja: [
     {
