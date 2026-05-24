@@ -29,13 +29,6 @@ export function DateRangeFilter({
   const [draftTo, setDraftTo] = useState(value.to ?? "");
 
   useEffect(() => {
-    if (!isOpen) {
-      setDraftFrom(value.from ?? "");
-      setDraftTo(value.to ?? "");
-    }
-  }, [isOpen, value.from, value.to]);
-
-  useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
@@ -57,7 +50,13 @@ export function DateRangeFilter({
       <button
         type="button"
         className="flex h-10 w-full items-center justify-between gap-3 rounded-xl border border-[#D8E1EA] bg-white px-3 text-right text-sm text-[#334155] transition-colors hover:border-[#C8D3DF]"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          if (!isOpen) {
+            setDraftFrom(value.from ?? "");
+            setDraftTo(value.to ?? "");
+          }
+          setIsOpen(!isOpen);
+        }}
       >
         <span className={value.from || value.to ? "" : "text-[#64748B]"}>
           {displayText}

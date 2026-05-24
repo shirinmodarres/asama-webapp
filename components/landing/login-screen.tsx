@@ -81,7 +81,7 @@ export function LoginScreen() {
     <div className="relative min-h-screen overflow-hidden px-4 py-6 lg:px-8 lg:py-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(31,58,95,0.08),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(108,174,117,0.1),transparent_26%)]" />
 
-      <main className="relative mx-auto grid w-full max-w-[1320px] gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
+      <main className="relative mx-auto grid w-full max-w-330 gap-6 xl:grid-cols-[440px_minmax(0,1fr)]">
         <section className="rounded-[30px] border border-[#D7E0E8] bg-white/95 p-6 shadow-[0_34px_90px_rgba(15,23,42,0.1)] backdrop-blur xl:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <AsamaLogo href="/" />
@@ -94,7 +94,7 @@ export function LoginScreen() {
             <p className="text-sm font-semibold tracking-[0.16em] text-[#6B7280]">
               درگاه ورود سازمانی
             </p>
-            <h1 className="mt-4 max-w-[30rem] text-2xl font-bold leading-[1.8] text-[#102034] lg:text-[2rem]">
+            <h1 className="mt-4 max-w-120 text-2xl font-bold leading-[1.8] text-[#102034] lg:text-[2rem]">
               دسترسی یکپارچه به عملیات سفارش، انبار، مالی و پشتیبانی
             </h1>
             <p className="mt-4 text-base leading-8 text-[#5F6E81]">

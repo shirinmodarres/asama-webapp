@@ -127,7 +127,7 @@ export function SearchableSelect({
           !selectedOption && "text-[#94A3B8]",
           triggerClassName,
         )}
-        aria-invalid={invalid || undefined}
+        data-invalid={invalid || undefined}
       >
         <span className="truncate text-right">
           {selectedOption?.label ?? placeholder}

@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, FilePenLine, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionCard } from "@/components/ui/section-card";
 import { SummaryCard } from "@/components/ui/summary-card";
-import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { listOrders } from "@/lib/services/order.service";
 import type { Order } from "@/lib/models/order.model";
