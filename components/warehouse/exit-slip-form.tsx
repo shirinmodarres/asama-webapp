@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { ClipboardPenLine } from "lucide-react";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { CreateExitSlipInput } from "@/lib/expert/types";
+import { isRequired, REQUIRED_MESSAGE } from "@/lib/utils/form-validation";
 
 interface ExitSlipFormProps {
   orderId: string;
@@ -27,11 +29,19 @@ export function ExitSlipForm({
   );
   const [createdBy, setCreatedBy] = useState("رضا کاظمی");
   const [notes, setNotes] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   return (
     <form
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        const nextErrors: Record<string, string> = {};
+        if (!isRequired(slipNumber)) nextErrors.slipNumber = REQUIRED_MESSAGE;
+        if (!isRequired(exitDate)) nextErrors.exitDate = "لطفاً تاریخ را انتخاب کنید.";
+        if (!isRequired(createdBy)) nextErrors.createdBy = REQUIRED_MESSAGE;
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
         onSubmit({ orderId, slipNumber, exitDate, createdBy, notes });
       }}
       className="contents"
@@ -55,18 +65,30 @@ export function ExitSlipForm({
           <InputField
             label="شماره حواله خروج"
             value={slipNumber}
-            onChange={setSlipNumber}
+            onChange={(value) => {
+              setSlipNumber(value);
+              setErrors((current) => ({ ...current, slipNumber: "" }));
+            }}
+            error={errors.slipNumber}
           />
           <InputField
             label="تاریخ خروج"
             value={exitDate}
-            onChange={setExitDate}
+            onChange={(value) => {
+              setExitDate(value);
+              setErrors((current) => ({ ...current, exitDate: "" }));
+            }}
             type="date"
+            error={errors.exitDate}
           />
           <InputField
             label="نام تحویل دهنده / مسئول انبار"
             value={createdBy}
-            onChange={setCreatedBy}
+            onChange={(value) => {
+              setCreatedBy(value);
+              setErrors((current) => ({ ...current, createdBy: "" }));
+            }}
+            error={errors.createdBy}
           />
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>توضیحات</span>
@@ -91,21 +113,22 @@ function InputField({
   value,
   onChange,
   type = "text",
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: "text" | "date";
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         type={type}
-        required
+        aria-invalid={Boolean(error)}
       />
-    </label>
+    </FormField>
   );
 }

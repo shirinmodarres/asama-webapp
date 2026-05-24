@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, ShieldPlus, Smartphone, UserRound } from "lucide-react";
 import { AsamaLogo } from "@/components/branding/asama-logo";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,13 @@ import { Input } from "@/components/ui/input";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { getPanelRouteForRole } from "@/lib/domain/roles";
 import { bootstrapSupport, login } from "@/lib/services/auth.service";
+import {
+  isRequired,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
+import { normalizePhone } from "@/lib/utils/number-format";
 
 const DEFAULT_PHONE = "09912776057";
 const DEFAULT_PASSWORD = "modarres@1379";
@@ -33,6 +41,8 @@ export default function SetupPage() {
   const [loginPassword, setLoginPassword] = useState(DEFAULT_PASSWORD);
   const [bootstrapMessage, setBootstrapMessage] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
+  const [bootstrapErrors, setBootstrapErrors] = useState<Record<string, string>>({});
+  const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [bootstrapType, setBootstrapType] = useState<"success" | "error">("success");
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -41,12 +51,22 @@ export default function SetupPage() {
     event.preventDefault();
     setBootstrapMessage("");
     setBootstrapType("success");
+    const nextErrors: Record<string, string> = {};
+    if (!isRequired(fullName)) nextErrors.fullName = REQUIRED_MESSAGE;
+    if (!isRequired(bootstrapPhone)) {
+      nextErrors.bootstrapPhone = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(bootstrapPhone)) {
+      nextErrors.bootstrapPhone = PHONE_MESSAGE;
+    }
+    if (!isRequired(bootstrapPassword)) nextErrors.bootstrapPassword = REQUIRED_MESSAGE;
+    setBootstrapErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     setIsBootstrapping(true);
 
     try {
       await bootstrapSupport({
         fullName: fullName.trim(),
-        phone: bootstrapPhone.trim(),
+        phone: normalizePhone(bootstrapPhone),
         password: bootstrapPassword,
       });
       setBootstrapMessage("پشتیبان با موفقیت ساخته شد");
@@ -66,10 +86,19 @@ export default function SetupPage() {
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginMessage("");
+    const nextErrors: Record<string, string> = {};
+    if (!isRequired(loginPhone)) {
+      nextErrors.loginPhone = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(loginPhone)) {
+      nextErrors.loginPhone = PHONE_MESSAGE;
+    }
+    if (!isRequired(loginPassword)) nextErrors.loginPassword = REQUIRED_MESSAGE;
+    setLoginErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
     setIsLoggingIn(true);
 
     try {
-      const response = await login(loginPhone.trim(), loginPassword);
+      const response = await login(normalizePhone(loginPhone), loginPassword);
       router.replace(getPanelRouteForRole(response.user.role));
     } catch (error) {
       if (error instanceof ApiError && error.code === "INVALID_CREDENTIALS") {
@@ -119,10 +148,10 @@ export default function SetupPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4" onSubmit={handleBootstrap}>
-                <InputField label="نام" value={fullName} onChange={setFullName} icon={UserRound} />
-                <InputField label="شماره موبایل" value={bootstrapPhone} onChange={setBootstrapPhone} icon={Smartphone} inputMode="numeric" />
-                <InputField label="رمز عبور" value={bootstrapPassword} onChange={setBootstrapPassword} icon={KeyRound} type="password" />
+              <form noValidate className="space-y-4" onSubmit={handleBootstrap}>
+                <InputField label="نام" value={fullName} onChange={(value) => { setFullName(value); setBootstrapErrors((current) => ({ ...current, fullName: "" })); }} icon={UserRound} error={bootstrapErrors.fullName} />
+                <InputField label="شماره موبایل" value={bootstrapPhone} onChange={(value) => { setBootstrapPhone(value); setBootstrapErrors((current) => ({ ...current, bootstrapPhone: "" })); }} icon={Smartphone} inputMode="numeric" error={bootstrapErrors.bootstrapPhone} />
+                <InputField label="رمز عبور" value={bootstrapPassword} onChange={(value) => { setBootstrapPassword(value); setBootstrapErrors((current) => ({ ...current, bootstrapPassword: "" })); }} icon={KeyRound} type="password" error={bootstrapErrors.bootstrapPassword} />
 
                 {bootstrapMessage ? (
                   bootstrapType === "error" ? (
@@ -156,9 +185,9 @@ export default function SetupPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <form className="space-y-4" onSubmit={handleLogin}>
-                <InputField label="شماره موبایل" value={loginPhone} onChange={setLoginPhone} icon={Smartphone} inputMode="numeric" />
-                <InputField label="رمز عبور" value={loginPassword} onChange={setLoginPassword} icon={KeyRound} type="password" />
+              <form noValidate className="space-y-4" onSubmit={handleLogin}>
+                <InputField label="شماره موبایل" value={loginPhone} onChange={(value) => { setLoginPhone(value); setLoginErrors((current) => ({ ...current, loginPhone: "" })); }} icon={Smartphone} inputMode="numeric" error={loginErrors.loginPhone} />
+                <InputField label="رمز عبور" value={loginPassword} onChange={(value) => { setLoginPassword(value); setLoginErrors((current) => ({ ...current, loginPassword: "" })); }} icon={KeyRound} type="password" error={loginErrors.loginPassword} />
 
                 {loginMessage ? <InlineErrorMessage message={loginMessage} /> : null}
 
@@ -181,6 +210,7 @@ function InputField({
   icon: Icon,
   type = "text",
   inputMode,
+  error,
 }: {
   label: string;
   value: string;
@@ -188,6 +218,7 @@ function InputField({
   icon: React.ComponentType<{ className?: string }>;
   type?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  error?: string;
 }) {
   return (
     <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -200,9 +231,10 @@ function InputField({
           className="pr-10"
           type={type}
           inputMode={inputMode}
-          required
+          aria-invalid={Boolean(error)}
         />
       </div>
+      <FieldError message={error} />
     </label>
   );
 }

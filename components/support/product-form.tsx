@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatFaNumber, toNumber } from "@/lib/utils/number-format";
+import {
+  isNonNegativeNumber,
+  isRequired,
+  NON_NEGATIVE_NUMBER_MESSAGE,
+  REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 interface BaseProps {
   onCancel: () => void;
@@ -90,11 +97,41 @@ export function ProductForm(props: ProductFormProps) {
   const [status, setStatus] = useState<"active" | "inactive">(
     props.mode === "edit" ? props.initialValues.status : "active",
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (props.mode === "create" && !isRequired(id)) {
+      nextErrors.id = REQUIRED_MESSAGE;
+    }
+    if (!isRequired(name)) nextErrors.name = REQUIRED_MESSAGE;
+    if (!isRequired(unit)) nextErrors.unit = REQUIRED_MESSAGE;
+    if (!isRequired(unitPrice)) {
+      nextErrors.unitPrice = REQUIRED_MESSAGE;
+    } else if (!isNonNegativeNumber(unitPrice)) {
+      nextErrors.unitPrice = NON_NEGATIVE_NUMBER_MESSAGE;
+    }
+    if (props.mode === "create") {
+      if (!isRequired(totalStock)) {
+        nextErrors.totalStock = REQUIRED_MESSAGE;
+      } else if (!isNonNegativeNumber(totalStock)) {
+        nextErrors.totalStock = NON_NEGATIVE_NUMBER_MESSAGE;
+      }
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   return (
     <form
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        if (!validate()) return;
 
         if (props.mode === "create") {
           props.onSubmit({
@@ -127,33 +164,61 @@ export function ProductForm(props: ProductFormProps) {
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
           {props.mode === "create" ? (
-            <InputField label="شناسه کالا" value={id} onChange={setId} />
+            <InputField
+              label="شناسه کالا"
+              value={id}
+              onChange={(value) => {
+                setId(value);
+                clearError("id");
+              }}
+              error={errors.id}
+            />
           ) : null}
-          <InputField label="نام کالا" value={name} onChange={setName} />
+          <InputField
+            label="نام کالا"
+            value={name}
+            onChange={(value) => {
+              setName(value);
+              clearError("name");
+            }}
+            error={errors.name}
+          />
           <InputField label="برند" value={brand} onChange={setBrand} />
           <InputField label="دسته بندی" value={category} onChange={setCategory} />
-          <InputField label="واحد فروش" value={unit} onChange={setUnit} />
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>قیمت واحد</span>
+          <InputField
+            label="واحد فروش"
+            value={unit}
+            onChange={(value) => {
+              setUnit(value);
+              clearError("unit");
+            }}
+            error={errors.unit}
+          />
+          <FormField label="قیمت واحد" error={errors.unitPrice}>
             <Input
               value={unitPrice}
-              onChange={(event) => setUnitPrice(event.target.value)}
+              onChange={(event) => {
+                setUnitPrice(event.target.value);
+                clearError("unitPrice");
+              }}
               inputMode="numeric"
-              required
+              aria-invalid={Boolean(errors.unitPrice)}
             />
-          </label>
+          </FormField>
 
           {props.mode === "create" ? (
             <>
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>موجودی فروش اولیه</span>
+              <FormField label="موجودی فروش اولیه" error={errors.totalStock}>
                 <Input
                   value={totalStock}
-                  onChange={(event) => setTotalStock(event.target.value)}
+                  onChange={(event) => {
+                    setTotalStock(event.target.value);
+                    clearError("totalStock");
+                  }}
                   inputMode="numeric"
-                  required
+                  aria-invalid={Boolean(errors.totalStock)}
                 />
-              </label>
+              </FormField>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>وضعیت</span>
                 <Select
@@ -228,19 +293,20 @@ function InputField({
   label,
   value,
   onChange,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required
+        aria-invalid={Boolean(error)}
       />
-    </label>
+    </FormField>
   );
 }

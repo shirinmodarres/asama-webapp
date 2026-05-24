@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { FieldError } from "@/components/shared/field-error";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import type { NajaCenterStatus } from "@/lib/models/naja-center.model";
+import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+  SELECT_REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 interface BaseProps {
   onCancel: () => void;
@@ -74,22 +84,51 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
   const [status, setStatus] = useState<NajaCenterStatus>(
     props.mode === "edit" ? props.initialValues.status : "active",
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!isRequired(name)) nextErrors.name = REQUIRED_MESSAGE;
+    if (!isRequired(centerCode)) nextErrors.centerCode = REQUIRED_MESSAGE;
+    if (!isRequired(responsibleName)) nextErrors.responsibleName = REQUIRED_MESSAGE;
+    if (!isRequired(phone)) {
+      nextErrors.phone = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(phone)) {
+      nextErrors.phone = PHONE_MESSAGE;
+    }
+    if (secondaryPhone && !isValidPhone(secondaryPhone)) {
+      nextErrors.secondaryPhone = PHONE_MESSAGE;
+    }
+    if (!isRequired(province)) nextErrors.province = REQUIRED_MESSAGE;
+    if (!isRequired(city)) nextErrors.city = REQUIRED_MESSAGE;
+    if (!isRequired(county)) nextErrors.county = REQUIRED_MESSAGE;
+    if (!isRequired(fullAddress)) nextErrors.fullAddress = REQUIRED_MESSAGE;
+    if (!status) nextErrors.status = SELECT_REQUIRED_MESSAGE;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   return (
     <form
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        if (!validate()) return;
         props.onSubmit({
-          name,
-          responsibleName,
-          phone,
-          secondaryPhone: secondaryPhone.trim() || null,
-          landlinePhone: landlinePhone.trim() || null,
-          province,
-          city,
-          county,
-          centerCode,
-          fullAddress,
+          name: name.trim(),
+          responsibleName: responsibleName.trim(),
+          phone: normalizePhone(phone),
+          secondaryPhone: secondaryPhone ? normalizePhone(secondaryPhone) : null,
+          landlinePhone: landlinePhone ? normalizeDigits(landlinePhone.trim()) : null,
+          province: province.trim(),
+          city: city.trim(),
+          county: county.trim(),
+          centerCode: normalizeDigits(centerCode.trim()),
+          fullAddress: fullAddress.trim(),
           status,
         });
       }}
@@ -97,18 +136,42 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
     >
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
-          <InputField label="نام مرکز" value={name} onChange={setName} />
+          <InputField
+            label="نام مرکز"
+            value={name}
+            onChange={(value) => {
+              setName(value);
+              clearError("name");
+            }}
+            error={errors.name}
+          />
           <InputField
             label="نام مسئول"
             value={responsibleName}
-            onChange={setResponsibleName}
+            onChange={(value) => {
+              setResponsibleName(value);
+              clearError("responsibleName");
+            }}
+            error={errors.responsibleName}
           />
-          <InputField label="شماره همراه" value={phone} onChange={setPhone} />
+          <InputField
+            label="شماره همراه"
+            value={phone}
+            onChange={(value) => {
+              setPhone(value);
+              clearError("phone");
+            }}
+            error={errors.phone}
+          />
           <InputField
             label="شماره همراه دوم (اختیاری)"
             value={secondaryPhone}
-            onChange={setSecondaryPhone}
+            onChange={(value) => {
+              setSecondaryPhone(value);
+              clearError("secondaryPhone");
+            }}
             required={false}
+            error={errors.secondaryPhone}
           />
           <InputField
             label="شماره تلفن ثابت (اختیاری)"
@@ -116,19 +179,49 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
             onChange={setLandlinePhone}
             required={false}
           />
-          <InputField label="استان" value={province} onChange={setProvince} />
-          <InputField label="شهر" value={city} onChange={setCity} />
-          <InputField label="شهرستان" value={county} onChange={setCounty} />
+          <InputField
+            label="استان"
+            value={province}
+            onChange={(value) => {
+              setProvince(value);
+              clearError("province");
+            }}
+            error={errors.province}
+          />
+          <InputField
+            label="شهر"
+            value={city}
+            onChange={(value) => {
+              setCity(value);
+              clearError("city");
+            }}
+            error={errors.city}
+          />
+          <InputField
+            label="شهرستان"
+            value={county}
+            onChange={(value) => {
+              setCounty(value);
+              clearError("county");
+            }}
+            error={errors.county}
+          />
           <InputField
             label="کدپستی مرکز"
             value={centerCode}
-            onChange={setCenterCode}
+            onChange={(value) => {
+              setCenterCode(value);
+              clearError("centerCode");
+            }}
+            error={errors.centerCode}
           />
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>وضعیت</span>
+          <FormField label="وضعیت" error={errors.status}>
             <SearchableSelect
               value={status}
-              onValueChange={(value) => setStatus(value as NajaCenterStatus)}
+              onValueChange={(value) => {
+                setStatus(value as NajaCenterStatus);
+                clearError("status");
+              }}
               options={[
                 { value: "active", label: "فعال" },
                 { value: "inactive", label: "غیرفعال" },
@@ -136,17 +229,22 @@ export function NajaCenterForm(props: NajaCenterFormProps) {
               placeholder="انتخاب وضعیت"
               searchPlaceholder="جستجو در وضعیت ها"
               emptyMessage="وضعیتی پیدا نشد"
+              invalid={Boolean(errors.status)}
             />
-          </label>
+          </FormField>
         </div>
 
         <label className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
           <span>آدرس کامل</span>
           <Textarea
             value={fullAddress}
-            onChange={(event) => setFullAddress(event.target.value)}
-            required
+            onChange={(event) => {
+              setFullAddress(event.target.value);
+              clearError("fullAddress");
+            }}
+            aria-invalid={Boolean(errors.fullAddress)}
           />
+          <FieldError message={errors.fullAddress} />
         </label>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -176,20 +274,22 @@ function InputField({
   value,
   onChange,
   required = true,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required={required}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
       />
-    </label>
+    </FormField>
   );
 }

@@ -8,6 +8,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -46,6 +47,7 @@ export default function ExitSlipCreatePage() {
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -181,8 +183,9 @@ export default function ExitSlipCreatePage() {
   const handleScan = async () => {
     if (!order) return;
     const normalizedCode = normalizeDigits(scannedCode.trim());
+    setFieldErrors({});
     if (!normalizedCode) {
-      setError("کد اسکن‌شده را وارد کنید.");
+      setFieldErrors({ scannedCode: "این فیلد الزامی است." });
       scanInputRef.current?.focus();
       return;
     }
@@ -222,7 +225,7 @@ export default function ExitSlipCreatePage() {
       .filter(Boolean);
 
     if (!canSubmit || unitObjectIds.length !== scannedUnits.length) {
-      setError("تعداد کالاهای اسکن‌شده با سفارش برابر نیست.");
+      setError("تعداد کالاهای ثبت‌شده با سفارش برابر نیست.");
       return;
     }
 
@@ -284,7 +287,13 @@ export default function ExitSlipCreatePage() {
               <Input
                 ref={scanInputRef}
                 value={scannedCode}
-                onChange={(event) => setScannedCode(event.target.value)}
+                onChange={(event) => {
+                  setScannedCode(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    scannedCode: "",
+                  }));
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
@@ -292,7 +301,9 @@ export default function ExitSlipCreatePage() {
                   }
                 }}
                 disabled={isValidating}
+                aria-invalid={Boolean(fieldErrors.scannedCode)}
               />
+              <FieldError message={fieldErrors.scannedCode} />
             </label>
             <Button
               type="button"

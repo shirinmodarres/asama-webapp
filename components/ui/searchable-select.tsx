@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   className?: string;
   triggerClassName?: string;
+  invalid?: boolean;
 }
 
 export function SearchableSelect({
@@ -33,6 +34,7 @@ export function SearchableSelect({
   disabled = false,
   className,
   triggerClassName,
+  invalid = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -120,9 +122,12 @@ export function SearchableSelect({
         }}
         className={cn(
           "flex h-11 w-full items-center justify-between gap-3 rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
+          invalid &&
+            "border-red-400 focus:border-red-500 focus:ring-red-200",
           !selectedOption && "text-[#94A3B8]",
           triggerClassName,
         )}
+        aria-invalid={invalid || undefined}
       >
         <span className="truncate text-right">
           {selectedOption?.label ?? placeholder}

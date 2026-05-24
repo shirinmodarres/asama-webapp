@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FieldError } from "@/components/shared/field-error";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +15,10 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { toNumber } from "@/lib/utils/number-format";
+import {
+  isPositiveNumber,
+  POSITIVE_NUMBER_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 interface InventoryProduct {
   objectId?: string;
@@ -75,13 +80,19 @@ function InventoryUpdateModalContent({
   );
   const [amount, setAmount] = useState("1");
   const [note, setNote] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent className="max-w-[34rem]">
         <form
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
+            if (!isPositiveNumber(amount)) {
+              setErrors({ amount: POSITIVE_NUMBER_MESSAGE });
+              return;
+            }
             onSubmit({
               productId: product.id,
               inventoryScope,
@@ -134,8 +145,13 @@ function InventoryUpdateModalContent({
               <Input
                 inputMode="numeric"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => {
+                  setAmount(event.target.value);
+                  setErrors((current) => ({ ...current, amount: "" }));
+                }}
+                aria-invalid={Boolean(errors.amount)}
               />
+              <FieldError message={errors.amount} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">

@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FormField } from "@/components/shared/form-field";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,13 @@ import {
 } from "@/lib/services/customer.service";
 import { formatDeliveryAddress } from "@/lib/utils/address-format";
 import { formatFaDigits, normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidNationalId,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 export default function EditCustomerPage() {
   const params = useParams<{ objectId: string }>();
@@ -235,11 +243,29 @@ function CustomerEditForm({
   const [phone, setPhone] = useState(customer.phone);
   const [nationalId, setNationalId] = useState(customer.nationalId ?? "");
   const [status, setStatus] = useState(customer.status);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+  };
 
   return (
     <form
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        const nextErrors: Record<string, string> = {};
+        if (!isRequired(fullName)) nextErrors.fullName = REQUIRED_MESSAGE;
+        if (!isRequired(phone)) {
+          nextErrors.phone = REQUIRED_MESSAGE;
+        } else if (!isValidPhone(phone)) {
+          nextErrors.phone = PHONE_MESSAGE;
+        }
+        if (nationalId && !isValidNationalId(nationalId)) {
+          nextErrors.nationalId = "کد ملی معتبر نیست.";
+        }
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
         onSubmit({
           fullName,
           phone: normalizePhone(phone),
@@ -252,9 +278,34 @@ function CustomerEditForm({
       <Card className="p-5">
         <h3 className="text-base font-semibold text-[#102034]">اطلاعات مشتری</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <InputField label="نام مشتری" value={fullName} onChange={setFullName} />
-          <InputField label="شماره موبایل" value={phone} onChange={setPhone} />
-          <InputField label="کد ملی" value={nationalId} onChange={setNationalId} required={false} />
+          <InputField
+            label="نام مشتری"
+            value={fullName}
+            onChange={(value) => {
+              setFullName(value);
+              clearError("fullName");
+            }}
+            error={errors.fullName}
+          />
+          <InputField
+            label="شماره موبایل"
+            value={phone}
+            onChange={(value) => {
+              setPhone(value);
+              clearError("phone");
+            }}
+            error={errors.phone}
+          />
+          <InputField
+            label="کد ملی"
+            value={nationalId}
+            onChange={(value) => {
+              setNationalId(value);
+              clearError("nationalId");
+            }}
+            required={false}
+            error={errors.nationalId}
+          />
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>وضعیت</span>
             <SearchableSelect value={status} onValueChange={(value) => setStatus(value as Customer["status"])} options={[{ value: "active", label: "فعال" }, { value: "inactive", label: "غیرفعال" }]} />
@@ -269,11 +320,15 @@ function CustomerEditForm({
   );
 }
 
-function InputField({ label, value, onChange, required = true }: { label: string; value: string; onChange: (value: string) => void; required?: boolean }) {
+function InputField({ label, value, onChange, required = true, error }: { label: string; value: string; onChange: (value: string) => void; required?: boolean; error?: string }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
-      <Input value={value} onChange={(event) => onChange(event.target.value)} required={required} />
-    </label>
+    <FormField label={label} error={error}>
+      <Input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
+      />
+    </FormField>
   );
 }

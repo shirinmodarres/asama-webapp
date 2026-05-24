@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
@@ -31,6 +32,7 @@ import {
   getReceiverName,
 } from "@/lib/utils/address-format";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
+import { POSITIVE_NUMBER_MESSAGE, SELECT_REQUIRED_MESSAGE } from "@/lib/utils/form-validation";
 
 interface DraftItem {
   rowId: string;
@@ -81,6 +83,10 @@ export function OrderForm({
     initialOrder?.customerAddressObjectId ?? "",
   );
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [rowErrors, setRowErrors] = useState<
+    Record<string, { productId?: string; quantity?: string }>
+  >({});
 
   useEffect(() => {
     let isMounted = true;
@@ -206,6 +212,14 @@ export function OrderForm({
   };
 
   const updateRow = (rowId: string, patch: Partial<DraftItem>) => {
+    setRowErrors((current) => ({
+      ...current,
+      [rowId]: {
+        ...current[rowId],
+        ...(patch.productId !== undefined ? { productId: "" } : {}),
+        ...(patch.quantity !== undefined ? { quantity: "" } : {}),
+      },
+    }));
     setItems((current) =>
       current.map((item) =>
         item.rowId === rowId ? { ...item, ...patch } : item,
@@ -215,13 +229,26 @@ export function OrderForm({
 
   const handleSubmit = async () => {
     setError("");
+    setFieldErrors({});
+    setRowErrors({});
 
-    if (
-      items.some(
-        (item) => !item.productId || !Number.isFinite(item.quantity) || item.quantity <= 0,
-      )
-    ) {
-      setError("برای هر ردیف کالا و تعداد معتبر وارد کنید.");
+    const nextRowErrors: Record<
+      string,
+      { productId?: string; quantity?: string }
+    > = {};
+    for (const item of items) {
+      const errors: { productId?: string; quantity?: string } = {};
+      if (!item.productId) errors.productId = SELECT_REQUIRED_MESSAGE;
+      if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+        errors.quantity = POSITIVE_NUMBER_MESSAGE;
+      }
+      if (Object.keys(errors).length > 0) {
+        nextRowErrors[item.rowId] = errors;
+      }
+    }
+
+    if (Object.keys(nextRowErrors).length > 0) {
+      setRowErrors(nextRowErrors);
       return;
     }
 
@@ -248,7 +275,7 @@ export function OrderForm({
     }
 
     if (selectedCustomerId && !selectedAddressId) {
-      setError("برای مشتری انتخاب شده باید آدرس تحویل انتخاب شود.");
+      setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
       return;
     }
 
@@ -275,7 +302,13 @@ export function OrderForm({
             <span>مشتری</span>
             <SearchableSelect
               value={selectedCustomerId || undefined}
-              onValueChange={setSelectedCustomerId}
+              onValueChange={(value) => {
+                setSelectedCustomerId(value);
+                setFieldErrors((current) => ({
+                  ...current,
+                  selectedCustomerId: "",
+                }));
+              }}
               options={customers.map((customer) => ({
                 value: customer.objectId,
                 label: customer.fullName,
@@ -283,14 +316,22 @@ export function OrderForm({
               placeholder="انتخاب مشتری"
               searchPlaceholder="جستجو بر اساس نام"
               emptyMessage="مشتری پیدا نشد"
+              invalid={Boolean(fieldErrors.selectedCustomerId)}
             />
+            <FieldError message={fieldErrors.selectedCustomerId} />
           </label>
 
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>آدرس تحویل</span>
             <SearchableSelect
               value={selectedAddressId || undefined}
-              onValueChange={setSelectedAddressId}
+              onValueChange={(value) => {
+                setSelectedAddressId(value);
+                setFieldErrors((current) => ({
+                  ...current,
+                  selectedAddressId: "",
+                }));
+              }}
               options={addresses.map((address) => ({
                 value: address.objectId,
                 label: formatDeliveryAddress(address),
@@ -301,7 +342,9 @@ export function OrderForm({
               searchPlaceholder="جستجو در آدرس‌ها"
               emptyMessage="آدرسی پیدا نشد"
               disabled={!selectedCustomerId || isLoadingAddresses}
+              invalid={Boolean(fieldErrors.selectedAddressId)}
             />
+            <FieldError message={fieldErrors.selectedAddressId} />
           </label>
         </div>
 
@@ -408,19 +451,25 @@ export function OrderForm({
                     searchPlaceholder="جستجو در کالاها"
                     emptyMessage="کالایی پیدا نشد"
                     triggerClassName="pr-10"
+                    invalid={Boolean(rowErrors[item.rowId]?.productId)}
                   />
+                  <FieldError message={rowErrors[item.rowId]?.productId} />
                 </div>
 
-                <Input
-                  inputMode="numeric"
-                  value={item.quantity}
-                  onChange={(event) =>
-                    updateRow(item.rowId, {
-                      quantity: toNumber(event.target.value),
-                    })
-                  }
-                  className="px-2.5 text-center"
-                />
+                <div>
+                  <Input
+                    inputMode="numeric"
+                    value={item.quantity}
+                    onChange={(event) =>
+                      updateRow(item.rowId, {
+                        quantity: toNumber(event.target.value),
+                      })
+                    }
+                    className="px-2.5 text-center"
+                    aria-invalid={Boolean(rowErrors[item.rowId]?.quantity)}
+                  />
+                  <FieldError message={rowErrors[item.rowId]?.quantity} />
+                </div>
 
                 <div className="flex h-11 items-center justify-between gap-3 rounded-[14px] border border-[#E7EDF3] bg-[#FBFCFD] px-3.5 text-sm">
                   <span className="text-xs font-medium text-[#6B7280]">

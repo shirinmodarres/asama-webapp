@@ -8,6 +8,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -45,6 +46,7 @@ export default function WarehouseInboundReceiptEditPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -153,6 +155,7 @@ export default function WarehouseInboundReceiptEditPage() {
 
   const addUnit = () => {
     setError("");
+    setFieldErrors({});
     const unit = {
       rowId: `new-${Date.now()}`,
       productIdentifier: normalizeDigits(newProductIdentifier.trim()),
@@ -160,7 +163,25 @@ export default function WarehouseInboundReceiptEditPage() {
       trackingCode: normalizeDigits(newTrackingCode.trim()),
     };
     if (!unit.productIdentifier || !unit.serialNumber || !unit.trackingCode) {
-      setError("شناسه محصول، سریال محصول و کد رهگیری الزامی است.");
+      setFieldErrors({
+        newProductIdentifier: unit.productIdentifier
+          ? ""
+          : "این فیلد الزامی است.",
+        newSerialNumber: unit.serialNumber ? "" : "این فیلد الزامی است.",
+        newTrackingCode: unit.trackingCode ? "" : "این فیلد الزامی است.",
+      });
+      return;
+    }
+    if (
+      units.some(
+        (entry) =>
+          normalizeDigits(entry.serialNumber.trim()) === unit.serialNumber ||
+          normalizeDigits(entry.trackingCode.trim()) === unit.trackingCode,
+      )
+    ) {
+      setFieldErrors({
+        newTrackingCode: "سریال یا کد رهگیری تکراری در فرم وجود دارد.",
+      });
       return;
     }
     setUnits((current) => [...current, unit]);
@@ -266,24 +287,54 @@ export default function WarehouseInboundReceiptEditPage() {
 
           <Card className="p-5">
             <div className="grid gap-3 md:grid-cols-3">
-              <Input
-                value={newProductIdentifier}
-                onChange={(event) => setNewProductIdentifier(event.target.value)}
-                placeholder="شناسه محصول"
-              />
-              <Input
-                value={newSerialNumber}
-                onChange={(event) => setNewSerialNumber(event.target.value)}
-                placeholder="سریال محصول"
-              />
-              <Input
-                value={newTrackingCode}
-                onChange={(event) => setNewTrackingCode(event.target.value)}
-                placeholder="کد رهگیری"
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") addUnit();
-                }}
-              />
+              <div>
+                <Input
+                  value={newProductIdentifier}
+                  onChange={(event) => {
+                    setNewProductIdentifier(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      newProductIdentifier: "",
+                    }));
+                  }}
+                  placeholder="شناسه محصول"
+                  aria-invalid={Boolean(fieldErrors.newProductIdentifier)}
+                />
+                <FieldError message={fieldErrors.newProductIdentifier} />
+              </div>
+              <div>
+                <Input
+                  value={newSerialNumber}
+                  onChange={(event) => {
+                    setNewSerialNumber(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      newSerialNumber: "",
+                    }));
+                  }}
+                  placeholder="سریال محصول"
+                  aria-invalid={Boolean(fieldErrors.newSerialNumber)}
+                />
+                <FieldError message={fieldErrors.newSerialNumber} />
+              </div>
+              <div>
+                <Input
+                  value={newTrackingCode}
+                  onChange={(event) => {
+                    setNewTrackingCode(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      newTrackingCode: "",
+                    }));
+                  }}
+                  placeholder="کد رهگیری"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addUnit();
+                  }}
+                  aria-invalid={Boolean(fieldErrors.newTrackingCode)}
+                />
+                <FieldError message={fieldErrors.newTrackingCode} />
+              </div>
             </div>
             <Button type="button" className="mt-4" onClick={addUnit}>
               افزودن ردیف

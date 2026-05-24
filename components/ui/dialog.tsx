@@ -57,7 +57,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-[calc(100%-2rem)] max-w-[34rem] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[20px] border border-[#D7DEE6] bg-white p-6 opacity-100 shadow-[0_32px_80px_rgba(15,23,42,0.24)] transition-all duration-200 data-[state=closed]:translate-y-[-48%] data-[state=closed]:opacity-0 sm:w-full",
+          "fixed top-[50%] left-[50%] z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[34rem] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-[20px] border border-[#D7DEE6] bg-white p-5 opacity-100 shadow-[0_32px_80px_rgba(15,23,42,0.24)] transition-all duration-200 data-[state=closed]:translate-y-[-48%] data-[state=closed]:opacity-0 sm:w-full sm:p-6",
           className,
         )}
         {...props}

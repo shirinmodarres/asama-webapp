@@ -17,6 +17,7 @@ import { ConfirmationModal } from "@/components/manager/confirmation-modal";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
@@ -61,6 +62,7 @@ export default function ManagerOrderReviewPage() {
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
+  const [dialogErrors, setDialogErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
 
@@ -168,13 +170,15 @@ export default function ManagerOrderReviewPage() {
     const currentUserName = getStoredCurrentUser()?.fullName ?? "";
 
     if (decision === "needs_review" && !reviewReasonCode) {
-      setMessageType("error");
-      setMessage("لطفاً دلیل نیاز به بررسی را انتخاب کنید.");
+      setDialogErrors({
+        reviewReasonCode: "لطفاً دلیل نیاز به بررسی را انتخاب کنید.",
+      });
       return;
     }
 
     setIsSubmitting(true);
     setMessage("");
+    setDialogErrors({});
 
     try {
       const updated =
@@ -216,13 +220,15 @@ export default function ManagerOrderReviewPage() {
     const currentUserName = getStoredCurrentUser()?.fullName ?? "";
 
     if (shipmentAction === "lock" && !shipmentStopReasonCode) {
-      setMessageType("error");
-      setMessage("لطفاً دلیل توقف خروج را انتخاب کنید.");
+      setDialogErrors({
+        shipmentStopReasonCode: "لطفاً دلیل توقف خروج را انتخاب کنید.",
+      });
       return;
     }
 
     setIsSubmitting(true);
     setMessage("");
+    setDialogErrors({});
 
     try {
       const updated =
@@ -586,6 +592,7 @@ export default function ManagerOrderReviewPage() {
         onCancel={() => {
           setDecision(null);
           setReviewReasonCode("");
+          setDialogErrors({});
         }}
       >
         {decision === "needs_review" ? (
@@ -593,10 +600,23 @@ export default function ManagerOrderReviewPage() {
             <span>دلیل نیاز به بررسی</span>
             <Select
               value={reviewReasonCode}
-              onValueChange={setReviewReasonCode}
+              onValueChange={(value) => {
+                setReviewReasonCode(value);
+                setDialogErrors((current) => ({
+                  ...current,
+                  reviewReasonCode: "",
+                }));
+              }}
               disabled={isSubmitting}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                className={
+                  dialogErrors.reviewReasonCode
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                    : undefined
+                }
+                aria-invalid={Boolean(dialogErrors.reviewReasonCode)}
+              >
                 <SelectValue placeholder="انتخاب دلیل نیاز به بررسی" />
               </SelectTrigger>
               <SelectContent>
@@ -607,6 +627,7 @@ export default function ManagerOrderReviewPage() {
                 ))}
               </SelectContent>
             </Select>
+            <FieldError message={dialogErrors.reviewReasonCode} />
           </label>
         ) : null}
       </ConfirmationModal>
@@ -630,6 +651,7 @@ export default function ManagerOrderReviewPage() {
         onCancel={() => {
           setShipmentAction(null);
           setShipmentStopReasonCode("");
+          setDialogErrors({});
         }}
       >
         {shipmentAction === "lock" ? (
@@ -637,10 +659,23 @@ export default function ManagerOrderReviewPage() {
             <span>دلیل توقف خروج</span>
             <Select
               value={shipmentStopReasonCode}
-              onValueChange={setShipmentStopReasonCode}
+              onValueChange={(value) => {
+                setShipmentStopReasonCode(value);
+                setDialogErrors((current) => ({
+                  ...current,
+                  shipmentStopReasonCode: "",
+                }));
+              }}
               disabled={isSubmitting}
             >
-              <SelectTrigger>
+              <SelectTrigger
+                className={
+                  dialogErrors.shipmentStopReasonCode
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                    : undefined
+                }
+                aria-invalid={Boolean(dialogErrors.shipmentStopReasonCode)}
+              >
                 <SelectValue placeholder="انتخاب دلیل توقف خروج" />
               </SelectTrigger>
               <SelectContent>
@@ -651,6 +686,7 @@ export default function ManagerOrderReviewPage() {
                 ))}
               </SelectContent>
             </Select>
+            <FieldError message={dialogErrors.shipmentStopReasonCode} />
           </label>
         ) : null}
       </ConfirmationModal>

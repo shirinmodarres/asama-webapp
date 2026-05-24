@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { FieldError } from "@/components/shared/field-error";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import type { Warehouse } from "@/lib/models/warehouse.model";
+import {
+  isRequired,
+  REQUIRED_MESSAGE,
+  SELECT_REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 export interface WarehouseFormInput {
   name: string;
@@ -39,8 +46,14 @@ export function WarehouseForm({
   >(initialValues?.allowedOrderTypes ?? ["normal"]);
   const [isDefault, setIsDefault] = useState(initialValues?.isDefault ?? false);
   const [status, setStatus] = useState(initialValues?.status ?? "active");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+  };
 
   const toggleOrderType = (value: "normal" | "naja") => {
+    clearError("allowedOrderTypes");
     setAllowedOrderTypes((current) =>
       current.includes(value)
         ? current.filter((item) => item !== value)
@@ -50,22 +63,51 @@ export function WarehouseForm({
 
   return (
     <form
+      noValidate
       className="contents"
       onSubmit={(event) => {
         event.preventDefault();
+        const nextErrors: Record<string, string> = {};
+        if (!isRequired(name)) nextErrors.name = REQUIRED_MESSAGE;
+        if (!isRequired(code)) nextErrors.code = REQUIRED_MESSAGE;
+        if (!type) nextErrors.type = SELECT_REQUIRED_MESSAGE;
+        if (!status) nextErrors.status = SELECT_REQUIRED_MESSAGE;
+        if (allowedOrderTypes.length === 0) {
+          nextErrors.allowedOrderTypes = "حداقل یک نوع سفارش را انتخاب کنید.";
+        }
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
         onSubmit({ name, code, type, allowedOrderTypes, isDefault, status });
       }}
     >
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
-          <InputField label="نام انبار" value={name} onChange={setName} />
-          <InputField label="کد انبار" value={code} onChange={setCode} />
+          <InputField
+            label="نام انبار"
+            value={name}
+            onChange={(value) => {
+              setName(value);
+              clearError("name");
+            }}
+            error={errors.name}
+          />
+          <InputField
+            label="کد انبار"
+            value={code}
+            onChange={(value) => {
+              setCode(value);
+              clearError("code");
+            }}
+            error={errors.code}
+          />
 
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>نوع انبار</span>
+          <FormField label="نوع انبار" error={errors.type}>
             <SearchableSelect
               value={type}
-              onValueChange={setType}
+              onValueChange={(value) => {
+                setType(value);
+                clearError("type");
+              }}
               options={[
                 { value: "general", label: "عمومی" },
                 { value: "naja", label: "ناجا" },
@@ -74,14 +116,17 @@ export function WarehouseForm({
               placeholder="انتخاب نوع انبار"
               searchPlaceholder="جستجو در نوع انبار"
               emptyMessage="نوعی پیدا نشد"
+              invalid={Boolean(errors.type)}
             />
-          </label>
+          </FormField>
 
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>وضعیت</span>
+          <FormField label="وضعیت" error={errors.status}>
             <SearchableSelect
               value={status}
-              onValueChange={setStatus}
+              onValueChange={(value) => {
+                setStatus(value);
+                clearError("status");
+              }}
               options={[
                 { value: "active", label: "فعال" },
                 { value: "inactive", label: "غیرفعال" },
@@ -89,8 +134,9 @@ export function WarehouseForm({
               placeholder="انتخاب وضعیت"
               searchPlaceholder="جستجو در وضعیت"
               emptyMessage="وضعیتی پیدا نشد"
+              invalid={Boolean(errors.status)}
             />
-          </label>
+          </FormField>
 
           <div className="grid gap-3 text-sm font-medium text-[#334155]">
             <span>نوع سفارش مجاز</span>
@@ -104,6 +150,7 @@ export function WarehouseForm({
               label="سفارش ناجا"
               onChange={() => toggleOrderType("naja")}
             />
+            <FieldError message={errors.allowedOrderTypes} />
           </div>
 
           <div className="grid content-start gap-3 text-sm font-medium text-[#334155]">
@@ -142,20 +189,21 @@ function InputField({
   label,
   value,
   onChange,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required
+        aria-invalid={Boolean(error)}
       />
-    </label>
+    </FormField>
   );
 }
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { FieldError } from "@/components/shared/field-error";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -11,6 +13,13 @@ import type {
   ReceiverType,
 } from "@/lib/models/customer.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+  SELECT_REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 interface AddressFormProps {
   customerFullName: string;
@@ -57,11 +66,38 @@ export function AddressForm({
   const [isDefault, setIsDefault] = useState(
     initialValues?.isDefault ?? defaultIsDefault,
   );
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setErrors((current) => ({ ...current, [field]: "" }));
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!receiverType) nextErrors.receiverType = SELECT_REQUIRED_MESSAGE;
+    if (!isRequired(province)) nextErrors.province = REQUIRED_MESSAGE;
+    if (!isRequired(city)) nextErrors.city = REQUIRED_MESSAGE;
+    if (!isRequired(fullAddress)) nextErrors.fullAddress = REQUIRED_MESSAGE;
+    if (receiverType === "other") {
+      if (!isRequired(receiverFullName)) {
+        nextErrors.receiverFullName = REQUIRED_MESSAGE;
+      }
+      if (!isRequired(receiverPhone)) {
+        nextErrors.receiverPhone = REQUIRED_MESSAGE;
+      } else if (!isValidPhone(receiverPhone)) {
+        nextErrors.receiverPhone = PHONE_MESSAGE;
+      }
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   return (
     <form
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
+        if (!validate()) return;
         const isSelf = receiverType === "self";
         onSubmit({
           title: optional(title) ?? "آدرس پیش‌فرض",
@@ -90,14 +126,19 @@ export function AddressForm({
         <InputField
           label="عنوان آدرس"
           value={title}
-          onChange={setTitle}
+          onChange={(value) => {
+            setTitle(value);
+            clearError("title");
+          }}
           required={false}
         />
-        <label className="grid gap-2 text-sm font-medium text-[#334155]">
-          <span>گیرنده بار</span>
+        <FormField label="گیرنده بار" error={errors.receiverType}>
           <SearchableSelect
             value={receiverType}
-            onValueChange={(value) => setReceiverType(value as ReceiverType)}
+            onValueChange={(value) => {
+              setReceiverType(value as ReceiverType);
+              clearError("receiverType");
+            }}
             options={[
               { value: "self", label: "خود مشتری" },
               { value: "other", label: "فرد دیگر" },
@@ -105,32 +146,61 @@ export function AddressForm({
             placeholder="انتخاب گیرنده"
             searchPlaceholder="جستجو در گزینه‌ها"
             emptyMessage="گزینه‌ای پیدا نشد"
+            invalid={Boolean(errors.receiverType)}
           />
-        </label>
-        <InputField label="استان" value={province} onChange={setProvince} />
-        <InputField label="شهر" value={city} onChange={setCity} />
+        </FormField>
+        <InputField
+          label="استان"
+          value={province}
+          onChange={(value) => {
+            setProvince(value);
+            clearError("province");
+          }}
+          error={errors.province}
+        />
+        <InputField
+          label="شهر"
+          value={city}
+          onChange={(value) => {
+            setCity(value);
+            clearError("city");
+          }}
+          error={errors.city}
+        />
         <InputField
           label="شهرستان"
           value={county}
-          onChange={setCounty}
+          onChange={(value) => {
+            setCounty(value);
+            clearError("county");
+          }}
           required={false}
         />
         <InputField
           label="کد پستی"
           value={postalCode}
-          onChange={setPostalCode}
+          onChange={(value) => {
+            setPostalCode(value);
+            clearError("postalCode");
+          }}
           required={false}
         />
         <InputField
           label="پلاک"
           value={plaque}
-          onChange={setPlaque}
+          onChange={(value) => {
+            setPlaque(value);
+            clearError("plaque");
+          }}
           required={false}
         />
         <InputField
           label="واحد"
           value={unit}
-          onChange={setUnit}
+          onChange={(value) => {
+            setUnit(value);
+            clearError("unit");
+          }}
           required={false}
         />
       </div>
@@ -148,12 +218,20 @@ export function AddressForm({
           <InputField
             label="نام و نام خانوادگی گیرنده"
             value={receiverFullName}
-            onChange={setReceiverFullName}
+            onChange={(value) => {
+              setReceiverFullName(value);
+              clearError("receiverFullName");
+            }}
+            error={errors.receiverFullName}
           />
           <InputField
             label="شماره موبایل گیرنده"
             value={receiverPhone}
-            onChange={setReceiverPhone}
+            onChange={(value) => {
+              setReceiverPhone(value);
+              clearError("receiverPhone");
+            }}
+            error={errors.receiverPhone}
           />
         </div>
       )}
@@ -162,9 +240,13 @@ export function AddressForm({
         <span>آدرس کامل</span>
         <Textarea
           value={fullAddress}
-          onChange={(event) => setFullAddress(event.target.value)}
-          required
+          onChange={(event) => {
+            setFullAddress(event.target.value);
+            clearError("fullAddress");
+          }}
+          aria-invalid={Boolean(errors.fullAddress)}
         />
+        <FieldError message={errors.fullAddress} />
       </label>
 
       <label className="flex items-center gap-2 text-sm font-medium text-[#334155]">
@@ -200,21 +282,23 @@ function InputField({
   value,
   onChange,
   required = true,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required={required}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
       />
-    </label>
+    </FormField>
   );
 }
 

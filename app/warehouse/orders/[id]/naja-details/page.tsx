@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { NajaCenterInfoCard } from "@/components/naja/naja-center-info-card";
 import { NajaReturnActionRemote } from "@/components/naja/naja-return-action-remote";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -20,7 +21,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import type { Order } from "@/lib/models/order.model";
 import { completeNajaWarehouseInfo } from "@/lib/services/naja.service";
 import { getOrder } from "@/lib/services/order.service";
-import { formatFaDigits } from "@/lib/utils/number-format";
+import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
 export default function WarehouseNajaDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export default function WarehouseNajaDetailsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -66,11 +68,19 @@ export default function WarehouseNajaDetailsPage() {
     setIsSubmitting(true);
     setMessage("");
     setError("");
+    const nextErrors: Record<string, string> = {};
+    if (!productIdentifier.trim()) nextErrors.productIdentifier = "این فیلد الزامی است.";
+    if (!trackingCode.trim()) nextErrors.trackingCode = "این فیلد الزامی است.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const updated = await completeNajaWarehouseInfo(order.objectId, {
-        productIdentifier: productIdentifier.trim(),
-        trackingCode: trackingCode.trim(),
+        productIdentifier: normalizeDigits(productIdentifier.trim()),
+        trackingCode: normalizeDigits(trackingCode.trim()),
         completedByName: "رضا احمدی",
       });
       setOrder(updated);
@@ -127,11 +137,33 @@ export default function WarehouseNajaDetailsPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>شناسه کالا</span>
-                <Input value={productIdentifier} onChange={(event) => setProductIdentifier(event.target.value)} />
+                <Input
+                  value={productIdentifier}
+                  onChange={(event) => {
+                    setProductIdentifier(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      productIdentifier: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.productIdentifier)}
+                />
+                <FieldError message={fieldErrors.productIdentifier} />
               </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کد رهگیری</span>
-                <Input value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} />
+                <Input
+                  value={trackingCode}
+                  onChange={(event) => {
+                    setTrackingCode(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      trackingCode: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.trackingCode)}
+                />
+                <FieldError message={fieldErrors.trackingCode} />
               </label>
             </div>
 

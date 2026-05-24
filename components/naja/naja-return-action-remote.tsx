@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -105,11 +106,15 @@ export function NajaReturnActionRemote({
           <span>دلیل برگشت</span>
           <Textarea
             value={reason}
-            onChange={(event) => setReason(event.target.value)}
+            onChange={(event) => {
+              setReason(event.target.value);
+              setError("");
+            }}
             placeholder="علت بازگردانی سفارش را ثبت کنید"
+            aria-invalid={Boolean(error)}
           />
+          <FieldError message={error} />
         </label>
-        {error ? <div className="mt-3"><InlineErrorMessage message={error} /></div> : null}
       </ConfirmationModal>
     </Card>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
@@ -26,6 +27,15 @@ import {
   normalizePhone,
   toNumber,
 } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidNationalId,
+  isValidPhone,
+  PHONE_MESSAGE,
+  POSITIVE_NUMBER_MESSAGE,
+  REQUIRED_MESSAGE,
+  SELECT_REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -50,6 +60,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [najaExpertName, setNajaExpertName] = useState("کارشناس مرادی");
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -155,18 +166,22 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
   const handleSubmit = async () => {
     setError("");
+    setFieldErrors({});
+    const nextErrors: Record<string, string> = {};
 
     if (!centerObjectId) {
-      setError("مرکز ناجا را انتخاب کنید.");
-      return;
+      nextErrors.centerObjectId = SELECT_REQUIRED_MESSAGE;
     }
     if (!warehouseId) {
-      setError("انبار ناجا را انتخاب کنید.");
-      return;
+      nextErrors.warehouseId = SELECT_REQUIRED_MESSAGE;
     }
 
     if (!productId) {
-      setError("کالای ناجا را انتخاب کنید.");
+      nextErrors.productId = SELECT_REQUIRED_MESSAGE;
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
       return;
     }
 
@@ -177,8 +192,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
     const requestedQuantity = toNumber(quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
-      setError("تعداد سفارش باید بیشتر از صفر باشد.");
-      return;
+      nextErrors.quantity = POSITIVE_NUMBER_MESSAGE;
     }
 
     if (requestedQuantity > selectedProductStock) {
@@ -186,8 +200,20 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       return;
     }
 
-    if (!customerName.trim() || !nationalId.trim() || !phoneNumber.trim()) {
-      setError("اطلاعات مشتری را کامل وارد کنید.");
+    if (!isRequired(customerName)) nextErrors.customerName = REQUIRED_MESSAGE;
+    if (!isRequired(nationalId)) {
+      nextErrors.nationalId = REQUIRED_MESSAGE;
+    } else if (!isValidNationalId(nationalId)) {
+      nextErrors.nationalId = "کد ملی معتبر نیست.";
+    }
+    if (!isRequired(phoneNumber)) {
+      nextErrors.phoneNumber = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(phoneNumber)) {
+      nextErrors.phoneNumber = PHONE_MESSAGE;
+    }
+    if (!isRequired(najaExpertName)) nextErrors.najaExpertName = REQUIRED_MESSAGE;
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -230,13 +256,21 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 <Landmark className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={centerObjectId}
-                  onValueChange={setCenterObjectId}
+                  onValueChange={(value) => {
+                    setCenterObjectId(value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      centerObjectId: "",
+                    }));
+                  }}
                   options={centerOptions}
                   placeholder="انتخاب مرکز ناجا"
                   searchPlaceholder="جستجو در مراکز ناجا"
                   emptyMessage="مرکز فعالی پیدا نشد"
                   triggerClassName="pr-10"
+                  invalid={Boolean(fieldErrors.centerObjectId)}
                 />
+                <FieldError message={fieldErrors.centerObjectId} />
               </div>
             </label>
 
@@ -247,12 +281,19 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 onValueChange={(value) => {
                   setWarehouseId(value);
                   setProductId("");
+                  setFieldErrors((current) => ({
+                    ...current,
+                    warehouseId: "",
+                    productId: "",
+                  }));
                 }}
                 options={warehouseOptions}
                 placeholder="انتخاب انبار ناجا"
                 searchPlaceholder="جستجو در انبارها"
                 emptyMessage="انبار ناجا پیدا نشد"
+                invalid={Boolean(fieldErrors.warehouseId)}
               />
+              <FieldError message={fieldErrors.warehouseId} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
@@ -261,13 +302,21 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={productId}
-                  onValueChange={setProductId}
+                  onValueChange={(value) => {
+                    setProductId(value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      productId: "",
+                    }));
+                  }}
                   options={productOptions}
                   placeholder="انتخاب کالا از موجودی ناجا"
                   searchPlaceholder="جستجو در کالاهای ناجا"
                   emptyMessage="کالای دارای موجودی ناجا پیدا نشد"
                   triggerClassName="pr-10"
+                  invalid={Boolean(fieldErrors.productId)}
                 />
+                <FieldError message={fieldErrors.productId} />
               </div>
             </label>
 
@@ -276,40 +325,80 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               <Input
                 inputMode="numeric"
                 value={quantity}
-                onChange={(event) => setQuantity(toNumber(event.target.value))}
+                onChange={(event) => {
+                  setQuantity(toNumber(event.target.value));
+                  setFieldErrors((current) => ({
+                    ...current,
+                    quantity: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.quantity)}
               />
+              <FieldError message={fieldErrors.quantity} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>نام ثبت کننده / کارشناس ناجا</span>
               <Input
                 value={najaExpertName}
-                onChange={(event) => setNajaExpertName(event.target.value)}
+                onChange={(event) => {
+                  setNajaExpertName(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    najaExpertName: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.najaExpertName)}
               />
+              <FieldError message={fieldErrors.najaExpertName} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>نام مشتری</span>
               <Input
                 value={customerName}
-                onChange={(event) => setCustomerName(event.target.value)}
+                onChange={(event) => {
+                  setCustomerName(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    customerName: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.customerName)}
               />
+              <FieldError message={fieldErrors.customerName} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>کد ملی</span>
               <Input
                 value={nationalId}
-                onChange={(event) => setNationalId(event.target.value)}
+                onChange={(event) => {
+                  setNationalId(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    nationalId: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.nationalId)}
               />
+              <FieldError message={fieldErrors.nationalId} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>شماره موبایل</span>
               <Input
                 value={phoneNumber}
-                onChange={(event) => setPhoneNumber(event.target.value)}
+                onChange={(event) => {
+                  setPhoneNumber(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    phoneNumber: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.phoneNumber)}
               />
+              <FieldError message={fieldErrors.phoneNumber} />
             </label>
           </div>
 

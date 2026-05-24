@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AddressForm } from "@/components/customer/address-form";
+import { FormField } from "@/components/shared/form-field";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type {
@@ -9,6 +10,13 @@ import type {
   CustomerPayload,
 } from "@/lib/models/customer.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidNationalId,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 export interface CustomerFormInput extends CustomerPayload {
   defaultAddress: CustomerAddressPayload;
@@ -28,15 +36,25 @@ export function CustomerForm({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [nationalId, setNationalId] = useState("");
-  const [validationError, setValidationError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleAddressSubmit = (defaultAddress: CustomerAddressPayload) => {
-    if (!fullName.trim() || !phone.trim()) {
-      setValidationError("نام مشتری و شماره موبایل الزامی است.");
+    const nextErrors: Record<string, string> = {};
+    if (!isRequired(fullName)) nextErrors.fullName = REQUIRED_MESSAGE;
+    if (!isRequired(phone)) {
+      nextErrors.phone = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(phone)) {
+      nextErrors.phone = PHONE_MESSAGE;
+    }
+    if (nationalId && !isValidNationalId(nationalId)) {
+      nextErrors.nationalId = "کد ملی معتبر نیست.";
+    }
+
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
-    setValidationError("");
     onSubmit({
       fullName: fullName.trim(),
       phone: normalizePhone(phone),
@@ -56,25 +74,32 @@ export function CustomerForm({
           <InputField
             label="نام مشتری"
             value={fullName}
-            onChange={setFullName}
+            onChange={(value) => {
+              setFullName(value);
+              setFieldErrors((current) => ({ ...current, fullName: "" }));
+            }}
+            error={fieldErrors.fullName}
           />
           <InputField
             label="شماره موبایل"
             value={phone}
-            onChange={setPhone}
+            onChange={(value) => {
+              setPhone(value);
+              setFieldErrors((current) => ({ ...current, phone: "" }));
+            }}
+            error={fieldErrors.phone}
           />
           <InputField
             label="کد ملی"
             value={nationalId}
-            onChange={setNationalId}
+            onChange={(value) => {
+              setNationalId(value);
+              setFieldErrors((current) => ({ ...current, nationalId: "" }));
+            }}
             required={false}
+            error={fieldErrors.nationalId}
           />
         </div>
-        {validationError ? (
-          <p className="mt-4 rounded-xl border border-[#F0D0D0] bg-[#FFF6F6] p-3 text-sm text-[#9C3B3B]">
-            {validationError}
-          </p>
-        ) : null}
       </Card>
 
       <Card className="p-5">
@@ -104,20 +129,22 @@ function InputField({
   value,
   onChange,
   required = true,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  error?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-[#334155]">
-      <span>{label}</span>
+    <FormField label={label} error={error}>
       <Input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        required={required}
+        aria-invalid={Boolean(error)}
+        aria-required={required}
       />
-    </label>
+    </FormField>
   );
 }

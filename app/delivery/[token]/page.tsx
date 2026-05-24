@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { EmptyState } from "@/components/shared/empty-state";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,12 @@ import {
   normalizeDigits,
   normalizePhone,
 } from "@/lib/utils/number-format";
+import {
+  isRequired,
+  isValidPhone,
+  PHONE_MESSAGE,
+  REQUIRED_MESSAGE,
+} from "@/lib/utils/form-validation";
 
 export default function DeliveryConfirmationPage() {
   const params = useParams<{ token: string }>();
@@ -30,6 +37,7 @@ export default function DeliveryConfirmationPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -57,11 +65,19 @@ export default function DeliveryConfirmationPage() {
   const submitConfirmation = async () => {
     setError("");
     setMessage("");
+    setFieldErrors({});
 
     const normalizedPhone = normalizePhone(phone);
     const normalizedCode = normalizeDigits(deliveryCode.trim());
-    if (!normalizedPhone || !normalizedCode) {
-      setError("شماره موبایل و کد تأیید دریافت الزامی است.");
+    const nextErrors: Record<string, string> = {};
+    if (!isRequired(phone)) {
+      nextErrors.phone = REQUIRED_MESSAGE;
+    } else if (!isValidPhone(phone)) {
+      nextErrors.phone = PHONE_MESSAGE;
+    }
+    if (!normalizedCode) nextErrors.deliveryCode = REQUIRED_MESSAGE;
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -177,17 +193,30 @@ export default function DeliveryConfirmationPage() {
                   <span>شماره موبایل</span>
                   <Input
                     value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
+                    onChange={(event) => {
+                      setPhone(event.target.value);
+                      setFieldErrors((current) => ({ ...current, phone: "" }));
+                    }}
                     inputMode="tel"
+                    aria-invalid={Boolean(fieldErrors.phone)}
                   />
+                  <FieldError message={fieldErrors.phone} />
                 </label>
                 <label className="grid gap-2 text-sm font-medium text-[#334155]">
                   <span>کد تأیید دریافت</span>
                   <Input
                     value={deliveryCode}
-                    onChange={(event) => setDeliveryCode(event.target.value)}
+                    onChange={(event) => {
+                      setDeliveryCode(event.target.value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        deliveryCode: "",
+                      }));
+                    }}
                     inputMode="numeric"
+                    aria-invalid={Boolean(fieldErrors.deliveryCode)}
                   />
+                  <FieldError message={fieldErrors.deliveryCode} />
                 </label>
               </div>
               <Button

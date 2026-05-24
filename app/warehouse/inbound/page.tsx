@@ -5,6 +5,7 @@ import { PackageSearch, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
+import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -45,6 +46,7 @@ export default function WarehouseInboundPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -130,9 +132,10 @@ export default function WarehouseInboundPage() {
   const addUnit = () => {
     setError("");
     setMessage("");
+    setFieldErrors({});
 
     if (!selectedProductId) {
-      setError("ابتدا کالا را انتخاب کنید.");
+      setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
       return;
     }
 
@@ -148,7 +151,13 @@ export default function WarehouseInboundPage() {
       !nextUnit.serialNumber ||
       !nextUnit.trackingCode
     ) {
-      setError("شناسه محصول، سریال محصول و کد رهگیری الزامی است.");
+      setFieldErrors({
+        productIdentifier: nextUnit.productIdentifier
+          ? ""
+          : "این فیلد الزامی است.",
+        serialNumber: nextUnit.serialNumber ? "" : "این فیلد الزامی است.",
+        trackingCode: nextUnit.trackingCode ? "" : "این فیلد الزامی است.",
+      });
       return;
     }
 
@@ -160,7 +169,9 @@ export default function WarehouseInboundPage() {
     );
 
     if (hasDuplicate) {
-      setError("این کالا قبلاً در لیست ثبت شده است.");
+      setFieldErrors({
+        trackingCode: "این شناسه یا سریال قبلاً ثبت شده است.",
+      });
       return;
     }
 
@@ -173,13 +184,14 @@ export default function WarehouseInboundPage() {
   const submitReceipt = async () => {
     setError("");
     setMessage("");
+    setFieldErrors({});
 
     if (!selectedProductId) {
-      setError("انتخاب کالا الزامی است.");
+      setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
       return;
     }
     if (!warehouseId) {
-      setError("انبار مقصد را انتخاب کنید.");
+      setFieldErrors({ warehouseId: "لطفاً یک گزینه انتخاب کنید." });
       return;
     }
     if (units.length === 0) {
@@ -256,12 +268,20 @@ export default function WarehouseInboundPage() {
                 <span>انبار مقصد</span>
                 <SearchableSelect
                   value={warehouseId || undefined}
-                  onValueChange={setWarehouseId}
+                  onValueChange={(value) => {
+                    setWarehouseId(value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      warehouseId: "",
+                    }));
+                  }}
                   options={warehouseOptions}
                   placeholder="انتخاب انبار مقصد"
                   searchPlaceholder="جستجو در انبارها"
                   emptyMessage="انباری پیدا نشد"
+                  invalid={Boolean(fieldErrors.warehouseId)}
                 />
+                <FieldError message={fieldErrors.warehouseId} />
               </label>
 
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -273,13 +293,19 @@ export default function WarehouseInboundPage() {
                     onValueChange={(value) => {
                       setSelectedProductId(value);
                       setUnits([]);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        selectedProductId: "",
+                      }));
                     }}
                     options={productOptions}
                     placeholder="انتخاب کالا"
                     searchPlaceholder="جستجو در کالاها"
                     emptyMessage="کالایی پیدا نشد"
                     triggerClassName="pr-10"
+                    invalid={Boolean(fieldErrors.selectedProductId)}
                   />
+                  <FieldError message={fieldErrors.selectedProductId} />
                 </div>
               </label>
 
@@ -311,25 +337,49 @@ export default function WarehouseInboundPage() {
                 <span>شناسه محصول</span>
                 <Input
                   value={productIdentifier}
-                  onChange={(event) => setProductIdentifier(event.target.value)}
+                  onChange={(event) => {
+                    setProductIdentifier(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      productIdentifier: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.productIdentifier)}
                 />
+                <FieldError message={fieldErrors.productIdentifier} />
               </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>سریال محصول</span>
                 <Input
                   value={serialNumber}
-                  onChange={(event) => setSerialNumber(event.target.value)}
+                  onChange={(event) => {
+                    setSerialNumber(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      serialNumber: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.serialNumber)}
                 />
+                <FieldError message={fieldErrors.serialNumber} />
               </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کد رهگیری</span>
                 <Input
                   value={trackingCode}
-                  onChange={(event) => setTrackingCode(event.target.value)}
+                  onChange={(event) => {
+                    setTrackingCode(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      trackingCode: "",
+                    }));
+                  }}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") addUnit();
                   }}
+                  aria-invalid={Boolean(fieldErrors.trackingCode)}
                 />
+                <FieldError message={fieldErrors.trackingCode} />
               </label>
             </div>
             <Button type="button" className="mt-4" onClick={addUnit}>

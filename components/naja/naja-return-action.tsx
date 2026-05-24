@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ExpertOrder } from "@/lib/expert/types";
 import { useExpertStore } from "@/components/expert/expert-store-provider";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
+import { FieldError } from "@/components/shared/field-error";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +25,11 @@ export function NajaReturnAction({ order, actorName }: NajaReturnActionProps) {
     order.status === "returned" || order.status === "returnedAfterInvoice";
 
   const handleConfirm = () => {
+    if (!reason.trim()) {
+      setMessage("دلیل برگشت را وارد کنید.");
+      return;
+    }
+
     const result = returnNajaOrder({
       orderId: order.id,
       reason,
@@ -91,10 +97,15 @@ export function NajaReturnAction({ order, actorName }: NajaReturnActionProps) {
       >
         <Textarea
           value={reason}
-          onChange={(event) => setReason(event.target.value)}
+          onChange={(event) => {
+            setReason(event.target.value);
+            setMessage("");
+          }}
           placeholder="دلیل برگشت را وارد کنید"
           className="min-h-28"
+          aria-invalid={Boolean(message)}
         />
+        <FieldError message={message} />
       </ConfirmationModal>
     </>
   );
