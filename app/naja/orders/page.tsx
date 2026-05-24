@@ -1,6 +1,6 @@
 "use client";
 
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -10,6 +10,7 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -68,18 +69,30 @@ export default function NajaOrdersPage() {
             (order.customerPhone ?? "").toLowerCase().includes(query)
           );
         })
-        .filter((order) => statusFilter === "all" || order.orderStatus === statusFilter)
+        .filter(
+          (order) =>
+            statusFilter === "all" || order.orderStatus === statusFilter,
+        )
         .filter((order) => isWithinDateRange(order.updatedAt, dateFrom, dateTo))
         .sort(
-          (a, b) => Number(new Date(b.updatedAt)) - Number(new Date(a.updatedAt)),
+          (a, b) =>
+            Number(new Date(b.updatedAt)) - Number(new Date(a.updatedAt)),
         ),
     [dateFrom, dateTo, orders, search, statusFilter],
   );
 
+  const hasActiveFilters =
+    search.trim().length > 0 ||
+    statusFilter !== "all" ||
+    dateFrom.length > 0 ||
+    dateTo.length > 0;
+
   const statusOptions = useMemo(
     () => [
       { value: "all", label: "همه وضعیت‌ها" },
-      ...Array.from(new Set(orders.map((order) => order.orderStatus).filter(Boolean))).map((status) => ({
+      ...Array.from(
+        new Set(orders.map((order) => order.orderStatus).filter(Boolean)),
+      ).map((status) => ({
         value: status,
         label: getOrderStatusLabel(status),
       })),
@@ -95,9 +108,23 @@ export default function NajaOrdersPage() {
         <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
       ),
     },
-    { key: "customer", header: "نام مشتری", render: (row) => row.customerName ?? "-" },
-    { key: "nationalId", header: "کد ملی", render: (row) => row.customerNationalId ? formatFaDigits(row.customerNationalId) : "-" },
-    { key: "phone", header: "شماره موبایل", render: (row) => row.customerPhone ? formatFaDigits(row.customerPhone) : "-" },
+    {
+      key: "customer",
+      header: "نام مشتری",
+      render: (row) => row.customerName ?? "-",
+    },
+    {
+      key: "nationalId",
+      header: "کد ملی",
+      render: (row) =>
+        row.customerNationalId ? formatFaDigits(row.customerNationalId) : "-",
+    },
+    {
+      key: "phone",
+      header: "شماره موبایل",
+      render: (row) =>
+        row.customerPhone ? formatFaDigits(row.customerPhone) : "-",
+    },
     {
       key: "orderStatus",
       header: "وضعیت سفارش",
@@ -106,7 +133,9 @@ export default function NajaOrdersPage() {
     {
       key: "warehouseStatus",
       header: "وضعیت انبار",
-      render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} />,
+      render: (row) => (
+        <StatusBadge type="warehouse" status={row.warehouseStatus} />
+      ),
     },
     {
       key: "updatedAt",
@@ -132,20 +161,46 @@ export default function NajaOrdersPage() {
 
   return (
     <DashboardLayout role="naja" title="سفارش‌ها">
+      <SectionHeader
+        title="سفارش‌های ناجا"
+        description="فهرست سفارش‌های ثبت‌شده ناجا را مشاهده و پیگیری کنید."
+        actions={
+          <Link
+            href="/naja/orders/create"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
+          >
+            <PlusCircle className="size-4" />
+            <span>ثبت سفارش ناجا</span>
+          </Link>
+        }
+      />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
             <span>جستجو در سفارش‌ها</span>
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجو بر اساس کد سفارش، مشتری، کد ملی یا موبایل" className="pr-10" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="جستجو بر اساس کد سفارش، مشتری، کد ملی یا موبایل"
+                className="pr-10"
+              />
             </div>
           </label>
           <label className="grid w-full gap-2 text-sm font-medium text-[#334155] xl:w-56">
             <span>فیلتر وضعیت</span>
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-              <SearchableSelect value={statusFilter} onValueChange={setStatusFilter} options={statusOptions} placeholder="همه وضعیت‌ها" searchPlaceholder="جستجو در وضعیت‌ها" emptyMessage="وضعیتی پیدا نشد" triggerClassName="pr-10" />
+              <SearchableSelect
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+                options={statusOptions}
+                placeholder="همه وضعیت‌ها"
+                searchPlaceholder="جستجو در وضعیت‌ها"
+                emptyMessage="وضعیتی پیدا نشد"
+                triggerClassName="pr-10"
+              />
             </div>
           </label>
           <DateRangeFilter
@@ -155,18 +210,38 @@ export default function NajaOrdersPage() {
               setDateTo(range.to ?? "");
             }}
           />
-          <Button type="button" variant="outline" className="w-fit shrink-0" onClick={() => { setSearch(""); setStatusFilter("all"); setDateFrom(""); setDateTo(""); }}>
-            پاک کردن فیلترها
-          </Button>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex w-fit shrink-0 items-center gap-2"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+                setDateFrom("");
+                setDateTo("");
+              }}
+            >
+              <span>حذف فیلترها</span>
+              <X className="size-4" />
+            </Button>
+          ) : null}
         </div>
       </section>
 
       {isLoading ? (
         <LoadingState title="در حال دریافت سفارش های ناجا" />
       ) : error ? (
-        <PageErrorMessage title="دریافت سفارش های ناجا انجام نشد" message={error} />
+        <PageErrorMessage
+          title="دریافت سفارش های ناجا انجام نشد"
+          message={error}
+        />
       ) : rows.length > 0 ? (
-        <DataTable columns={columns} rows={rows} rowKey={(row) => row.objectId || row.id} />
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.objectId || row.id}
+        />
       ) : (
         <EmptyState
           title="سفارش ناجایی یافت نشد"
@@ -177,11 +252,17 @@ export default function NajaOrdersPage() {
   );
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
-  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime()) return false;
+  if (dateFrom && timestamp < new Date(`${dateFrom}T00:00:00`).getTime())
+    return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59`).getTime())
+    return false;
   return true;
 }

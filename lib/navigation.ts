@@ -48,22 +48,10 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت سفارش‌های ناجا",
     },
     {
-      label: "ثبت سفارش ناجا",
-      href: "/naja/orders/create",
-      icon: "plus-circle",
-      description: "ثبت سفارش ناجا",
-    },
-    {
       label: "مراکز ناجا",
       href: "/naja/centers",
       icon: "layers",
       description: "فهرست مراکز ناجا",
-    },
-    {
-      label: "تعریف مرکز ناجا",
-      href: "/naja/centers/new",
-      icon: "plus-circle",
-      description: "ثبت مرکز ناجا",
     },
     {
       label: "سفارش های ناجا",

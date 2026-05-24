@@ -3,6 +3,7 @@ import {
   Activity,
   Boxes,
   BriefcaseBusiness,
+  Building2,
   ClipboardCheck,
   FileCheck2,
   FileSpreadsheet,
@@ -46,4 +47,5 @@ export const sidebarIconMap: Record<SidebarIconName, LucideIcon> = {
   pencil: PencilLine,
   users: Users,
   warehouse: Warehouse,
+  "building-2": Building2,
 };

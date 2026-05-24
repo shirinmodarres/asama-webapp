@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpLeft } from "lucide-react";
+import { ArrowUpLeft, Square } from "lucide-react";
 import type { SidebarIconName } from "@/lib/types";
 import { sidebarIconMap } from "@/components/shared/app-icons";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,7 @@ export function ActionLinkCard({
   href,
   icon,
 }: ActionLinkCardProps) {
-  const Icon = sidebarIconMap[icon];
+  const Icon = sidebarIconMap[icon] ?? Square;
 
   return (
     <Link href={href} className="group block h-full">

@@ -24,7 +24,8 @@ export type SidebarIconName =
   | "history"
   | "pencil"
   | "users"
-  | "warehouse";
+  | "warehouse"
+  | "building-2";
 
 export interface Role {
   key: RoleKey;
