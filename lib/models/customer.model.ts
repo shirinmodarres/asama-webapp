@@ -27,6 +27,14 @@ export interface CustomerAddress {
 export interface Customer {
   objectId: string;
   id: string;
+  sepidarCustomerId: string | null;
+  sepidarCustomerCode: string | null;
+  saleType: {
+    objectId: string | null;
+    sepidarSaleTypeId: number | null;
+    title: string | null;
+  } | null;
+  isSyncedFromSepidar: boolean;
   fullName: string;
   phone: string;
   nationalId: string | null;

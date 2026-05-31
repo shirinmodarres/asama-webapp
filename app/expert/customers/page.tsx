@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ListFilter, PlusCircle, Search, X } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -16,8 +15,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { compareText } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
-import { listCustomers } from "@/lib/services/customer.service";
-import { formatDeliveryAddress } from "@/lib/utils/address-format";
+import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,7 +33,7 @@ export default function ExpertCustomersPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listCustomers();
+        const data = await listAssignedCustomersForExpert();
         if (isMounted) setCustomers(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -55,7 +53,7 @@ export default function ExpertCustomersPage() {
     return [...customers]
       .filter((customer) => {
         if (!query) return true;
-        return [customer.fullName, customer.phone].some((value) =>
+        return [customer.fullName, customer.sepidarCustomerCode ?? "", customer.phone].some((value) =>
           value.toLowerCase().includes(query),
         );
       })
@@ -79,31 +77,22 @@ export default function ExpertCustomersPage() {
       ),
     },
     {
+      key: "code",
+      header: "کد مشتری",
+      render: (row) => row.sepidarCustomerCode || "-",
+    },
+    {
       key: "phone",
-      header: "موبایل",
+      header: "موبایل/تلفن",
       render: (row) => (row.phone ? formatFaDigits(row.phone) : "-"),
     },
     {
-      key: "nationalId",
-      header: "کد ملی",
-      render: (row) => (row.nationalId ? formatFaDigits(row.nationalId) : "-"),
-    },
-    {
-      key: "province",
-      header: "استان",
-      render: (row) => row.defaultAddress?.province || "-",
-    },
-    {
-      key: "address",
-      header: "آدرس ",
-      cellClassName: "max-w-[360px] whitespace-normal leading-7",
-      render: (row) => {
-        const address = row.defaultAddress
-          ? formatDeliveryAddress(row.defaultAddress)
-          : "آدرس ثبت نشده است.";
-
-        return <span title={address}>{truncateText(address, 52)}</span>;
-      },
+      key: "sale-type",
+      header: "نوع فروش",
+      render: (row) =>
+        row.saleType?.title
+          ? `${row.saleType.sepidarSaleTypeId ? `${formatFaDigits(row.saleType.sepidarSaleTypeId)} - ` : ""}${row.saleType.title}`
+          : "-",
     },
     {
       key: "status",
@@ -114,34 +103,13 @@ export default function ExpertCustomersPage() {
         </Badge>
       ),
     },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Link
-          href={`/expert/customers/${row.objectId}/edit`}
-          className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
-        >
-          مشاهده / ویرایش
-        </Link>
-      ),
-    },
   ];
 
   return (
     <DashboardLayout role="expert" title="مشتری‌ها">
       <SectionHeader
-        title="مشتری‌ها"
-        description="فهرست مشتری‌ها و آدرس‌های ثبت‌شده را مشاهده و ویرایش کنید."
-        actions={
-          <Link
-            href="/expert/customers/new"
-            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
-          >
-            <PlusCircle className="size-4" />
-            <span>تعریف مشتری</span>
-          </Link>
-        }
+        title="مشتری‌های اختصاص‌یافته"
+        description="مشتری‌هایی که پشتیبان برای ثبت سفارش به شما اختصاص داده است."
       />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -204,14 +172,10 @@ export default function ExpertCustomersPage() {
         />
       ) : (
         <EmptyState
-          title="مشتری یافت نشد"
-          description="هنوز مشتری ثبت نشده یا عبارت جستجو نتیجه ای ندارد."
+          title="هنوز مشتری‌ای به شما اختصاص داده نشده است."
+          description="پس از تخصیص مشتری توسط پشتیبان، اطلاعات آن در این فهرست نمایش داده می‌شود."
         />
       )}
     </DashboardLayout>
   );
-}
-
-function truncateText(value: string, maxLength: number): string {
-  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }

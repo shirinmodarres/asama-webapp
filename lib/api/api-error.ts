@@ -4,6 +4,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: "لطفاً دوباره وارد شوید.",
   INVALID_CREDENTIALS: "شماره موبایل یا رمز عبور اشتباه است.",
   DUPLICATE_PRODUCT_ID: "شناسه کالا تکراری است.",
+  CUSTOMER_ALREADY_ASSIGNED:
+    "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
   DUPLICATE_PHONE: "این شماره موبایل قبلاً ثبت شده است.",
   DUPLICATE_CUSTOMER_PHONE:
     "این شماره موبایل قبلاً ثبت شده است.",

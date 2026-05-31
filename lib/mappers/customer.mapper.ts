@@ -2,6 +2,7 @@ import {
   toArray,
   toBooleanValue,
   toNullableString,
+  toNumberValue,
   toRecord,
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
@@ -34,8 +35,18 @@ export function mapCustomerDto(dto: unknown): Customer {
   return {
     objectId: toStringValue(record.objectId),
     id: toStringValue(record.id) || toStringValue(record.objectId),
-    fullName: toStringValue(record.fullName),
-    phone: normalizePhone(toStringValue(record.phone)),
+    sepidarCustomerId: toNullableString(
+      record.sepidarCustomerId ?? record.sepidarId,
+    ),
+    sepidarCustomerCode: toNullableString(
+      record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
+    ),
+    saleType: mapCustomerSaleType(record.saleType),
+    isSyncedFromSepidar:
+      toBooleanValue(record.isSyncedFromSepidar ?? record.syncedFromSepidar) ||
+      toStringValue(record.source).toLowerCase() === "sepidar",
+    fullName: toStringValue(record.fullName ?? record.title ?? record.name),
+    phone: normalizePhone(toStringValue(record.phone ?? record.mobile)),
     nationalId: record.nationalId
       ? normalizeDigits(toStringValue(record.nationalId))
       : null,
@@ -46,6 +57,19 @@ export function mapCustomerDto(dto: unknown): Customer {
     addresses,
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+function mapCustomerSaleType(value: unknown): Customer["saleType"] {
+  const record = toRecord(value);
+  if (!Object.keys(record).length) return null;
+  return {
+    objectId: toNullableString(record.objectId),
+    sepidarSaleTypeId:
+      record.sepidarSaleTypeId === undefined || record.sepidarSaleTypeId === null
+        ? null
+        : toNumberValue(record.sepidarSaleTypeId),
+    title: toNullableString(record.title),
   };
 }
 

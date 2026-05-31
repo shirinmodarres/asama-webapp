@@ -158,6 +158,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "فهرست و وضعیت کالا",
     },
     {
+      label: "اختصاص مشتری",
+      href: "/support/customer-assignments",
+      icon: "users",
+      description: "مشتریان سپیدار و کارشناسان",
+    },
+    {
       label: "موجودی",
       href: "/support/inventory",
       icon: "package",
