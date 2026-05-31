@@ -119,11 +119,15 @@ export function mapSepidarCustomerSyncSummaryDto(
   const response = toRecord(dto);
   const record = toRecord(response.summary ?? response);
   return {
-    total: toNumberValue(record.total ?? record.totalCount),
+    total: toNumberValue(
+      record.total ?? record.totalCount ?? record.totalFromSepidar,
+    ),
     processed: toNumberValue(record.processed ?? record.processedCount),
     created: toNumberValue(record.created ?? record.createdCount),
     updated: toNumberValue(record.updated ?? record.updatedCount),
-    rejected: toNumberValue(record.rejected ?? record.rejectedCount),
+    rejected: toNumberValue(
+      record.rejected ?? record.rejectedCount ?? record.skippedCount,
+    ),
     failed: toNumberValue(record.failed ?? record.failedCount ?? record.errorCount),
   };
 }

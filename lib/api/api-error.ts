@@ -4,8 +4,16 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: "لطفاً دوباره وارد شوید.",
   INVALID_CREDENTIALS: "شماره موبایل یا رمز عبور اشتباه است.",
   DUPLICATE_PRODUCT_ID: "شناسه کالا تکراری است.",
+  PRODUCT_MASTER_DATA_READ_ONLY:
+    "اطلاعات اصلی کالا از سپیدار خوانده می‌شود و قابل ویرایش نیست.",
+  PRODUCT_CREATION_DISABLED: "تعریف کالا فقط از طریق سپیدار انجام می‌شود.",
+  CUSTOMER_NOT_ASSIGNED_TO_EXPERT: "این مشتری به شما اختصاص داده نشده است.",
   CUSTOMER_ALREADY_ASSIGNED:
     "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
+  CUSTOMER_MUST_BE_FROM_SEPIDAR: "مشتری باید از سپیدار خوانده شده باشد.",
+  PRODUCT_MUST_BE_FROM_SEPIDAR: "کالا باید از سپیدار خوانده شده باشد.",
+  SEPIDAR_PRODUCT_REQUIRED: "کالا باید از سپیدار خوانده شده باشد.",
+  PRODUCT_NOT_SELLABLE: "کالا قابل فروش نیست.",
   DUPLICATE_PHONE: "این شماره موبایل قبلاً ثبت شده است.",
   DUPLICATE_CUSTOMER_PHONE:
     "این شماره موبایل قبلاً ثبت شده است.",

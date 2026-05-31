@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, UserMinus } from "lucide-react";
+import { Pencil, RefreshCw, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -30,7 +30,9 @@ import {
   listSepidarCustomers,
   listSepidarSaleTypes,
   listSupportExperts,
+  syncCustomersFromSepidar,
   syncSaleTypesFromSepidar,
+  updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -47,9 +49,13 @@ export default function SupportCustomerAssignmentsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState("");
+  const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [syncSummary, setSyncSummary] = useState<SepidarCustomerSyncSummary | null>(null);
+  const [syncSummary, setSyncSummary] = useState<{
+    customers: SepidarCustomerSyncSummary;
+    saleTypes: SepidarCustomerSyncSummary;
+  } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
@@ -108,26 +114,42 @@ export default function SupportCustomerAssignmentsPage() {
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
+    const actorName =
+      getStoredCurrentUser()?.fullName ||
+      getStoredCurrentUser()?.username ||
+      "پشتیبان";
+
     const payload = {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
       saleTypeObjectId: selectedSaleTypeId,
-      assignedByName:
-        getStoredCurrentUser()?.fullName ||
-        getStoredCurrentUser()?.username ||
-        "پشتیبان",
     };
 
     setIsSubmitting(true);
     setError("");
     setMessage("");
     try {
-      await createExpertCustomerAssignment(payload);
+      if (editingAssignmentId) {
+        await updateExpertCustomerAssignment(editingAssignmentId, {
+          ...payload,
+          updatedByName: actorName,
+        });
+      } else {
+        await createExpertCustomerAssignment({
+          ...payload,
+          assignedByName: actorName,
+        });
+      }
       await loadData();
+      setEditingAssignmentId("");
       setSelectedExpertId("");
       setSelectedCustomerId("");
       setSelectedSaleTypeId("");
-      setMessage("مشتری با موفقیت به کارشناس اختصاص داده شد.");
+      setMessage(
+        editingAssignmentId
+          ? "اختصاص مشتری با موفقیت به‌روزرسانی شد."
+          : "مشتری با موفقیت به کارشناس اختصاص داده شد.",
+      );
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {
@@ -135,17 +157,27 @@ export default function SupportCustomerAssignmentsPage() {
     }
   };
 
-  const syncSaleTypes = async () => {
+  const syncSepidarAssignmentData = async () => {
     setIsSyncing(true);
     setError("");
     setMessage("");
     setSyncSummary(null);
     try {
-      const summary = await syncSaleTypesFromSepidar();
-      const updatedSaleTypes = await listSepidarSaleTypes();
+      const [customerSummary, saleTypeSummary] = await Promise.all([
+        syncCustomersFromSepidar(),
+        syncSaleTypesFromSepidar(),
+      ]);
+      const [updatedCustomers, updatedSaleTypes] = await Promise.all([
+        listSepidarCustomers(),
+        listSepidarSaleTypes(),
+      ]);
+      setCustomers(updatedCustomers);
       setSaleTypes(updatedSaleTypes);
-      setSyncSummary(summary);
-      setMessage("نوع‌های فروش از سپیدار به‌روزرسانی شد.");
+      setSyncSummary({
+        customers: customerSummary,
+        saleTypes: saleTypeSummary,
+      });
+      setMessage("مشتری‌ها و نوع‌های فروش از سپیدار به‌روزرسانی شدند.");
     } catch (syncError) {
       setError(getErrorMessage(syncError));
     } finally {
@@ -169,22 +201,35 @@ export default function SupportCustomerAssignmentsPage() {
     [experts],
   );
   const customerOptions = useMemo(
-    () =>
-      customers
+    () => {
+      const assignedCustomerIds = new Set(
+        assignments
+          .filter(
+            (assignment) =>
+              assignment.status === "active" &&
+              assignment.objectId !== editingAssignmentId,
+          )
+          .map((assignment) => assignment.customerObjectId),
+      );
+
+      return customers
         .filter((customer) => customer.status === "active")
+        .filter((customer) => !assignedCustomerIds.has(customer.objectId))
         .map((customer) => ({
           value: customer.objectId,
           label: formatCustomerOptionLabel(customer),
-        })),
-    [customers],
+        }));
+    },
+    [assignments, customers, editingAssignmentId],
   );
   const saleTypeOptions = useMemo(
     () =>
       saleTypes
-        .filter((saleType) => saleType.isAvailable)
         .map((saleType) => ({
           value: saleType.objectId,
-          label: `${saleType.sepidarSaleTypeId ? formatFaDigits(saleType.sepidarSaleTypeId) : "-"} - ${saleType.title || "-"}`,
+          label: `${saleType.sepidarSaleTypeId ?? "-"} - ${saleType.title || "-"}${
+            saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
+          }`,
         })),
     [saleTypes],
   );
@@ -203,6 +248,33 @@ export default function SupportCustomerAssignmentsPage() {
       setDeactivatingId("");
     }
   };
+
+  const startEditAssignment = (assignment: ExpertCustomerAssignment) => {
+    setEditingAssignmentId(assignment.objectId);
+    setSelectedExpertId(assignment.expertObjectId);
+    setSelectedCustomerId(assignment.customerObjectId);
+    setSelectedSaleTypeId(assignment.saleTypeObjectId ?? "");
+    setFieldErrors({});
+    setError("");
+    setMessage("");
+  };
+
+  const cancelEditAssignment = () => {
+    setEditingAssignmentId("");
+    setSelectedExpertId("");
+    setSelectedCustomerId("");
+    setSelectedSaleTypeId("");
+    setFieldErrors({});
+  };
+
+  const isSubmitDisabled =
+    isSubmitting ||
+    expertOptions.length === 0 ||
+    customerOptions.length === 0 ||
+    saleTypeOptions.length === 0 ||
+    !selectedExpertId ||
+    !selectedCustomerId ||
+    !selectedSaleTypeId;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
     { key: "expert", header: "کارشناس", render: (row) => row.expertName || "-" },
@@ -240,16 +312,28 @@ export default function SupportCustomerAssignmentsPage() {
       header: "عملیات",
       render: (row) =>
         row.status === "active" ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => deactivateAssignment(row.objectId)}
-            disabled={deactivatingId === row.objectId}
-          >
-            <UserMinus className="size-4" />
-            {deactivatingId === row.objectId ? "در حال انجام..." : "غیرفعال کردن"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => startEditAssignment(row)}
+              disabled={deactivatingId === row.objectId || isSubmitting}
+            >
+              <Pencil className="size-4" />
+              ویرایش
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => deactivateAssignment(row.objectId)}
+              disabled={deactivatingId === row.objectId}
+            >
+              <UserMinus className="size-4" />
+              {deactivatingId === row.objectId ? "در حال انجام..." : "غیرفعال کردن"}
+            </Button>
+          </div>
         ) : (
           "-"
         ),
@@ -262,26 +346,46 @@ export default function SupportCustomerAssignmentsPage() {
         title="اختصاص مشتری به کارشناس"
         description="مشتریان سپیدار را به کارشناسان فروش اختصاص دهید و نوع فروش هر مشتری را مشخص کنید."
         actions={
-          <Button type="button" onClick={syncSaleTypes} disabled={isSyncing}>
+          <Button type="button" onClick={syncSepidarAssignmentData} disabled={isSyncing}>
             <RefreshCw className={`size-4 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing
-              ? "در حال دریافت نوع‌های فروش..."
-              : "به‌روزرسانی نوع‌های فروش از سپیدار"}
+              ? "در حال دریافت مشتری‌ها و نوع‌های فروش..."
+              : "به‌روزرسانی مشتری‌ها و نوع‌های فروش از سپیدار"}
           </Button>
         }
       />
 
       {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
       {error ? <InlineErrorMessage message={error} /> : null}
-      {syncSummary ? <SyncSummary summary={syncSummary} /> : null}
+      {syncSummary ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <SyncSummary title="به‌روزرسانی مشتری‌های سپیدار انجام شد." summary={syncSummary.customers} />
+          <SyncSummary title="به‌روزرسانی نوع‌های فروش انجام شد." summary={syncSummary.saleTypes} />
+        </div>
+      ) : null}
 
       {isLoading ? (
         <LoadingState title="در حال دریافت مشتریان و کارشناسان" />
       ) : (
         <>
           <Card className="p-5">
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            {editingAssignmentId ? (
+              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#D7DEE6] bg-[#F8FAFC] p-3 text-sm text-[#334155] sm:flex-row sm:items-center sm:justify-between">
+                <span>در حال ویرایش اختصاص مشتری هستید.</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelEditAssignment}
+                  disabled={isSubmitting}
+                >
+                  <X className="size-4" />
+                  لغو ویرایش
+                </Button>
+              </div>
+            ) : null}
+            <div className="grid min-w-0 gap-4 md:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
                 <span>کارشناس فروش</span>
                 <SearchableSelect
                   value={selectedExpertId || undefined}
@@ -294,10 +398,11 @@ export default function SupportCustomerAssignmentsPage() {
                   searchPlaceholder="جستجو در کارشناسان"
                   emptyMessage="کارشناسی پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedExpertId)}
+                  className="min-w-0"
                 />
                 <FieldError message={fieldErrors.selectedExpertId} />
               </label>
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
                 <span>مشتری سپیدار</span>
                 <SearchableSelect
                   value={selectedCustomerId || undefined}
@@ -310,10 +415,11 @@ export default function SupportCustomerAssignmentsPage() {
                   searchPlaceholder="جستجو در مشتریان"
                   emptyMessage="مشتری‌ای پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedCustomerId)}
+                  className="min-w-0"
                 />
                 <FieldError message={fieldErrors.selectedCustomerId} />
               </label>
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
                 <span>نوع فروش</span>
                 <SearchableSelect
                   value={selectedSaleTypeId || undefined}
@@ -327,8 +433,13 @@ export default function SupportCustomerAssignmentsPage() {
                   options={saleTypeOptions}
                   placeholder="انتخاب نوع فروش"
                   searchPlaceholder="جستجو در نوع‌های فروش"
-                  emptyMessage="نوع فروشی پیدا نشد"
+                  emptyMessage={
+                    saleTypes.length === 0
+                      ? "نوع فروشی پیدا نشد. ابتدا نوع‌های فروش را از سپیدار به‌روزرسانی کنید."
+                      : "نوع فروشی با این جستجو پیدا نشد."
+                  }
                   invalid={Boolean(fieldErrors.selectedSaleTypeId)}
+                  className="min-w-0"
                 />
                 <FieldError message={fieldErrors.selectedSaleTypeId} />
               </label>
@@ -337,9 +448,13 @@ export default function SupportCustomerAssignmentsPage() {
               type="button"
               className="mt-5"
               onClick={submitAssignment}
-              disabled={isSubmitting}
+              disabled={isSubmitDisabled}
             >
-              {isSubmitting ? "در حال ثبت..." : "اختصاص مشتری"}
+              {isSubmitting
+                ? "در حال ثبت..."
+                : editingAssignmentId
+                  ? "به‌روزرسانی اختصاص"
+                  : "اختصاص مشتری"}
             </Button>
           </Card>
 
@@ -367,7 +482,13 @@ function formatCustomerOptionLabel(customer: Customer): string {
   return code ? `${formatFaDigits(code)} - ${name}` : name;
 }
 
-function SyncSummary({ summary }: { summary: SepidarCustomerSyncSummary }) {
+function SyncSummary({
+  title,
+  summary,
+}: {
+  title: string;
+  summary: SepidarCustomerSyncSummary;
+}) {
   const rows = [
     ["تعداد کل", summary.total],
     ["پردازش‌شده", summary.processed],
@@ -379,7 +500,7 @@ function SyncSummary({ summary }: { summary: SepidarCustomerSyncSummary }) {
   return (
     <Card className="border-[#CFE3D3] bg-[#F3FAF4] p-4">
       <p className="text-sm font-semibold text-[#315D3D]">
-        به‌روزرسانی نوع‌های فروش انجام شد.
+        {title}
       </p>
       <dl className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {rows.map(([label, value]) => (

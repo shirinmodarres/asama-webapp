@@ -14,6 +14,7 @@ import type {
   ExpertCustomerAssignment,
   SepidarSaleType,
   SepidarCustomerSyncSummary,
+  UpdateExpertCustomerAssignmentPayload,
 } from "@/lib/models/customer-assignment.model";
 import type { Customer } from "@/lib/models/customer.model";
 
@@ -52,6 +53,17 @@ export async function createExpertCustomerAssignment(
 ): Promise<ExpertCustomerAssignment> {
   const data = await httpClient.post<unknown>(
     "/api/support/expert-customer-assignments",
+    payload,
+  );
+  return mapExpertCustomerAssignmentDto(data);
+}
+
+export async function updateExpertCustomerAssignment(
+  objectId: string,
+  payload: UpdateExpertCustomerAssignmentPayload,
+): Promise<ExpertCustomerAssignment> {
+  const data = await httpClient.patch<unknown>(
+    `/api/support/expert-customer-assignments/${objectId}`,
     payload,
   );
   return mapExpertCustomerAssignmentDto(data);

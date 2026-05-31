@@ -29,6 +29,13 @@ export interface CreateExpertCustomerAssignmentPayload {
   assignedByName: string;
 }
 
+export interface UpdateExpertCustomerAssignmentPayload {
+  expertUserId: string;
+  customerObjectId: string;
+  saleTypeObjectId: string;
+  updatedByName: string;
+}
+
 export interface SepidarSaleType {
   objectId: string;
   id: string;
