@@ -14,6 +14,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   PRODUCT_MUST_BE_FROM_SEPIDAR: "کالا باید از سپیدار خوانده شده باشد.",
   SEPIDAR_PRODUCT_REQUIRED: "کالا باید از سپیدار خوانده شده باشد.",
   PRODUCT_NOT_SELLABLE: "کالا قابل فروش نیست.",
+  PRODUCT_PRICE_MISSING: "قیمت کالا برای این نوع فروش ثبت نشده است.",
   DUPLICATE_PHONE: "این شماره موبایل قبلاً ثبت شده است.",
   DUPLICATE_CUSTOMER_PHONE:
     "این شماره موبایل قبلاً ثبت شده است.",
@@ -38,6 +39,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
   SALES_STOCK_BELOW_RESERVED:
     "موجودی فروش نمی‌تواند کمتر از موجودی رزروشده باشد.",
+  SEPIDAR_SETTINGS_ENV_ONLY:
+    "تنظیمات سپیدار فعلاً از فایل محیطی خوانده می‌شود.",
+  SEPIDAR_DNS_FAILED:
+    "دامنه سپیدار پیدا نشد. تنظیم DNS یا آدرس Base URL را بررسی کنید.",
+  SEPIDAR_TIMEOUT: "اتصال به سپیدار بیش از حد طول کشید.",
+  SEPIDAR_UNAUTHORIZED: "ورود یا توکن سپیدار معتبر نیست.",
   REVIEW_REASON_REQUIRED: "لطفاً دلیل نیاز به بررسی را انتخاب کنید.",
   INVALID_REVIEW_REASON: "دلیل انتخاب‌شده معتبر نیست.",
   ORDER_CANNOT_NEED_REVIEW: "امکان ارسال این سفارش برای بررسی وجود ندارد.",

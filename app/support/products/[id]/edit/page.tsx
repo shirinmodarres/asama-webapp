@@ -112,9 +112,21 @@ export default function SupportEditProductPage() {
   return (
     <DashboardLayout role="support" title="ویرایش کالا">
       <SectionHeader
-        title="ویرایش اطلاعات کالا"
-        description="اطلاعات پایه، موجودی و وضعیت کالا را به‌روزرسانی کنید"
+        title={product.isSyncedFromSepidar ? "مشاهده اطلاعات کالا" : "ویرایش اطلاعات کالا"}
+        description={
+          product.isSyncedFromSepidar
+            ? "اطلاعات پایه این کالا از سپیدار دریافت شده است"
+            : "اطلاعات پایه، موجودی و وضعیت کالا را به‌روزرسانی کنید"
+        }
       />
+
+      {product.isSyncedFromSepidar ? (
+        <div className="rounded-xl border border-[#C9D7E8] bg-[#EEF4FA] p-4 text-sm leading-7 text-[#1F3A5F]">
+          اطلاعات این کالا از سپیدار خوانده می‌شود. برای تغییر نام، کد، بارکد یا
+          مشخصات اصلی، آن را در سپیدار ویرایش کنید و سپس همگام‌سازی کالاها را
+          انجام دهید.
+        </div>
+      ) : null}
 
       {message && messageType === "success" ? (
         <div className="rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-3 text-sm text-[#1D4ED8]">
@@ -126,6 +138,7 @@ export default function SupportEditProductPage() {
       ) : null}
       <ProductForm
         mode="edit"
+        readOnlyMasterData={product.isSyncedFromSepidar}
         initialValues={{
           id: product.id,
           name: product.name,

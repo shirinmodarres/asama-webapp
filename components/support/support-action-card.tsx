@@ -12,8 +12,8 @@ export function SupportActionCard({
   href,
 }: SupportActionCardProps) {
   const icon =
-    href === "/support/products/new"
-      ? "plus-circle"
+    href === "/support/products"
+      ? "boxes"
       : href === "/support/inventory"
         ? "package"
         : "pencil";

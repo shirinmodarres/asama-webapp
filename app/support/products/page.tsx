@@ -8,6 +8,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ProductStatusBadge } from "@/components/support/product-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,10 +19,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatCurrency, formatNumber } from "@/lib/expert/utils";
+import { formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import { listProducts } from "@/lib/services/product.service";
-import { PlusCircle, Search, Tags, X } from "lucide-react";
+import { Search, Tags, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -112,7 +113,10 @@ export default function SupportProductsPage() {
       key: "name",
       header: "نام کالا",
       render: (row) => (
-        <span className="font-medium text-[#1F3A5F]">{row.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-[#1F3A5F]">{row.name}</span>
+          {row.isSyncedFromSepidar ? <Badge variant="brand">سپیدار</Badge> : null}
+        </div>
       ),
     },
     { key: "brand", header: "برند", render: (row) => row.brand },
@@ -134,11 +138,6 @@ export default function SupportProductsPage() {
     },
     { key: "unit", header: "واحد", render: (row) => row.unit },
     {
-      key: "unitPrice",
-      header: "قیمت واحد",
-      render: (row) => formatCurrency(row.unitPrice),
-    },
-    {
       key: "status",
       header: "وضعیت",
       render: (row) => <ProductStatusBadge status={row.status} />,
@@ -151,7 +150,7 @@ export default function SupportProductsPage() {
           href={`/support/products/${row.objectId || row.id}/edit`}
           className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
         >
-          ویرایش
+          {row.isSyncedFromSepidar ? "مشاهده" : "ویرایش"}
         </Link>
       ),
     },
@@ -161,16 +160,7 @@ export default function SupportProductsPage() {
     <DashboardLayout role="support" title="کالاها">
       <SectionHeader
         title="فهرست کالاها"
-        description="مشاهده، جستجو و ویرایش کالاها"
-        actions={
-          <Link
-            href="/support/products/new"
-            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm text-white!"
-          >
-            <PlusCircle className="size-4" />
-            <span>تعریف کالای جدید</span>
-          </Link>
-        }
+        description="مشاهده کالاهای دریافت‌شده از سپیدار و مدیریت موجودی عملیاتی"
       />
 
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -270,7 +260,7 @@ export default function SupportProductsPage() {
       ) : (
         <EmptyState
           title="کالایی یافت نشد"
-          description="فیلترها را تغییر دهید یا کالای جدید ثبت کنید."
+          description="فیلترها را تغییر دهید یا وضعیت همگام‌سازی را از تنظیمات سپیدار بررسی کنید."
         />
       )}
     </DashboardLayout>

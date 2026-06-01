@@ -56,6 +56,7 @@ interface CreateModeProps extends BaseProps {
 
 interface EditModeProps extends BaseProps {
   mode: "edit";
+  readOnlyMasterData?: boolean;
   initialValues: {
     id: string;
     name: string;
@@ -72,6 +73,8 @@ interface EditModeProps extends BaseProps {
 type ProductFormProps = CreateModeProps | EditModeProps;
 
 export function ProductForm(props: ProductFormProps) {
+  const isReadOnlyMasterData =
+    props.mode === "edit" && props.readOnlyMasterData === true;
   const [id, setId] = useState(
     props.mode === "edit" ? props.initialValues.id : "",
   );
@@ -163,7 +166,7 @@ export function ProductForm(props: ProductFormProps) {
     >
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
-          {props.mode === "create" ? (
+          {props.mode === "create" || isReadOnlyMasterData ? (
             <InputField
               label="شناسه کالا"
               value={id}
@@ -172,6 +175,7 @@ export function ProductForm(props: ProductFormProps) {
                 clearError("id");
               }}
               error={errors.id}
+              disabled={isReadOnlyMasterData}
             />
           ) : null}
           <InputField
@@ -182,9 +186,10 @@ export function ProductForm(props: ProductFormProps) {
               clearError("name");
             }}
             error={errors.name}
+            disabled={isReadOnlyMasterData}
           />
-          <InputField label="برند" value={brand} onChange={setBrand} />
-          <InputField label="دسته بندی" value={category} onChange={setCategory} />
+          <InputField label="برند" value={brand} onChange={setBrand} disabled={isReadOnlyMasterData} />
+          <InputField label="دسته بندی" value={category} onChange={setCategory} disabled={isReadOnlyMasterData} />
           <InputField
             label="واحد فروش"
             value={unit}
@@ -193,6 +198,7 @@ export function ProductForm(props: ProductFormProps) {
               clearError("unit");
             }}
             error={errors.unit}
+            disabled={isReadOnlyMasterData}
           />
           <FormField label="قیمت واحد" error={errors.unitPrice}>
             <Input
@@ -203,6 +209,7 @@ export function ProductForm(props: ProductFormProps) {
               }}
               inputMode="numeric"
               aria-invalid={Boolean(errors.unitPrice)}
+              disabled={isReadOnlyMasterData}
             />
           </FormField>
 
@@ -245,6 +252,7 @@ export function ProductForm(props: ProductFormProps) {
                 onValueChange={(value) =>
                   setStatus(value as "active" | "inactive")
                 }
+                disabled={isReadOnlyMasterData}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="وضعیت کالا" />
@@ -264,24 +272,27 @@ export function ProductForm(props: ProductFormProps) {
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             className="min-h-28"
+            disabled={isReadOnlyMasterData}
           />
         </label>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <Button type="submit" disabled={props.isSubmitting}>
-            {props.isSubmitting
-              ? "در حال ثبت..."
-              : props.mode === "create"
-                ? "ثبت کالا"
-                : "ذخیره تغییرات"}
-          </Button>
+          {!isReadOnlyMasterData ? (
+            <Button type="submit" disabled={props.isSubmitting}>
+              {props.isSubmitting
+                ? "در حال ثبت..."
+                : props.mode === "create"
+                  ? "ثبت کالا"
+                  : "ذخیره تغییرات"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
             onClick={props.onCancel}
             disabled={props.isSubmitting}
           >
-            انصراف
+            {isReadOnlyMasterData ? "بازگشت" : "انصراف"}
           </Button>
         </div>
       </Card>
@@ -294,11 +305,13 @@ function InputField({
   value,
   onChange,
   error,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  disabled?: boolean;
 }) {
   return (
     <FormField label={label} error={error}>
@@ -306,6 +319,7 @@ function InputField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
+        disabled={disabled}
       />
     </FormField>
   );

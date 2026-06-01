@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, RefreshCw, UserMinus, X } from "lucide-react";
+import { Pencil, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -20,7 +20,6 @@ import type { AuthUser } from "@/lib/models/auth.model";
 import type {
   ExpertCustomerAssignment,
   SepidarSaleType,
-  SepidarCustomerSyncSummary,
 } from "@/lib/models/customer-assignment.model";
 import type { Customer } from "@/lib/models/customer.model";
 import {
@@ -30,8 +29,6 @@ import {
   listSepidarCustomers,
   listSepidarSaleTypes,
   listSupportExperts,
-  syncCustomersFromSepidar,
-  syncSaleTypesFromSepidar,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -47,15 +44,10 @@ export default function SupportCustomerAssignmentsPage() {
   const [selectedSaleTypeId, setSelectedSaleTypeId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState("");
   const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [syncSummary, setSyncSummary] = useState<{
-    customers: SepidarCustomerSyncSummary;
-    saleTypes: SepidarCustomerSyncSummary;
-  } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
@@ -154,34 +146,6 @@ export default function SupportCustomerAssignmentsPage() {
       setError(getErrorMessage(submitError));
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const syncSepidarAssignmentData = async () => {
-    setIsSyncing(true);
-    setError("");
-    setMessage("");
-    setSyncSummary(null);
-    try {
-      const [customerSummary, saleTypeSummary] = await Promise.all([
-        syncCustomersFromSepidar(),
-        syncSaleTypesFromSepidar(),
-      ]);
-      const [updatedCustomers, updatedSaleTypes] = await Promise.all([
-        listSepidarCustomers(),
-        listSepidarSaleTypes(),
-      ]);
-      setCustomers(updatedCustomers);
-      setSaleTypes(updatedSaleTypes);
-      setSyncSummary({
-        customers: customerSummary,
-        saleTypes: saleTypeSummary,
-      });
-      setMessage("مشتری‌ها و نوع‌های فروش از سپیدار به‌روزرسانی شدند.");
-    } catch (syncError) {
-      setError(getErrorMessage(syncError));
-    } finally {
-      setIsSyncing(false);
     }
   };
 
@@ -345,25 +309,10 @@ export default function SupportCustomerAssignmentsPage() {
       <SectionHeader
         title="اختصاص مشتری به کارشناس"
         description="مشتریان سپیدار را به کارشناسان فروش اختصاص دهید و نوع فروش هر مشتری را مشخص کنید."
-        actions={
-          <Button type="button" onClick={syncSepidarAssignmentData} disabled={isSyncing}>
-            <RefreshCw className={`size-4 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing
-              ? "در حال دریافت مشتری‌ها و نوع‌های فروش..."
-              : "به‌روزرسانی مشتری‌ها و نوع‌های فروش از سپیدار"}
-          </Button>
-        }
       />
 
       {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
       {error ? <InlineErrorMessage message={error} /> : null}
-      {syncSummary ? (
-        <div className="grid gap-4 xl:grid-cols-2">
-          <SyncSummary title="به‌روزرسانی مشتری‌های سپیدار انجام شد." summary={syncSummary.customers} />
-          <SyncSummary title="به‌روزرسانی نوع‌های فروش انجام شد." summary={syncSummary.saleTypes} />
-        </div>
-      ) : null}
-
       {isLoading ? (
         <LoadingState title="در حال دریافت مشتریان و کارشناسان" />
       ) : (
@@ -435,7 +384,7 @@ export default function SupportCustomerAssignmentsPage() {
                   searchPlaceholder="جستجو در نوع‌های فروش"
                   emptyMessage={
                     saleTypes.length === 0
-                      ? "نوع فروشی پیدا نشد. ابتدا نوع‌های فروش را از سپیدار به‌روزرسانی کنید."
+                      ? "نوع فروشی پیدا نشد. وضعیت همگام‌سازی را از تنظیمات سپیدار بررسی کنید."
                       : "نوع فروشی با این جستجو پیدا نشد."
                   }
                   invalid={Boolean(fieldErrors.selectedSaleTypeId)}
@@ -480,38 +429,4 @@ function formatCustomerOptionLabel(customer: Customer): string {
   const name = customer.fullName || "مشتری";
   const code = customer.sepidarCustomerCode || customer.id;
   return code ? `${formatFaDigits(code)} - ${name}` : name;
-}
-
-function SyncSummary({
-  title,
-  summary,
-}: {
-  title: string;
-  summary: SepidarCustomerSyncSummary;
-}) {
-  const rows = [
-    ["تعداد کل", summary.total],
-    ["پردازش‌شده", summary.processed],
-    ["ایجادشده", summary.created],
-    ["به‌روزشده", summary.updated],
-    ["ردشده", summary.rejected],
-    ["خطادار", summary.failed],
-  ];
-  return (
-    <Card className="border-[#CFE3D3] bg-[#F3FAF4] p-4">
-      <p className="text-sm font-semibold text-[#315D3D]">
-        {title}
-      </p>
-      <dl className="mt-3 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        {rows.map(([label, value]) => (
-          <div key={String(label)} className="rounded-xl border border-[#D6E8DA] bg-white p-3">
-            <dt className="text-xs text-[#536275]">{label}</dt>
-            <dd className="mt-1 font-semibold text-[#1F3A5F]">
-              {formatNumber(Number(value))}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </Card>
-  );
 }
