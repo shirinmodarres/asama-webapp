@@ -164,6 +164,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "مشتریان سپیدار و کارشناسان",
     },
     {
+      label: "تنظیمات سپیدار",
+      href: "/support/sepidar-settings",
+      icon: "plug-zap",
+      description: "اتصال و همگام‌سازی",
+    },
+    {
       label: "موجودی",
       href: "/support/inventory",
       icon: "package",

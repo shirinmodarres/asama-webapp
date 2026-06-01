@@ -25,7 +25,8 @@ export type SidebarIconName =
   | "pencil"
   | "users"
   | "warehouse"
-  | "building-2";
+  | "building-2"
+  | "plug-zap";
 
 export interface Role {
   key: RoleKey;
