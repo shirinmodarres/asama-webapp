@@ -47,6 +47,7 @@ import {
   releaseShipment,
   stopShipment,
 } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 type DecisionType = "approve" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
@@ -294,6 +295,26 @@ export default function ManagerOrderReviewPage() {
                 value={order.orderType === "naja" ? "ناجا" : "عادی"}
               />
               <InfoItem label="مشتری" value={order.customerName ?? "-"} />
+              {order.orderType === "naja" ? (
+                <>
+                  <InfoItem
+                    label="کد مشتری سپیدار"
+                    value={
+                      order.sepidarCustomerCode
+                        ? formatFaDigits(order.sepidarCustomerCode)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="نوع فروش"
+                    value={order.saleTypeTitle || order.saleType?.title || "-"}
+                  />
+                  <InfoItem
+                    label="وضعیت پیش‌فاکتور سپیدار"
+                    value={getQuotationStatusLabel(order)}
+                  />
+                </>
+              ) : null}
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem
@@ -737,4 +758,19 @@ function formatReviewRemaining(order: Order): string | null {
   return order.reviewExpiresAt
     ? `مهلت بررسی تا: ${formatDate(order.reviewExpiresAt)}`
     : null;
+}
+
+function getQuotationStatusLabel(order: Order): string {
+  if (order.sepidarIntegrationStatus === "quotation_failed") {
+    return "ثبت پیش‌فاکتور ناموفق بود.";
+  }
+
+  if (
+    order.sepidarQuotationId ||
+    order.sepidarIntegrationStatus === "quotation_created"
+  ) {
+    return "پیش‌فاکتور ثبت شد.";
+  }
+
+  return "ثبت نشده";
 }

@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { NajaCenterInfoCard } from "@/components/naja/naja-center-info-card";
 import { NajaOrderTimeline } from "@/components/naja/naja-order-timeline";
 import { NajaReturnActionRemote } from "@/components/naja/naja-return-action-remote";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -151,7 +150,7 @@ export default function NajaOrderDetailsPage() {
     <DashboardLayout role="naja" title="جزئیات سفارش">
       <SectionHeader
         title={`سفارش ${order.code}`}
-        description="مشاهده اطلاعات مشتری، مرکز ناجا، وضعیت انبار و فاکتور سفارش"
+        description="مشاهده اطلاعات مشتری/مرکز ناجا از سپیدار، وضعیت انبار و فاکتور سفارش"
         actions={
           <Link
             href="/naja/orders"
@@ -170,6 +169,18 @@ export default function NajaOrderDetailsPage() {
               <InfoItem label="کد سفارش" value={order.code} />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="نام مشتری" value={order.customerName ?? "-"} />
+              <InfoItem
+                label="کد مشتری سپیدار"
+                value={
+                  order.sepidarCustomerCode
+                    ? formatFaDigits(order.sepidarCustomerCode)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="نوع فروش"
+                value={order.saleTypeTitle || order.saleType?.title || "-"}
+              />
               <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
               <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
@@ -180,11 +191,19 @@ export default function NajaOrderDetailsPage() {
                 label="وضعیت فاکتور"
                 value={invoice ? `صادر شده - ${invoice.invoiceCode}` : "هنوز صادر نشده"}
               />
+              <InfoItem
+                label="وضعیت پیش‌فاکتور سپیدار"
+                value={getQuotationStatusLabel(order)}
+              />
+              {order.sepidarQuotationNumber ? (
+                <InfoItem
+                  label="شماره پیش‌فاکتور سپیدار"
+                  value={formatFaDigits(order.sepidarQuotationNumber)}
+                />
+              ) : null}
               {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
           </div>
-
-          <NajaCenterInfoCard center={order.najaCenter} />
 
           <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />
 
@@ -219,4 +238,16 @@ function InfoItem({ label, value }: { label: string; value: ReactNode }) {
       <dd className="mt-1 text-sm font-medium text-[#1F3A5F]">{value}</dd>
     </div>
   );
+}
+
+function getQuotationStatusLabel(order: Order): string {
+  if (order.sepidarIntegrationStatus === "quotation_failed") {
+    return "ثبت پیش‌فاکتور ناموفق بود.";
+  }
+
+  if (order.sepidarQuotationId || order.sepidarIntegrationStatus === "quotation_created") {
+    return "پیش‌فاکتور ثبت شد.";
+  }
+
+  return "ثبت نشده";
 }

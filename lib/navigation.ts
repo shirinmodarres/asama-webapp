@@ -36,12 +36,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت سفارش‌های ناجا",
     },
     {
-      label: "مراکز ناجا",
-      href: "/naja/centers",
-      icon: "layers",
-      description: "فهرست مراکز ناجا",
-    },
-    {
       label: "سفارش های ناجا",
       href: "/naja/orders",
       icon: "shopping-cart",
@@ -72,12 +66,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/manager/inventory",
       icon: "boxes",
       description: "فروش و موجودی انبار",
-    },
-    {
-      label: "مراکز ناجا",
-      href: "/manager/naja-centers",
-      icon: "layers",
-      description: "مشاهده مراکز ناجا",
     },
   ],
   warehouse: [
@@ -186,12 +174,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/warehouses",
       icon: "warehouse",
       description: "انبارهای عمومی و ناجا",
-    },
-    {
-      label: "مراکز ناجا",
-      href: "/support/naja-centers",
-      icon: "layers",
-      description: "تعریف و ویرایش مراکز",
     },
     {
       label: "کاربران",

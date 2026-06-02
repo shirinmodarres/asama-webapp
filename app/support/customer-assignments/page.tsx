@@ -38,7 +38,9 @@ export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [saleTypes, setSaleTypes] = useState<SepidarSaleType[]>([]);
-  const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>([]);
+  const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
+    [],
+  );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedSaleTypeId, setSelectedSaleTypeId] = useState("");
@@ -51,12 +53,13 @@ export default function SupportCustomerAssignmentsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [expertData, customerData, saleTypeData, assignmentData] = await Promise.all([
-      listSupportExperts(),
-      listSepidarCustomers(),
-      listSepidarSaleTypes(),
-      listExpertCustomerAssignments(),
-    ]);
+    const [expertData, customerData, saleTypeData, assignmentData] =
+      await Promise.all([
+        listSupportExperts(),
+        listSepidarCustomers(),
+        listSepidarSaleTypes(),
+        listExpertCustomerAssignments(),
+      ]);
     setExperts(expertData);
     setCustomers(customerData);
     setSaleTypes(saleTypeData);
@@ -69,12 +72,13 @@ export default function SupportCustomerAssignmentsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [expertData, customerData, saleTypeData, assignmentData] = await Promise.all([
-          listSupportExperts(),
-          listSepidarCustomers(),
-          listSepidarSaleTypes(),
-          listExpertCustomerAssignments(),
-        ]);
+        const [expertData, customerData, saleTypeData, assignmentData] =
+          await Promise.all([
+            listSupportExperts(),
+            listSepidarCustomers(),
+            listSepidarSaleTypes(),
+            listExpertCustomerAssignments(),
+          ]);
         if (!isMounted) return;
         setExperts(expertData);
         setCustomers(customerData);
@@ -155,46 +159,37 @@ export default function SupportCustomerAssignmentsPage() {
         .filter((expert) => expert.status === "active")
         .map((expert) => ({
           value: expert.objectId,
-          label:
-            expert.fullName ||
-            expert.name ||
-            expert.mobile ||
-            expert.username ||
-            "-",
+          label: `${expert.fullName || expert.name || expert.username || expert.mobile || "-"} - ${expert.roleLabel}`,
         })),
     [experts],
   );
-  const customerOptions = useMemo(
-    () => {
-      const assignedCustomerIds = new Set(
-        assignments
-          .filter(
-            (assignment) =>
-              assignment.status === "active" &&
-              assignment.objectId !== editingAssignmentId,
-          )
-          .map((assignment) => assignment.customerObjectId),
-      );
+  const customerOptions = useMemo(() => {
+    const assignedCustomerIds = new Set(
+      assignments
+        .filter(
+          (assignment) =>
+            assignment.status === "active" &&
+            assignment.objectId !== editingAssignmentId,
+        )
+        .map((assignment) => assignment.customerObjectId),
+    );
 
-      return customers
-        .filter((customer) => customer.status === "active")
-        .filter((customer) => !assignedCustomerIds.has(customer.objectId))
-        .map((customer) => ({
-          value: customer.objectId,
-          label: formatCustomerOptionLabel(customer),
-        }));
-    },
-    [assignments, customers, editingAssignmentId],
-  );
+    return customers
+      .filter((customer) => customer.status === "active")
+      .filter((customer) => !assignedCustomerIds.has(customer.objectId))
+      .map((customer) => ({
+        value: customer.objectId,
+        label: formatCustomerOptionLabel(customer),
+      }));
+  }, [assignments, customers, editingAssignmentId]);
   const saleTypeOptions = useMemo(
     () =>
-      saleTypes
-        .map((saleType) => ({
-          value: saleType.objectId,
-          label: `${saleType.sepidarSaleTypeId ?? "-"} - ${saleType.title || "-"}${
-            saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
-          }`,
-        })),
+      saleTypes.map((saleType) => ({
+        value: saleType.objectId,
+        label: `${saleType.sepidarSaleTypeId ?? "-"} - ${saleType.title || "-"}${
+          saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
+        }`,
+      })),
     [saleTypes],
   );
 
@@ -241,8 +236,16 @@ export default function SupportCustomerAssignmentsPage() {
     !selectedSaleTypeId;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
-    { key: "expert", header: "کارشناس", render: (row) => row.expertName || "-" },
-    { key: "customer", header: "مشتری", render: (row) => row.customerName || "-" },
+    {
+      key: "expert",
+      header: "کارشناس",
+      render: (row) => row.expertName || "-",
+    },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.customerName || "-",
+    },
     {
       key: "customer-code",
       header: "کد مشتری",
@@ -252,10 +255,15 @@ export default function SupportCustomerAssignmentsPage() {
     {
       key: "sale-type",
       header: "نوع فروش",
-      render: (row) =>
-        row.saleTypeTitle
-          ? `${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${row.saleTypeTitle}`
-          : "-",
+      render: (row) => {
+        const saleTypeTitle = row.saleTypeTitle
+          ? row.saleTypeTitle.split("/")[0].trim()
+          : "";
+
+        return saleTypeTitle
+          ? `${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
+          : "-";
+      },
     },
     {
       key: "date",
@@ -276,7 +284,7 @@ export default function SupportCustomerAssignmentsPage() {
       header: "عملیات",
       render: (row) =>
         row.status === "active" ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex  gap-2">
             <Button
               type="button"
               size="sm"
@@ -285,7 +293,7 @@ export default function SupportCustomerAssignmentsPage() {
               disabled={deactivatingId === row.objectId || isSubmitting}
             >
               <Pencil className="size-4" />
-              ویرایش
+              {/* ویرایش */}
             </Button>
             <Button
               type="button"
@@ -295,7 +303,7 @@ export default function SupportCustomerAssignmentsPage() {
               disabled={deactivatingId === row.objectId}
             >
               <UserMinus className="size-4" />
-              {deactivatingId === row.objectId ? "در حال انجام..." : "غیرفعال کردن"}
+              {/* {deactivatingId === row.objectId ? "در حال انجام..." : "غیرفعال کردن"} */}
             </Button>
           </div>
         ) : (
@@ -311,7 +319,9 @@ export default function SupportCustomerAssignmentsPage() {
         description="مشتریان سپیدار را به کارشناسان فروش اختصاص دهید و نوع فروش هر مشتری را مشخص کنید."
       />
 
-      {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
+      {message ? (
+        <div className="asama-banner px-4 py-3 text-sm">{message}</div>
+      ) : null}
       {error ? <InlineErrorMessage message={error} /> : null}
       {isLoading ? (
         <LoadingState title="در حال دریافت مشتریان و کارشناسان" />
@@ -340,7 +350,10 @@ export default function SupportCustomerAssignmentsPage() {
                   value={selectedExpertId || undefined}
                   onValueChange={(value) => {
                     setSelectedExpertId(value);
-                    setFieldErrors((current) => ({ ...current, selectedExpertId: "" }));
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedExpertId: "",
+                    }));
                   }}
                   options={expertOptions}
                   placeholder="انتخاب کارشناس"
@@ -357,7 +370,10 @@ export default function SupportCustomerAssignmentsPage() {
                   value={selectedCustomerId || undefined}
                   onValueChange={(value) => {
                     setSelectedCustomerId(value);
-                    setFieldErrors((current) => ({ ...current, selectedCustomerId: "" }));
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedCustomerId: "",
+                    }));
                   }}
                   options={customerOptions}
                   placeholder="انتخاب مشتری"
@@ -411,7 +427,9 @@ export default function SupportCustomerAssignmentsPage() {
             <DataTable
               columns={columns}
               rows={assignments}
-              rowKey={(row) => row.objectId || `${row.expertObjectId}-${row.customerObjectId}`}
+              rowKey={(row) =>
+                row.objectId || `${row.expertObjectId}-${row.customerObjectId}`
+              }
             />
           ) : (
             <EmptyState

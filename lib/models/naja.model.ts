@@ -1,12 +1,19 @@
 export interface CreateNajaOrderPayload {
-  createdByName: string;
-  customerName: string;
-  customerNationalId: string;
-  customerPhone: string;
-  centerObjectId: string;
+  createdByName?: string;
+  expertUserId?: string;
+  orderType?: "naja";
+  customerObjectId: string;
+  saleTypeObjectId?: string | null;
+  sepidarSaleTypeId?: number | null;
   warehouseId?: string;
-  productObjectId: string;
-  quantity: number;
+  productObjectId?: string;
+  quantity?: number;
+  items?: Array<{
+    productObjectId: string;
+    quantity: number;
+    unitPrice?: number;
+    priceNoteItemId?: number | null;
+  }>;
   notes?: string;
 }
 
