@@ -11,7 +11,7 @@ import type {
 } from "@/lib/expert/types";
 
 export const orderStatusLabel: Record<OrderStatus, string> = {
-  pending: "در انتظار تأیید",
+  pending_approval: "در انتظار تایید",
   needs_review: "نیازمند بررسی",
   review_resolved: "مشکل برطرف شد",
   approved: "تأیید شده",
@@ -182,7 +182,7 @@ export const initialOrders: ExpertOrder[] = [
     customerName: "فروشگاه خانه مدرن تهران",
     createdAt: "2026-04-15T08:45:00.000Z",
     updatedAt: "2026-04-15T08:45:00.000Z",
-    status: "pending",
+    status: "pending_approval",
     warehouseStatus: "reserved",
     items: [
       { productId: "p-100", quantity: 3 },
@@ -517,7 +517,7 @@ export function getOrderLastStageLabel(order: ExpertOrder): string {
   if (order.orderSource === "naja" && order.warehouseStatus === "najaDetailsCompleted") {
     return "آماده صدور فاکتور ناجا";
   }
-  if (order.status === "pending") return "در انتظار تصمیم مدیر فروش";
+  if (order.status === "pending_approval") return "در انتظار تصمیم مدیر فروش";
   if (order.status === "cancelled") return "بازگشت رزرو به موجودی";
   if (order.status === "invoiced") return "فاکتور صادر شده";
   return warehouseStatusLabel[order.warehouseStatus];

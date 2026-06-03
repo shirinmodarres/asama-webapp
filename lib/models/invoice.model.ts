@@ -20,7 +20,7 @@ export interface Invoice {
   orderCode: string;
   invoiceType: InvoiceType;
   invoiceName: string;
-  createdByName: string;
+  createdByName?: string;
   totalAmount: number;
   status: InvoiceStatus;
   statusLabel: string;

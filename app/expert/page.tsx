@@ -44,7 +44,7 @@ export default function ExpertPage() {
 
   const stats = useMemo(() => {
     const pendingOrders = orders.filter(
-      (order) => order.orderStatus === "pending",
+      (order) => order.orderStatus === "pending_approval",
     );
     const needsReviewOrders = orders.filter(
       (order) => order.orderStatus === "needs_review",
@@ -107,6 +107,15 @@ export default function ExpertPage() {
         <PageErrorMessage title="دریافت داشبورد انجام نشد" message={error} />
       ) : (
         <>
+          <section className="flex justify-end">
+            <Link
+              href="/expert/orders/new"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white!"
+            >
+              <PlusCircle className="size-4" />
+              <span>ثبت سفارش جدید</span>
+            </Link>
+          </section>
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {stats.cards.map((stat) => (
               <SummaryCard
@@ -155,7 +164,7 @@ export default function ExpertPage() {
                     اولین سفارش را ثبت کنید تا این بخش به‌روزرسانی شود.
                   </p>
                   <Link
-                    href="/expert/orders/create"
+                    href="/expert/orders/new"
                     className="mt-4 inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white!"
                   >
                     <PlusCircle className="size-4" />
@@ -172,5 +181,5 @@ export default function ExpertPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending" || status === "needs_review";
+  return status === "pending_approval" || status === "needs_review";
 }

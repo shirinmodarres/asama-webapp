@@ -98,7 +98,7 @@ export default function FinanceReadyPage() {
         const matchesSearch =
           query.length === 0 ||
           row.order.code.toLowerCase().includes(query) ||
-          row.order.createdByName.toLowerCase().includes(query) ||
+          (row.order.createdByName ?? "").toLowerCase().includes(query) ||
           (row.order.customerName ?? "").toLowerCase().includes(query) ||
           row.slipNumber.toLowerCase().includes(query);
 

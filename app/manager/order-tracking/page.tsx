@@ -26,7 +26,7 @@ import { listOrders } from "@/lib/services/order.service";
 
 type TrackingFilter =
   | "all"
-  | "pending"
+  | "pending_approval"
   | "needs_review"
   | "review_resolved"
   | "approved"
@@ -182,7 +182,10 @@ export default function ManagerOrderTrackingPage() {
                 onValueChange={(value) => setFilter(value as TrackingFilter)}
                 options={[
                   { value: "all", label: "همه وضعیت‌ها" },
-                  { value: "pending", label: getOrderStatusLabel("pending") },
+                  {
+                    value: "pending_approval",
+                    label: getOrderStatusLabel("pending_approval"),
+                  },
                   {
                     value: "needs_review",
                     label: getOrderStatusLabel("needs_review"),

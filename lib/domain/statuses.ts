@@ -1,5 +1,5 @@
 export type OrderStatusCode =
-  | "pending"
+  | "pending_approval"
   | "needs_review"
   | "review_resolved"
   | "approved"
@@ -23,7 +23,7 @@ export type ProductStatusCode = "active" | "inactive";
 export type InvoiceStatusCode = "issued" | "needs_follow_up";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
-  pending: "در انتظار تأیید",
+  pending_approval: "در انتظار تایید",
   needs_review: "نیازمند بررسی",
   review_resolved: "مشکل برطرف شد",
   approved: "تأیید شده",
@@ -57,7 +57,13 @@ export const INVOICE_STATUS_LABELS: Record<InvoiceStatusCode, string> = {
 
 export function getOrderStatusLabel(status: string | null | undefined): string {
   if (!status) return "";
-  return ORDER_STATUS_LABELS[status as OrderStatusCode] ?? status;
+  const normalizedStatus = normalizeOrderStatus(status);
+  return ORDER_STATUS_LABELS[normalizedStatus as OrderStatusCode] ?? normalizedStatus;
+}
+
+export function normalizeOrderStatus(status: string | null | undefined): string {
+  if (status === "pending" || status === "pending_approva") return "pending_approval";
+  return status || "";
 }
 
 export function getWarehouseStatusLabel(

@@ -26,7 +26,7 @@ export default function ManagerPendingOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("pending_approval");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -78,7 +78,7 @@ export default function ManagerPendingOrdersPage() {
 
   const hasActiveFilters =
     search.trim().length > 0 ||
-    statusFilter !== "pending" ||
+    statusFilter !== "pending_approval" ||
     dateFrom.length > 0 ||
     dateTo.length > 0;
 
@@ -86,7 +86,7 @@ export default function ManagerPendingOrdersPage() {
     () =>
       Array.from(
         new Set([
-          "pending",
+          "pending_approval",
           "needs_review",
           "review_resolved",
           ...orders.map((order) => order.orderStatus).filter(Boolean),
@@ -176,7 +176,7 @@ export default function ManagerPendingOrdersPage() {
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 options={[
-                  { value: "pending", label: "در انتظار تایید" },
+                  { value: "pending_approval", label: getOrderStatusLabel("pending_approval") },
                   { value: "needs_review", label: "نیازمند بررسی" },
                   { value: "review_resolved", label: "مشکل برطرف شد" },
                   { value: "all", label: "همه وضعیت‌ها" },
@@ -184,7 +184,7 @@ export default function ManagerPendingOrdersPage() {
                     .filter(
                       (value) =>
                         ![
-                          "pending",
+                          "pending_approval",
                           "needs_review",
                           "review_resolved",
                         ].includes(value),
@@ -215,7 +215,7 @@ export default function ManagerPendingOrdersPage() {
               className="inline-flex w-fit shrink-0 items-center gap-2"
               onClick={() => {
                 setSearch("");
-                setStatusFilter("pending");
+                setStatusFilter("pending_approval");
                 setDateFrom("");
                 setDateTo("");
               }}

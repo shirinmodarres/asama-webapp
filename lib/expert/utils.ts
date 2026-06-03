@@ -42,7 +42,7 @@ export function formatDateTime(value: string): string {
 }
 
 export function isOrderEditable(order: ExpertOrder): boolean {
-  return order.status === "pending" || order.status === "needs_review";
+  return order.status === "pending_approval" || order.status === "needs_review";
 }
 
 export function getAvailableStock(product: Product): number {

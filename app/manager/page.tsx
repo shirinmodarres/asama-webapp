@@ -33,7 +33,7 @@ export default function ManagerPage() {
   }, []);
 
   const pendingCount = orders.filter(
-    (order) => order.orderStatus === "pending",
+    (order) => order.orderStatus === "pending_approval",
   ).length;
   const approvedCount = orders.filter(
     (order) => order.orderStatus === "approved",
