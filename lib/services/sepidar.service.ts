@@ -95,7 +95,7 @@ export async function testSepidarConnection(): Promise<SepidarConnectionTestResu
 export async function getSepidarSyncSummary(): Promise<SepidarSyncLogSummary[]> {
   const data = await httpClient.get<unknown>("/api/integrations/sepidar/sync/summary");
   const record = toRecord(data);
-  return ["items", "customers", "sale-types", "prices"].map((syncType) =>
+  return ["items", "customers", "sale-types", "prices", "stocks"].map((syncType) =>
     mapSepidarSyncLogSummary(record[syncType], syncType),
   );
 }
@@ -114,6 +114,10 @@ export async function syncSepidarSaleTypes(): Promise<SepidarSyncOperationSummar
 
 export async function syncSepidarPrices(): Promise<SepidarSyncOperationSummary> {
   return syncSepidar("/api/integrations/sepidar/sync/prices");
+}
+
+export async function syncSepidarStocks(): Promise<SepidarSyncOperationSummary> {
+  return syncSepidar("/api/integrations/sepidar/sync/stocks");
 }
 
 async function syncSepidar(path: string): Promise<SepidarSyncOperationSummary> {
