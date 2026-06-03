@@ -1,5 +1,6 @@
 import type { Customer } from "@/lib/models/customer.model";
 import type { AuthUser } from "@/lib/models/auth.model";
+import type { SepidarStock } from "@/lib/models/stock.model";
 
 export type CustomerAssignmentStatus = "active" | "inactive";
 
@@ -17,6 +18,9 @@ export interface ExpertCustomerAssignment {
   sepidarCustomerCode: string | null;
   saleTypeTitle: string | null;
   sepidarSaleTypeId: number | null;
+  allowedStockObjectIds: string[];
+  allowedSepidarStockIds: number[];
+  allowedStocks: SepidarStock[];
   assignedAt: string;
   status: CustomerAssignmentStatus;
   statusLabel: string;
@@ -26,6 +30,7 @@ export interface CreateExpertCustomerAssignmentPayload {
   expertUserId: string;
   customerObjectId: string;
   saleTypeObjectId: string;
+  allowedStockObjectIds: string[];
   assignedByName: string;
 }
 
@@ -33,6 +38,7 @@ export interface UpdateExpertCustomerAssignmentPayload {
   expertUserId: string;
   customerObjectId: string;
   saleTypeObjectId: string;
+  allowedStockObjectIds: string[];
   updatedByName: string;
 }
 

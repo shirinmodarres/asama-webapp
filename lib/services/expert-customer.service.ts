@@ -34,6 +34,11 @@ function normalizeAssignedCustomerDto(dto: unknown): Record<string, unknown> {
       customerRecord.objectId ??
       source.objectId,
     saleType: record.saleType ?? customerRecord.saleType,
+    allowedStockObjectIds:
+      record.allowedStockObjectIds ?? customerRecord.allowedStockObjectIds,
+    allowedSepidarStockIds:
+      record.allowedSepidarStockIds ?? customerRecord.allowedSepidarStockIds,
+    allowedStocks: record.allowedStocks ?? customerRecord.allowedStocks,
     assignedExpertName:
       record.assignedExpertName ??
       record.expertName ??

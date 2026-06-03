@@ -1,6 +1,8 @@
 import { mapAuthUserDto } from "@/lib/mappers/auth.mapper";
 import { mapCustomerDto } from "@/lib/mappers/customer.mapper";
+import { mapSepidarStockDto } from "@/lib/mappers/stock.mapper";
 import {
+  toArray,
   toNumberValue,
   toRecord,
   toStringValue,
@@ -61,6 +63,13 @@ export function mapExpertCustomerAssignmentDto(
       record.sepidarSaleTypeId === undefined || record.sepidarSaleTypeId === null
         ? saleType?.sepidarSaleTypeId ?? null
         : toNumberValue(record.sepidarSaleTypeId),
+    allowedStockObjectIds: toArray(record.allowedStockObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    allowedSepidarStockIds: toArray(record.allowedSepidarStockIds)
+      .map(toNumberValue)
+      .filter((value) => Number.isFinite(value)),
+    allowedStocks: toArray(record.allowedStocks).map(mapSepidarStockDto),
     assignedAt: toStringValue(record.assignedAt ?? record.createdAt),
     status,
     statusLabel:
