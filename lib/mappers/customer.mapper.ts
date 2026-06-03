@@ -6,6 +6,7 @@ import {
   toRecord,
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
+import { mapSepidarStockDto } from "@/lib/mappers/stock.mapper";
 import type {
   Customer,
   CustomerAddress,
@@ -42,6 +43,13 @@ export function mapCustomerDto(dto: unknown): Customer {
       record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
     ),
     saleType: mapCustomerSaleType(record.saleType),
+    allowedStockObjectIds: toArray(record.allowedStockObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    allowedSepidarStockIds: toArray(record.allowedSepidarStockIds)
+      .map(toNumberValue)
+      .filter((value) => Number.isFinite(value)),
+    allowedStocks: toArray(record.allowedStocks).map(mapSepidarStockDto),
     isSyncedFromSepidar:
       toBooleanValue(record.isSyncedFromSepidar ?? record.syncedFromSepidar) ||
       toStringValue(record.source).toLowerCase() === "sepidar",

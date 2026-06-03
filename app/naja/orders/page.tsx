@@ -66,7 +66,12 @@ export default function NajaOrdersPage() {
             order.code.toLowerCase().includes(query) ||
             (order.customerName ?? "").toLowerCase().includes(query) ||
             (order.customerNationalId ?? "").toLowerCase().includes(query) ||
-            (order.customerPhone ?? "").toLowerCase().includes(query)
+            (order.customerPhone ?? "").toLowerCase().includes(query) ||
+            (order.recipientFirstName ?? "").toLowerCase().includes(query) ||
+            (order.recipientLastName ?? "").toLowerCase().includes(query) ||
+            (order.recipientNationalId ?? "").toLowerCase().includes(query) ||
+            (order.recipientMobile ?? "").toLowerCase().includes(query) ||
+            (order.najaOrderNumber ?? "").toLowerCase().includes(query)
           );
         })
         .filter(
@@ -114,16 +119,28 @@ export default function NajaOrdersPage() {
       render: (row) => row.customerName ?? "-",
     },
     {
-      key: "nationalId",
-      header: "کد ملی",
+      key: "recipient",
+      header: "تحویل‌گیرنده",
       render: (row) =>
-        row.customerNationalId ? formatFaDigits(row.customerNationalId) : "-",
+        [row.recipientFirstName, row.recipientLastName].filter(Boolean).join(" ") ||
+        "-",
     },
     {
-      key: "phone",
+      key: "recipientMobile",
       header: "شماره موبایل",
       render: (row) =>
-        row.customerPhone ? formatFaDigits(row.customerPhone) : "-",
+        row.recipientMobile ? formatFaDigits(row.recipientMobile) : "-",
+    },
+    {
+      key: "najaOrderNumber",
+      header: "شماره سفارش",
+      render: (row) =>
+        row.najaOrderNumber ? formatFaDigits(row.najaOrderNumber) : "-",
+    },
+    {
+      key: "stock",
+      header: "انبار خروج",
+      render: (row) => row.stockTitle || "-",
     },
     {
       key: "orderStatus",

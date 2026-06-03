@@ -21,14 +21,33 @@ export interface Order {
   id: string;
   code: string;
   orderType: OrderType;
-  createdByName: string;
+  createdByName?: string | null;
   customerName: string | null;
   customer: Customer | null;
   customerObjectId: string | null;
+  sepidarCustomerId: number | string | null;
+  sepidarCustomerCode: string | null;
   customerAddressObjectId: string | null;
+  saleTypeObjectId: string | null;
+  sepidarSaleTypeId: number | null;
+  saleTypeTitle: string | null;
+  saleType: {
+    objectId: string | null;
+    sepidarSaleTypeId: number | null;
+    title: string | null;
+  } | null;
   warehouseId: string | null;
   warehouseName: string | null;
   warehouseType: string | null;
+  stockObjectId: string | null;
+  sepidarStockId: number | null;
+  stockTitle: string | null;
+  recipientFirstName: string | null;
+  recipientLastName: string | null;
+  recipientNationalId: string | null;
+  recipientMobile: string | null;
+  externalOrderNumber: string | null;
+  najaOrderNumber: string | null;
   customerNationalId: string | null;
   customerPhone: string | null;
   deliveryAddressTitle: string | null;
@@ -74,6 +93,10 @@ export interface Order {
   voidedAt: string | null;
   voidReason: string | null;
   returnReason: string | null;
+  sepidarQuotationId: number | null;
+  sepidarQuotationNumber: number | string | null;
+  sepidarIntegrationStatus: string | null;
+  sepidarLastError: string | null;
   createdAt: string;
   updatedAt: string;
   najaCenter: NajaCenter | null;
@@ -87,14 +110,19 @@ export interface OrderFilters {
 
 export interface CreateOrderPayload {
   customerName?: string;
-  createdByName: string;
+  createdByName?: string;
+  expertUserId?: string;
   customerObjectId?: string;
   customerAddressObjectId?: string;
+  saleTypeObjectId?: string;
+  sepidarSaleTypeId?: number;
   notes?: string;
   items: Array<{
     productObjectId?: string;
     productId?: string;
     quantity: number;
+    unitPrice?: number;
+    priceNoteItemId?: number | null;
   }>;
 }
 
