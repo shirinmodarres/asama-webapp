@@ -108,6 +108,7 @@ export default function EditExpertOrderPage() {
             initialOrder={order}
             submitLabel="ذخیره تغییرات"
             isSubmitting={isSubmitting}
+            assignedCustomersOnly
             onSubmit={handleSubmit}
           />
         </>
@@ -117,5 +118,5 @@ export default function EditExpertOrderPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending" || status === "needs_review";
+  return status === "pending_approval" || status === "needs_review";
 }

@@ -183,6 +183,39 @@ export default function NajaOrderDetailsPage() {
               />
               <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
               <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+              <InfoItem
+                label="نام و نام خانوادگی تحویل‌گیرنده"
+                value={
+                  [order.recipientFirstName, order.recipientLastName]
+                    .filter(Boolean)
+                    .join(" ") || "-"
+                }
+              />
+              <InfoItem
+                label="کد ملی تحویل‌گیرنده"
+                value={
+                  order.recipientNationalId
+                    ? formatFaDigits(order.recipientNationalId)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="شماره موبایل تحویل‌گیرنده"
+                value={
+                  order.recipientMobile
+                    ? formatFaDigits(order.recipientMobile)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="شماره سفارش"
+                value={
+                  order.najaOrderNumber
+                    ? formatFaDigits(order.najaOrderNumber)
+                    : "-"
+                }
+              />
+              <InfoItem label="انبار خروج" value={order.stockTitle || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
               <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />

@@ -67,6 +67,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "boxes",
       description: "فروش و موجودی انبار",
     },
+    {
+      label: "تأیید انتقال موجودی",
+      href: "/manager/stock-transfers",
+      icon: "truck",
+      description: "درخواست‌های انتقال داخلی",
+    },
   ],
   warehouse: [
     {
@@ -162,6 +168,18 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/inventory",
       icon: "package",
       description: "افزایش و کاهش موجودی",
+    },
+    {
+      label: "موجودی فروش",
+      href: "/support/product-stock-inventory",
+      icon: "boxes",
+      description: "کالا و انبار سپیدار",
+    },
+    {
+      label: "انتقال موجودی",
+      href: "/support/stock-transfers",
+      icon: "truck",
+      description: "درخواست انتقال از زاگرس",
     },
     {
       label: "موجودی ناجا",

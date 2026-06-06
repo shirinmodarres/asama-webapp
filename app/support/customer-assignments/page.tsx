@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, UserMinus, X } from "lucide-react";
+import { Check, Pencil, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -22,6 +22,7 @@ import type {
   SepidarSaleType,
 } from "@/lib/models/customer-assignment.model";
 import type { Customer } from "@/lib/models/customer.model";
+import type { SepidarStock } from "@/lib/models/stock.model";
 import {
   createExpertCustomerAssignment,
   deactivateExpertCustomerAssignment,
@@ -33,17 +34,20 @@ import {
 } from "@/lib/services/customer-assignment.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import { listSepidarStocks } from "@/lib/services/stock.service";
 
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [saleTypes, setSaleTypes] = useState<SepidarSaleType[]>([]);
+  const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
     [],
   );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedSaleTypeId, setSelectedSaleTypeId] = useState("");
+  const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState("");
@@ -53,16 +57,18 @@ export default function SupportCustomerAssignmentsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [expertData, customerData, saleTypeData, assignmentData] =
+    const [expertData, customerData, saleTypeData, stockData, assignmentData] =
       await Promise.all([
         listSupportExperts(),
         listSepidarCustomers(),
         listSepidarSaleTypes(),
+        listSepidarStocks(),
         listExpertCustomerAssignments(),
       ]);
     setExperts(expertData);
     setCustomers(customerData);
     setSaleTypes(saleTypeData);
+    setStocks(stockData);
     setAssignments(assignmentData);
   };
 
@@ -72,17 +78,19 @@ export default function SupportCustomerAssignmentsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [expertData, customerData, saleTypeData, assignmentData] =
+        const [expertData, customerData, saleTypeData, stockData, assignmentData] =
           await Promise.all([
             listSupportExperts(),
             listSepidarCustomers(),
             listSepidarSaleTypes(),
+            listSepidarStocks(),
             listExpertCustomerAssignments(),
           ]);
         if (!isMounted) return;
         setExperts(expertData);
         setCustomers(customerData);
         setSaleTypes(saleTypeData);
+        setStocks(stockData);
         setAssignments(assignmentData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -107,6 +115,9 @@ export default function SupportCustomerAssignmentsPage() {
     if (!selectedSaleTypeId) {
       nextErrors.selectedSaleTypeId = "لطفاً نوع فروش را انتخاب کنید.";
     }
+    if (selectedStockIds.length === 0) {
+      nextErrors.selectedStockIds = "لطفاً حداقل یک انبار مجاز انتخاب کنید.";
+    }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -119,6 +130,7 @@ export default function SupportCustomerAssignmentsPage() {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
       saleTypeObjectId: selectedSaleTypeId,
+      allowedStockObjectIds: selectedStockIds,
     };
 
     setIsSubmitting(true);
@@ -141,6 +153,7 @@ export default function SupportCustomerAssignmentsPage() {
       setSelectedExpertId("");
       setSelectedCustomerId("");
       setSelectedSaleTypeId("");
+      setSelectedStockIds([]);
       setMessage(
         editingAssignmentId
           ? "اختصاص مشتری با موفقیت به‌روزرسانی شد."
@@ -192,6 +205,16 @@ export default function SupportCustomerAssignmentsPage() {
       })),
     [saleTypes],
   );
+  const stockOptions = useMemo(
+    () =>
+      stocks
+        .filter((stock) => stock.isActive)
+        .map((stock) => ({
+          value: stock.objectId,
+          label: `${stock.code || "-"} - ${stock.title}`,
+        })),
+    [stocks],
+  );
 
   const deactivateAssignment = async (assignmentId: string) => {
     setDeactivatingId(assignmentId);
@@ -213,6 +236,7 @@ export default function SupportCustomerAssignmentsPage() {
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
     setSelectedSaleTypeId(assignment.saleTypeObjectId ?? "");
+    setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
     setError("");
     setMessage("");
@@ -223,6 +247,7 @@ export default function SupportCustomerAssignmentsPage() {
     setSelectedExpertId("");
     setSelectedCustomerId("");
     setSelectedSaleTypeId("");
+    setSelectedStockIds([]);
     setFieldErrors({});
   };
 
@@ -231,9 +256,11 @@ export default function SupportCustomerAssignmentsPage() {
     expertOptions.length === 0 ||
     customerOptions.length === 0 ||
     saleTypeOptions.length === 0 ||
+    stockOptions.length === 0 ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    !selectedSaleTypeId;
+    !selectedSaleTypeId ||
+    selectedStockIds.length === 0;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
     {
@@ -264,6 +291,21 @@ export default function SupportCustomerAssignmentsPage() {
           ? `${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
           : "-";
       },
+    },
+    {
+      key: "allowed-stocks",
+      header: "انبارهای مجاز",
+      cellClassName: "max-w-[260px] whitespace-normal leading-7",
+      render: (row) =>
+        row.allowedStocks.length
+          ? row.allowedStocks
+              .map((stock) =>
+                [stock.code ? formatFaDigits(stock.code) : null, stock.title]
+                  .filter(Boolean)
+                  .join(" - "),
+              )
+              .join("، ")
+          : "-",
     },
     {
       key: "date",
@@ -345,7 +387,7 @@ export default function SupportCustomerAssignmentsPage() {
             ) : null}
             <div className="grid min-w-0 gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>کارشناس فروش</span>
+                <span>کارشناس</span>
                 <SearchableSelect
                   value={selectedExpertId || undefined}
                   onValueChange={(value) => {
@@ -408,6 +450,59 @@ export default function SupportCustomerAssignmentsPage() {
                 />
                 <FieldError message={fieldErrors.selectedSaleTypeId} />
               </label>
+              <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
+                <span>انبارهای مجاز</span>
+                <div
+                  className={
+                    fieldErrors.selectedStockIds
+                      ? "grid gap-2 rounded-[14px] border border-red-400 bg-white p-3"
+                      : "grid gap-2 rounded-[14px] border border-[#D7DEE6] bg-white p-3"
+                  }
+                >
+                  {stockOptions.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {stockOptions.map((stock) => {
+                        const checked = selectedStockIds.includes(stock.value);
+                        return (
+                          <button
+                            key={stock.value}
+                            type="button"
+                            className={
+                              checked
+                                ? "flex items-center justify-between gap-2 rounded-xl border border-[#6CAE75] bg-[#F3FAF4] px-3 py-2 text-right text-xs text-[#1F3A5F]"
+                                : "flex items-center justify-between gap-2 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2 text-right text-xs text-[#334155] hover:border-[#CBD5E1]"
+                            }
+                            onClick={() => {
+                              setSelectedStockIds((current) =>
+                                checked
+                                  ? current.filter((id) => id !== stock.value)
+                                  : [...current, stock.value],
+                              );
+                              setFieldErrors((current) => ({
+                                ...current,
+                                selectedStockIds: "",
+                              }));
+                            }}
+                          >
+                            <span className="min-w-0 truncate">
+                              {stock.label}
+                            </span>
+                            {checked ? (
+                              <Check className="size-4 shrink-0 text-[#6CAE75]" />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs leading-6 text-[#6B7280]">
+                      انباری از سپیدار دریافت نشده است. وضعیت همگام‌سازی
+                      انبارهای سپیدار را بررسی کنید.
+                    </p>
+                  )}
+                </div>
+                <FieldError message={fieldErrors.selectedStockIds} />
+              </div>
             </div>
             <Button
               type="button"

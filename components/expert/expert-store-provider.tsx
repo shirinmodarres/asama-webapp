@@ -150,7 +150,7 @@ export function ExpertStoreProvider({ children }: { children: ReactNode }) {
       customerName: customerName.trim(),
       createdAt: timestamp,
       updatedAt: timestamp,
-      status: "pending",
+      status: "pending_approval",
       warehouseStatus: "reserved",
       items: mergedItems,
     };
@@ -304,7 +304,7 @@ export function ExpertStoreProvider({ children }: { children: ReactNode }) {
   const updateOrder = ({ id, customerName, items }: UpdateOrderInput): ActionResult => {
     const targetOrder = getOrderById(id);
     if (!targetOrder) return { ok: false, error: "سفارش مورد نظر یافت نشد." };
-    if (targetOrder.status !== "pending") return { ok: false, error: "فقط سفارش در انتظار تایید قابل ویرایش است." };
+    if (targetOrder.status !== "pending_approval") return { ok: false, error: "فقط سفارش در انتظار تایید قابل ویرایش است." };
     if (!customerName.trim()) return { ok: false, error: "نام مشتری را وارد کنید." };
 
     const result = updateOrderItemsWithStockCheck(targetOrder, items);
@@ -345,7 +345,7 @@ export function ExpertStoreProvider({ children }: { children: ReactNode }) {
     const targetOrder = getOrderById(id);
 
     if (!targetOrder) return { ok: false, error: "سفارش مورد نظر یافت نشد." };
-    if (targetOrder.status !== "pending") return { ok: false, error: "این سفارش دیگر در انتظار تایید نیست." };
+    if (targetOrder.status !== "pending_approval") return { ok: false, error: "این سفارش دیگر در انتظار تایید نیست." };
 
     const approvedOrder: ExpertOrder = {
       ...targetOrder,
@@ -374,7 +374,7 @@ export function ExpertStoreProvider({ children }: { children: ReactNode }) {
     const targetOrder = getOrderById(id);
 
     if (!targetOrder) return { ok: false, error: "سفارش مورد نظر یافت نشد." };
-    if (targetOrder.status !== "pending") return { ok: false, error: "این سفارش دیگر در انتظار تایید نیست." };
+    if (targetOrder.status !== "pending_approval") return { ok: false, error: "این سفارش دیگر در انتظار تایید نیست." };
 
     const quantityByProduct = new Map<string, number>();
     targetOrder.items.forEach((item) => {

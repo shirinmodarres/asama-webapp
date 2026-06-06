@@ -7,6 +7,7 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -16,7 +17,7 @@ import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
-import { ListFilter, Search, X } from "lucide-react";
+import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -57,7 +58,7 @@ export default function ExpertOrdersPage() {
     () =>
       Array.from(
         new Set([
-          "pending",
+          "pending_approval",
           "needs_review",
           "review_resolved",
           ...orders.map((order) => order.orderStatus).filter(Boolean),
@@ -175,6 +176,19 @@ export default function ExpertOrdersPage() {
 
   return (
     <DashboardLayout role="expert" title="سفارش های من">
+      <SectionHeader
+        title="سفارش‌های من"
+        description="سفارش‌های ثبت‌شده و وضعیت بررسی آن‌ها"
+        actions={
+          <Link
+            href="/expert/orders/new"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white!"
+          >
+            <PlusCircle className="size-4" />
+            <span>ثبت سفارش جدید</span>
+          </Link>
+        }
+      />
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
           <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
@@ -257,7 +271,7 @@ export default function ExpertOrdersPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending" || status === "needs_review";
+  return status === "pending_approval" || status === "needs_review";
 }
 
 function isWithinDateRange(

@@ -22,6 +22,7 @@ import {
   syncSepidarItems,
   syncSepidarPrices,
   syncSepidarSaleTypes,
+  syncSepidarStocks,
   testSepidarConnection,
   updateSepidarSettings,
   type SepidarConnectionTestResult,
@@ -32,13 +33,14 @@ import {
   type UpdateSepidarSettingsPayload,
 } from "@/lib/services/sepidar.service";
 
-type SyncKey = "items" | "customers" | "sale-types" | "prices";
+type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks";
 
 const SYNC_LABELS: Record<SyncKey, string> = {
   items: "کالاها",
   customers: "مشتریان",
   "sale-types": "نوع‌های فروش",
   prices: "قیمت‌ها",
+  stocks: "انبارها",
 };
 
 export default function SupportSepidarSettingsPage() {
@@ -278,7 +280,7 @@ export default function SupportSepidarSettingsPage() {
                   داده‌های آساما را با آخرین اطلاعات سپیدار به‌روزرسانی کنید.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                 <SyncButton
                   label="کالاها"
                   loading={syncingKey === "items"}
@@ -302,6 +304,12 @@ export default function SupportSepidarSettingsPage() {
                   loading={syncingKey === "prices"}
                   disabled={Boolean(syncingKey)}
                   onClick={() => runSync("prices", syncSepidarPrices)}
+                />
+                <SyncButton
+                  label="انبارهای سپیدار"
+                  loading={syncingKey === "stocks"}
+                  disabled={Boolean(syncingKey)}
+                  onClick={() => runSync("stocks", syncSepidarStocks)}
                 />
               </div>
             </div>

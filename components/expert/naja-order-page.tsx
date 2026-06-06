@@ -16,15 +16,13 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
-import type { Warehouse } from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { createNajaOrder } from "@/lib/services/naja.service";
 import { listOrderProductsBySaleType } from "@/lib/services/product.service";
-import { listWarehouses } from "@/lib/services/warehouse.service";
 import type { RoleKey } from "@/lib/types";
-import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
-import { POSITIVE_NUMBER_MESSAGE, SELECT_REQUIRED_MESSAGE } from "@/lib/utils/form-validation";
+import { formatFaDigits, normalizeDigits, normalizePhone, toNumber } from "@/lib/utils/number-format";
+import { POSITIVE_NUMBER_MESSAGE } from "@/lib/utils/form-validation";
 
 interface NajaOrderPageProps {
   role?: RoleKey;
@@ -34,14 +32,17 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerObjectId, setCustomerObjectId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [recipientFirstName, setRecipientFirstName] = useState("");
+  const [recipientLastName, setRecipientLastName] = useState("");
+  const [recipientNationalId, setRecipientNationalId] = useState("");
+  const [recipientMobile, setRecipientMobile] = useState("");
+  const [najaOrderNumber, setNajaOrderNumber] = useState("");
   const [createdByName, setCreatedByName] = useState(
     getStoredCurrentUser()?.fullName ||
       getStoredCurrentUser()?.username ||
@@ -57,23 +58,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       setIsLoading(true);
       setError("");
       try {
-        const [warehouseData, customerData] = await Promise.all([
-          listWarehouses(),
-          listAssignedCustomersForExpert(getStoredCurrentUser()?.objectId),
-        ]);
-        if (!isMounted) return;
-        const najaWarehouses = warehouseData.filter(
-          (warehouse) =>
-            warehouse.status !== "inactive" &&
-            (warehouse.type === "naja" ||
-              warehouse.allowedOrderTypes.includes("naja")),
+        const customerData = await listAssignedCustomersForExpert(
+          getStoredCurrentUser()?.objectId,
         );
-        setWarehouses(najaWarehouses);
+        if (!isMounted) return;
         setCustomers(customerData);
-        const defaultWarehouse =
-          najaWarehouses.find((warehouse) => warehouse.isDefault) ??
-          najaWarehouses[0];
-        if (defaultWarehouse) setWarehouseId(defaultWarehouse.objectId);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -149,15 +138,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     [products],
   );
 
-  const warehouseOptions = useMemo(
-    () =>
-      warehouses.map((warehouse) => ({
-        value: warehouse.objectId,
-        label: warehouse.name,
-      })),
-    [warehouses],
-  );
-
   const handleSubmit = async () => {
     setError("");
     setFieldErrors({});
@@ -169,8 +149,26 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     if (selectedCustomer && !selectedCustomer.saleType?.sepidarSaleTypeId) {
       nextErrors.customerObjectId = "برای این مشتری نوع فروش مشخص نشده است.";
     }
-    if (!warehouseId) nextErrors.warehouseId = SELECT_REQUIRED_MESSAGE;
+    if (!selectedCustomer?.allowedStocks.length) {
+      nextErrors.customerObjectId = "برای این کارشناس انبار مجاز تعریف نشده است.";
+    }
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
+    if (!productId) nextErrors.items = "حداقل یک کالا به سفارش اضافه کنید.";
+    if (!recipientFirstName.trim()) {
+      nextErrors.recipientFirstName = "نام الزامی است.";
+    }
+    if (!recipientLastName.trim()) {
+      nextErrors.recipientLastName = "نام خانوادگی الزامی است.";
+    }
+    if (!recipientNationalId.trim()) {
+      nextErrors.recipientNationalId = "کد ملی الزامی است.";
+    }
+    if (!recipientMobile.trim()) {
+      nextErrors.recipientMobile = "شماره موبایل الزامی است.";
+    }
+    if (!najaOrderNumber.trim()) {
+      nextErrors.najaOrderNumber = "شماره سفارش الزامی است.";
+    }
 
     const requestedQuantity = toNumber(quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
@@ -196,7 +194,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         customerObjectId,
         saleTypeObjectId: selectedCustomer.saleType?.objectId || undefined,
         sepidarSaleTypeId: selectedCustomer.saleType?.sepidarSaleTypeId ?? undefined,
-        warehouseId,
+        recipientFirstName: recipientFirstName.trim(),
+        recipientLastName: recipientLastName.trim(),
+        recipientNationalId: normalizeDigits(recipientNationalId.trim()),
+        recipientMobile: normalizePhone(recipientMobile.trim()),
+        najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
         items: [
           {
             productObjectId: productId,
@@ -222,7 +224,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           {isLoading ? (
             <LoadingState
               title="در حال دریافت اطلاعات سفارش ناجا"
-              description="فهرست مشتری‌های اختصاص‌یافته و انبارهای ناجا از سرور دریافت می‌شود."
+              description="فهرست مشتری‌های اختصاص‌یافته از سرور دریافت می‌شود."
             />
           ) : null}
 
@@ -271,28 +273,28 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   </span>
                   <span>نوع فروش: {selectedCustomer.saleType?.title || "-"}</span>
                 </div>
+                {selectedCustomer.allowedStocks.length ? (
+                  <div className="mt-3 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-xs leading-6 text-[#2F6B3A]">
+                    انبارهای مجاز:{" "}
+                    {selectedCustomer.allowedStocks
+                      .map((stock) =>
+                        [stock.code ? formatFaDigits(stock.code) : null, stock.title]
+                          .filter(Boolean)
+                          .join(" - "),
+                      )
+                      .join("، ")}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
+                    برای این کارشناس انبار مجاز تعریف نشده است.
+                  </div>
+                )}
               </div>
             ) : null}
 
-            <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
-              <span>انبار ناجا</span>
-              <SearchableSelect
-                value={warehouseId}
-                onValueChange={(value) => {
-                  setWarehouseId(value);
-                  setFieldErrors((current) => ({
-                    ...current,
-                    warehouseId: "",
-                  }));
-                }}
-                options={warehouseOptions}
-                placeholder="انتخاب انبار ناجا"
-                searchPlaceholder="جستجو در انبارها"
-                emptyMessage="انبار ناجا پیدا نشد"
-                invalid={Boolean(fieldErrors.warehouseId)}
-              />
-              <FieldError message={fieldErrors.warehouseId} />
-            </label>
+            <div className="rounded-[18px] border border-[#DDEAE0] bg-[#F3FAF4] p-4 text-sm leading-7 text-[#2F6B3A] md:col-span-2">
+              موجودی بر اساس انبار اختصاص‌یافته به این کارشناس بررسی می‌شود.
+            </div>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>کالای ناجا</span>
@@ -346,6 +348,89 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 aria-invalid={Boolean(fieldErrors.quantity)}
               />
               <FieldError message={fieldErrors.quantity} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>نام</span>
+              <Input
+                value={recipientFirstName}
+                onChange={(event) => {
+                  setRecipientFirstName(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    recipientFirstName: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.recipientFirstName)}
+              />
+              <FieldError message={fieldErrors.recipientFirstName} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>نام خانوادگی</span>
+              <Input
+                value={recipientLastName}
+                onChange={(event) => {
+                  setRecipientLastName(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    recipientLastName: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.recipientLastName)}
+              />
+              <FieldError message={fieldErrors.recipientLastName} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>کد ملی</span>
+              <Input
+                inputMode="numeric"
+                value={recipientNationalId}
+                onChange={(event) => {
+                  setRecipientNationalId(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    recipientNationalId: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.recipientNationalId)}
+              />
+              <FieldError message={fieldErrors.recipientNationalId} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>شماره موبایل</span>
+              <Input
+                inputMode="tel"
+                value={recipientMobile}
+                onChange={(event) => {
+                  setRecipientMobile(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    recipientMobile: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.recipientMobile)}
+              />
+              <FieldError message={fieldErrors.recipientMobile} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>شماره سفارش</span>
+              <Input
+                inputMode="numeric"
+                value={najaOrderNumber}
+                onChange={(event) => {
+                  setNajaOrderNumber(event.target.value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    najaOrderNumber: "",
+                  }));
+                }}
+                aria-invalid={Boolean(fieldErrors.najaOrderNumber)}
+              />
+              <FieldError message={fieldErrors.najaOrderNumber} />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -405,7 +490,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           itemCount={selectedProduct ? 1 : 0}
           totalQuantity={selectedProduct ? quantity : 0}
           totalAmount={totalAmount}
-          status="pending"
+          status="pending_approval"
           warehouseStatus="reserved"
         />
       </section>

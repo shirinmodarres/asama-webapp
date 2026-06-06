@@ -117,5 +117,5 @@ export default function SupportOrderEditPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending" || status === "needs_review";
+  return status === "pending_approval" || status === "needs_review";
 }

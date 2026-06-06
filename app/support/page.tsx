@@ -48,7 +48,7 @@ export default function SupportPage() {
   ).length;
   const orderNeedsEditCount = orders.filter(
     (order) =>
-      order.orderStatus === "pending" || order.orderStatus === "approved",
+      order.orderStatus === "pending_approval" || order.orderStatus === "approved",
   ).length;
   const najaInventoryCount = products.filter(
     (product) => product.najaInventoryQty > 0,

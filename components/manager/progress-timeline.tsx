@@ -38,7 +38,7 @@ export function ProgressTimeline({ order }: ProgressTimelineProps) {
           {
             key: "decision",
             label: "تصمیم مدیر فروش",
-            done: order.status !== "pending",
+            done: order.status !== "pending_approval",
           },
           {
             key: "warehouse",
