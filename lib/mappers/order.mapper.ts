@@ -1,6 +1,7 @@
 import {
   getOrderStatusLabel,
   getWarehouseStatusLabel,
+  normalizeOrderStatus as normalizeOrderStatusCode,
 } from "@/lib/domain/statuses";
 import {
   getCancelReasonLabel,
@@ -49,14 +50,15 @@ export function mapOrderDto(dto: unknown): Order {
   const cancelReasonCode = toNullableString(record.cancelReasonCode);
   const holdReason = toNullableString(record.holdReason);
   const cancelReason = toNullableString(record.cancelReason);
-  const orderStatus = toStringValue(record.orderStatus) || "pending";
+  const orderStatus = normalizeOrderStatus(toStringValue(record.orderStatus));
+  const saleTypeRecord = toRecord(record.saleType);
 
   return {
     objectId: toStringValue(record.objectId),
     id: toStringValue(record.id) || toStringValue(record.objectId),
     code: toStringValue(record.code),
     orderType: mapOrderType(record.orderType),
-    createdByName: toStringValue(record.createdByName),
+    createdByName: toNullableString(record.createdByName),
     customerName: toNullableString(
       record.customerName ?? customerRecord.fullName,
     ),
@@ -64,11 +66,40 @@ export function mapOrderDto(dto: unknown): Order {
     customerObjectId: toNullableString(
       record.customerObjectId ?? customerRecord.objectId,
     ),
+    sepidarCustomerId:
+      record.sepidarCustomerId === undefined || record.sepidarCustomerId === null
+        ? null
+        : toStringValue(record.sepidarCustomerId),
+    sepidarCustomerCode: toNullableString(record.sepidarCustomerCode),
     customerAddressObjectId: toNullableString(
       record.customerAddressObjectId ?? addressRecord.objectId,
     ),
+    saleTypeObjectId: toNullableString(
+      record.saleTypeObjectId ?? saleTypeRecord.objectId,
+    ),
+    sepidarSaleTypeId:
+      record.sepidarSaleTypeId === undefined || record.sepidarSaleTypeId === null
+        ? null
+        : toNumberValue(record.sepidarSaleTypeId),
+    saleTypeTitle: toNullableString(record.saleTypeTitle ?? saleTypeRecord.title),
+    saleType:
+      record.saleType || record.sepidarSaleTypeId !== undefined || record.saleTypeTitle
+        ? {
+            objectId: toNullableString(
+              record.saleTypeObjectId ?? saleTypeRecord.objectId,
+            ),
+            sepidarSaleTypeId:
+              record.sepidarSaleTypeId === undefined ||
+              record.sepidarSaleTypeId === null
+                ? null
+                : toNumberValue(record.sepidarSaleTypeId),
+            title: toNullableString(record.saleTypeTitle ?? saleTypeRecord.title),
+          }
+        : null,
     warehouseId: toNullableString(
-      record.warehouseId ?? record.warehouseObjectId ?? toRecord(record.warehouse).objectId,
+      record.warehouseId ??
+        record.warehouseObjectId ??
+        toRecord(record.warehouse).objectId,
     ),
     warehouseName: toNullableString(
       record.warehouseName ?? toRecord(record.warehouse).name,
@@ -76,8 +107,28 @@ export function mapOrderDto(dto: unknown): Order {
     warehouseType: toNullableString(
       record.warehouseType ?? toRecord(record.warehouse).type,
     ),
+    stockObjectId: toNullableString(
+      record.stockObjectId ?? toRecord(record.stock).objectId,
+    ),
+    sepidarStockId:
+      record.sepidarStockId === undefined || record.sepidarStockId === null
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    stockTitle: toNullableString(
+      record.stockTitle ?? toRecord(record.stock).title,
+    ),
+    recipientFirstName: toNullableString(record.recipientFirstName),
+    recipientLastName: toNullableString(record.recipientLastName),
+    recipientNationalId: normalizeNullableDigits(record.recipientNationalId),
+    recipientMobile: normalizeNullablePhone(record.recipientMobile),
+    externalOrderNumber: normalizeNullableDigits(record.externalOrderNumber),
+    najaOrderNumber: normalizeNullableDigits(
+      record.najaOrderNumber ?? record.externalOrderNumber,
+    ),
     customerNationalId: normalizeNullableDigits(
-      record.customerNationalId ?? record.nationalId ?? customerRecord.nationalId,
+      record.customerNationalId ??
+        record.nationalId ??
+        customerRecord.nationalId,
     ),
     customerPhone: normalizeNullablePhone(
       record.customerPhone ?? record.phoneNumber ?? customerRecord.phone,
@@ -103,7 +154,9 @@ export function mapOrderDto(dto: unknown): Order {
     deliveryPlaque: normalizeNullableDigits(
       record.deliveryPlaque ?? addressRecord.plaque,
     ),
-    deliveryUnit: normalizeNullableDigits(record.deliveryUnit ?? addressRecord.unit),
+    deliveryUnit: normalizeNullableDigits(
+      record.deliveryUnit ?? addressRecord.unit,
+    ),
     receiverFullName: toNullableString(
       record.receiverFullName ??
         record.receiverName ??
@@ -151,7 +204,8 @@ export function mapOrderDto(dto: unknown): Order {
     reviewResolvedAt: toNullableString(record.reviewResolvedAt),
     reviewExpiresAt: toNullableString(record.reviewExpiresAt),
     reviewRemainingMs:
-      record.reviewRemainingMs === null || record.reviewRemainingMs === undefined
+      record.reviewRemainingMs === null ||
+      record.reviewRemainingMs === undefined
         ? null
         : toNumberValue(record.reviewRemainingMs),
     sourceLabel: toNullableString(record.sourceLabel),
@@ -168,6 +222,17 @@ export function mapOrderDto(dto: unknown): Order {
     voidedAt: toNullableString(record.voidedAt),
     voidReason: toNullableString(record.voidReason),
     returnReason: toNullableString(record.returnReason),
+    sepidarQuotationId:
+      record.sepidarQuotationId === undefined || record.sepidarQuotationId === null
+        ? null
+        : toNumberValue(record.sepidarQuotationId),
+    sepidarQuotationNumber:
+      record.sepidarQuotationNumber === undefined ||
+      record.sepidarQuotationNumber === null
+        ? null
+        : toStringValue(record.sepidarQuotationNumber),
+    sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
+    sepidarLastError: toNullableString(record.sepidarLastError),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
     najaCenter: mapNajaCenterSummaryDto(
@@ -206,6 +271,10 @@ function mapOrderItemDto(dto: unknown): OrderItem {
 
 function mapOrderType(value: unknown): OrderType {
   return value === "naja" ? "naja" : "normal";
+}
+
+function normalizeOrderStatus(value: string): string {
+  return normalizeOrderStatusCode(value) || "pending_approval";
 }
 
 function mapFulfillmentStatus(value: unknown): FulfillmentStatus {

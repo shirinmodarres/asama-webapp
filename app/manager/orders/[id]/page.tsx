@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import {
   REVIEW_REASONS,
   SHIPMENT_STOP_REASONS,
@@ -47,9 +47,15 @@ import {
   releaseShipment,
   stopShipment,
 } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 type DecisionType = "approve" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
+interface StockSelectionOption {
+  stockObjectId: string;
+  sepidarStockId: number | string | null;
+  stockTitle: string;
+}
 
 export default function ManagerOrderReviewPage() {
   const params = useParams<{ id: string }>();
@@ -62,6 +68,10 @@ export default function ManagerOrderReviewPage() {
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
+  const [stockSelectionOptions, setStockSelectionOptions] = useState<
+    StockSelectionOption[]
+  >([]);
+  const [selectedStockObjectId, setSelectedStockObjectId] = useState("");
   const [dialogErrors, setDialogErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("error");
@@ -117,12 +127,12 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const canApprove = ["pending", "review_resolved"].includes(order.orderStatus);
-  const canNeedReview = order.orderStatus === "pending";
+  const canApprove = ["pending_approval", "review_resolved"].includes(order.orderStatus);
+  const canNeedReview = order.orderStatus === "pending_approval";
   const shouldShowNeedReviewButton =
     canNeedReview || order.orderStatus === "review_resolved";
   const canCancel =
-    ["pending", "needs_review", "review_resolved"].includes(
+    ["pending_approval", "needs_review", "review_resolved"].includes(
       order.orderStatus,
     ) && !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
@@ -164,6 +174,31 @@ export default function ManagerOrderReviewPage() {
     },
   ];
 
+  const handleApproveSuccess = (updated: Order) => {
+    setOrder(updated);
+    setMessageType("success");
+    setMessage("سفارش با موفقیت تأیید شد.");
+    setDecision(null);
+    setStockSelectionOptions([]);
+    setSelectedStockObjectId("");
+    setTimeout(() => router.push("/manager/order-tracking"), 700);
+  };
+
+  const handleApprovalError = (error: unknown) => {
+    const options = extractStockSelectionOptions(error);
+    if (options.length > 0) {
+      setDecision(null);
+      setStockSelectionOptions(options);
+      setSelectedStockObjectId(options[0]?.stockObjectId ?? "");
+      setMessageType("error");
+      setMessage(getErrorMessage(error));
+      return;
+    }
+
+    setMessageType("error");
+    setMessage(getErrorMessage(error));
+  };
+
   const confirmDecision = async () => {
     if (!decision) return;
 
@@ -192,23 +227,50 @@ export default function ManagerOrderReviewPage() {
             : await cancelOrder(order.objectId, {
                 cancelledByName: currentUserName,
               });
+      if (decision === "approve") {
+        handleApproveSuccess(updated);
+        return;
+      }
       setOrder(updated);
       setMessageType("success");
       setMessage(
-        decision === "approve"
-          ? "سفارش با موفقیت تأیید شد."
-          : decision === "needs_review"
-            ? "سفارش برای بررسی کارشناس ثبت شد."
-            : "سفارش با موفقیت لغو شد.",
+        decision === "needs_review"
+          ? "سفارش برای بررسی کارشناس ثبت شد."
+          : "سفارش با موفقیت لغو شد.",
       );
       setDecision(null);
       setReviewReasonCode("");
-      if (decision === "approve") {
-        setTimeout(() => router.push("/manager/order-tracking"), 700);
-      }
     } catch (error) {
-      setMessageType("error");
-      setMessage(getErrorMessage(error));
+      if (decision === "approve") {
+        handleApprovalError(error);
+      } else {
+        setMessageType("error");
+        setMessage(getErrorMessage(error));
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmStockSelection = async () => {
+    if (!selectedStockObjectId) {
+      setDialogErrors({
+        stockObjectId: "لطفاً انبار خروج را انتخاب کنید.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage("");
+    setDialogErrors({});
+
+    try {
+      const updated = await approveOrder(order.objectId, {
+        stockObjectId: selectedStockObjectId,
+      });
+      handleApproveSuccess(updated);
+    } catch (error) {
+      handleApprovalError(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -294,6 +356,59 @@ export default function ManagerOrderReviewPage() {
                 value={order.orderType === "naja" ? "ناجا" : "عادی"}
               />
               <InfoItem label="مشتری" value={order.customerName ?? "-"} />
+              {order.orderType === "naja" ? (
+                <>
+                  <InfoItem
+                    label="کد مشتری سپیدار"
+                    value={
+                      order.sepidarCustomerCode
+                        ? formatFaDigits(order.sepidarCustomerCode)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="نوع فروش"
+                    value={order.saleTypeTitle || order.saleType?.title || "-"}
+                  />
+                  <InfoItem
+                    label="نام و نام خانوادگی تحویل‌گیرنده"
+                    value={
+                      [order.recipientFirstName, order.recipientLastName]
+                        .filter(Boolean)
+                        .join(" ") || "-"
+                    }
+                  />
+                  <InfoItem
+                    label="کد ملی تحویل‌گیرنده"
+                    value={
+                      order.recipientNationalId
+                        ? formatFaDigits(order.recipientNationalId)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="شماره موبایل تحویل‌گیرنده"
+                    value={
+                      order.recipientMobile
+                        ? formatFaDigits(order.recipientMobile)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="شماره سفارش"
+                    value={
+                      order.najaOrderNumber
+                        ? formatFaDigits(order.najaOrderNumber)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="وضعیت پیش‌فاکتور سپیدار"
+                    value={getQuotationStatusLabel(order)}
+                  />
+                </>
+              ) : null}
+              <InfoItem label="انبار خروج" value={order.stockTitle || "-"} />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem
@@ -690,6 +805,58 @@ export default function ManagerOrderReviewPage() {
           </label>
         ) : null}
       </ConfirmationModal>
+
+      <ConfirmationModal
+        open={stockSelectionOptions.length > 0}
+        title="انتخاب انبار خروج"
+        message="چند انبار مجاز موجودی کافی دارند؛ لطفاً انبار خروج را انتخاب کنید."
+        confirmText="تایید و ادامه"
+        tone="success"
+        busy={isSubmitting}
+        onConfirm={confirmStockSelection}
+        onCancel={() => {
+          setStockSelectionOptions([]);
+          setSelectedStockObjectId("");
+          setDialogErrors({});
+        }}
+      >
+        <label className="grid gap-2 text-sm font-medium text-[#334155]">
+          <span>انبار خروج</span>
+          <Select
+            value={selectedStockObjectId}
+            onValueChange={(value) => {
+              setSelectedStockObjectId(value);
+              setDialogErrors((current) => ({
+                ...current,
+                stockObjectId: "",
+              }));
+            }}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger
+              className={
+                dialogErrors.stockObjectId
+                  ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+                  : undefined
+              }
+              aria-invalid={Boolean(dialogErrors.stockObjectId)}
+            >
+              <SelectValue placeholder="انتخاب انبار خروج" />
+            </SelectTrigger>
+            <SelectContent>
+              {stockSelectionOptions.map((option) => (
+                <SelectItem
+                  key={option.stockObjectId}
+                  value={option.stockObjectId}
+                >
+                  {formatStockOptionLabel(option)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldError message={dialogErrors.stockObjectId} />
+        </label>
+      </ConfirmationModal>
     </DashboardLayout>
   );
 }
@@ -719,6 +886,48 @@ function MetaLine({
   );
 }
 
+function extractStockSelectionOptions(error: unknown): StockSelectionOption[] {
+  if (!(error instanceof ApiError) || error.code !== "WAREHOUSE_SELECTION_REQUIRED") {
+    return [];
+  }
+
+  const details = error.details;
+  if (!details || typeof details !== "object" || !("options" in details)) {
+    return [];
+  }
+
+  const options = (details as { options?: unknown }).options;
+  if (!Array.isArray(options)) return [];
+
+  return options
+    .map((option) => {
+      if (!option || typeof option !== "object") return null;
+      const record = option as Record<string, unknown>;
+      const stockObjectId =
+        typeof record.stockObjectId === "string" ? record.stockObjectId : "";
+      if (!stockObjectId) return null;
+      return {
+        stockObjectId,
+        sepidarStockId:
+          typeof record.sepidarStockId === "string" ||
+          typeof record.sepidarStockId === "number"
+            ? record.sepidarStockId
+            : null,
+        stockTitle:
+          typeof record.stockTitle === "string" ? record.stockTitle : "",
+      };
+    })
+    .filter((option): option is StockSelectionOption => Boolean(option));
+}
+
+function formatStockOptionLabel(option: StockSelectionOption): string {
+  const stockId =
+    option.sepidarStockId !== null && option.sepidarStockId !== undefined
+      ? formatFaDigits(option.sepidarStockId)
+      : "";
+  return [stockId, option.stockTitle].filter(Boolean).join(" - ") || "انبار";
+}
+
 function formatReviewRemaining(order: Order): string | null {
   if (
     order.reviewRemainingMs !== null &&
@@ -737,4 +946,19 @@ function formatReviewRemaining(order: Order): string | null {
   return order.reviewExpiresAt
     ? `مهلت بررسی تا: ${formatDate(order.reviewExpiresAt)}`
     : null;
+}
+
+function getQuotationStatusLabel(order: Order): string {
+  if (order.sepidarIntegrationStatus === "quotation_failed") {
+    return "ثبت پیش‌فاکتور ناموفق بود.";
+  }
+
+  if (
+    order.sepidarQuotationId ||
+    order.sepidarIntegrationStatus === "quotation_created"
+  ) {
+    return "پیش‌فاکتور ثبت شد.";
+  }
+
+  return "ثبت نشده";
 }

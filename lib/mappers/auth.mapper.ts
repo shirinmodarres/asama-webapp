@@ -9,8 +9,11 @@ export function mapAuthUserDto(dto: unknown): AuthUser {
 
   return {
     objectId: toStringValue(record.objectId),
-    fullName: toStringValue(record.fullName),
-    phone: normalizePhone(toStringValue(record.phone)),
+    fullName: toStringValue(record.fullName ?? record.name),
+    name: toStringValue(record.name) || undefined,
+    mobile: normalizePhone(toStringValue(record.mobile ?? record.phone)) || undefined,
+    username: toStringValue(record.username) || undefined,
+    phone: normalizePhone(toStringValue(record.phone ?? record.mobile)),
     role,
     roleLabel: toStringValue(record.roleLabel) || getRoleLabel(role),
     status: record.status === "inactive" ? "inactive" : "active",

@@ -248,6 +248,9 @@ export function mapWarehouseInboundReceiptListDto(
 export function mapExitSlipDto(dto: unknown): ExitSlip {
   const record = toRecord(dto);
   const nestedSlip = toRecord(record.exitSlip);
+  const internalInvoice = toRecord(
+    record.internalInvoice ?? nestedSlip.internalInvoice,
+  );
   const source = Object.keys(nestedSlip).length ? nestedSlip : record;
   const deliveryAddress = toRecord(source.deliveryAddress);
   const fullAddress = toNullableString(
@@ -307,6 +310,17 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     ),
     deliveryAddress: fullAddress,
     notes: toNullableString(source.notes),
+    internalInvoiceObjectId: toNullableString(
+      source.internalInvoiceObjectId ??
+        record.internalInvoiceObjectId ??
+        internalInvoice.objectId,
+    ),
+    internalInvoiceNumber: toNullableString(
+      source.internalInvoiceNumber ??
+        record.internalInvoiceNumber ??
+        internalInvoice.invoiceNumber ??
+        internalInvoice.invoiceCode,
+    ),
     items: items.length ? items : groupUnitsByProduct(units),
     units,
     createdAt: toStringValue(source.createdAt),

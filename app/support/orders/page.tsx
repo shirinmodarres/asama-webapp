@@ -58,7 +58,7 @@ export default function SupportOrdersPage() {
       .filter(
         (order) =>
           order.code.toLowerCase().includes(search.toLowerCase()) ||
-          order.createdByName.toLowerCase().includes(search.toLowerCase()) ||
+          (order.createdByName ?? "").toLowerCase().includes(search.toLowerCase()) ||
           (order.customerName ?? "")
             .toLowerCase()
             .includes(search.toLowerCase()),

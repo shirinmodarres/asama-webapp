@@ -10,15 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
-import type { NajaCenter } from "@/lib/models/naja-center.model";
+import type { Customer } from "@/lib/models/customer.model";
 import type { Order } from "@/lib/models/order.model";
-import { listNajaCenters } from "@/lib/services/naja-center.service";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
+import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { listOrders } from "@/lib/services/order.service";
 import { ActionLinkCard } from "@/components/shared/action-link-card";
 
 export default function NajaDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [centers, setCenters] = useState<NajaCenter[]>([]);
+  const [assignedCustomers, setAssignedCustomers] = useState<Customer[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -26,13 +27,13 @@ export default function NajaDashboardPage() {
 
     async function loadData() {
       try {
-        const [orderData, centerData] = await Promise.all([
+        const [orderData, customerData] = await Promise.all([
           listOrders({ orderType: "naja" }),
-          listNajaCenters(),
+          listAssignedCustomersForExpert(getStoredCurrentUser()?.objectId),
         ]);
         if (!isMounted) return;
         setOrders(orderData);
-        setCenters(centerData);
+        setAssignedCustomers(customerData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       }
@@ -83,11 +84,12 @@ export default function NajaDashboardPage() {
           hint="بازگشتی در هر مرحله"
         />
         <SummaryCard
-          label="مراکز فعال ناجا"
+          label="مشتری‌های اختصاص‌یافته"
           value={formatFaDigits(
-            centers.filter((center) => center.status === "active").length,
+            assignedCustomers.filter((customer) => customer.status === "active")
+              .length,
           )}
-          hint="قابل انتخاب در سفارش"
+          hint="خوانده‌شده از سپیدار"
         />
       </section>
 
@@ -97,12 +99,6 @@ export default function NajaDashboardPage() {
           icon="plus-circle"
           title="ثبت سفارش ناجا"
           description="ثبت سفارش جدید"
-        />
-        <ActionLinkCard
-          href="/naja/centers"
-          icon="building-2"
-          title="مراکز ناجا"
-          description="مشاهده و ویرایش مراکز"
         />
         <ActionLinkCard
           href="/naja/orders"
@@ -135,10 +131,9 @@ export default function NajaDashboardPage() {
                       <p className="mt-1 text-sm text-[#6B7280]">
                         {order.customerName ?? "-"}
                       </p>
-                      {order.najaCenter ? (
+                      {order.saleTypeTitle ? (
                         <p className="mt-1 text-xs text-[#7C8A9C]">
-                          {order.najaCenter.name} -{" "}
-                          {order.najaCenter.centerCode}
+                          نوع فروش: {order.saleTypeTitle}
                         </p>
                       ) : null}
                     </div>

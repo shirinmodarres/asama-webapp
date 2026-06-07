@@ -8,11 +8,7 @@ import type {
   CreateNajaOrderPayload,
 } from "@/lib/models/naja.model";
 import type { Order } from "@/lib/models/order.model";
-import {
-  normalizeDigits,
-  normalizePhone,
-  toNumber,
-} from "@/lib/utils/number-format";
+import { normalizeDigits, normalizePhone, toNumber } from "@/lib/utils/number-format";
 
 export async function createNajaOrder(
   payload: CreateNajaOrderPayload,
@@ -21,12 +17,21 @@ export async function createNajaOrder(
     "/api/naja/orders",
     {
       ...payload,
-      customerNationalId: normalizeDigits(payload.customerNationalId),
-      customerPhone: normalizePhone(payload.customerPhone),
-      warehouseId: payload.warehouseId
-        ? normalizeDigits(payload.warehouseId)
-        : payload.warehouseId,
-      quantity: toNumber(payload.quantity),
+      recipientNationalId: normalizeDigits(payload.recipientNationalId),
+      recipientMobile: normalizePhone(payload.recipientMobile),
+      najaOrderNumber: normalizeDigits(payload.najaOrderNumber),
+      quantity:
+        payload.quantity !== undefined ? toNumber(payload.quantity) : undefined,
+      items: payload.items?.map((item) => ({
+        ...item,
+        quantity: toNumber(item.quantity),
+        unitPrice:
+          item.unitPrice !== undefined ? toNumber(item.unitPrice) : undefined,
+        priceNoteItemId:
+          item.priceNoteItemId !== undefined && item.priceNoteItemId !== null
+            ? toNumber(item.priceNoteItemId)
+            : item.priceNoteItemId,
+      })),
     },
   );
   return mapOrderDto(data);

@@ -36,12 +36,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت سفارش‌های ناجا",
     },
     {
-      label: "مراکز ناجا",
-      href: "/naja/centers",
-      icon: "layers",
-      description: "فهرست مراکز ناجا",
-    },
-    {
       label: "سفارش های ناجا",
       href: "/naja/orders",
       icon: "shopping-cart",
@@ -74,10 +68,10 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "فروش و موجودی انبار",
     },
     {
-      label: "مراکز ناجا",
-      href: "/manager/naja-centers",
-      icon: "layers",
-      description: "مشاهده مراکز ناجا",
+      label: "تأیید انتقال موجودی",
+      href: "/manager/stock-transfers",
+      icon: "truck",
+      description: "درخواست‌های انتقال داخلی",
     },
   ],
   warehouse: [
@@ -143,6 +137,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "file-text",
       description: "اسناد مالی صادرشده",
     },
+    {
+      label: "فاکتورهای داخلی",
+      href: "/accounting/internal-invoices",
+      icon: "file-check",
+      description: "آماده ثبت در حسابداری",
+    },
   ],
   support: [
     {
@@ -158,10 +158,34 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "فهرست و وضعیت کالا",
     },
     {
+      label: "اختصاص مشتری",
+      href: "/support/customer-assignments",
+      icon: "users",
+      description: "مشتریان سپیدار و کارشناسان",
+    },
+    {
+      label: "تنظیمات سپیدار",
+      href: "/support/sepidar-settings",
+      icon: "plug-zap",
+      description: "اتصال و همگام‌سازی",
+    },
+    {
       label: "موجودی",
       href: "/support/inventory",
       icon: "package",
       description: "افزایش و کاهش موجودی",
+    },
+    {
+      label: "موجودی فروش",
+      href: "/support/product-stock-inventory",
+      icon: "boxes",
+      description: "کالا و انبار سپیدار",
+    },
+    {
+      label: "انتقال موجودی",
+      href: "/support/stock-transfers",
+      icon: "truck",
+      description: "درخواست انتقال از زاگرس",
     },
     {
       label: "موجودی ناجا",
@@ -174,12 +198,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/warehouses",
       icon: "warehouse",
       description: "انبارهای عمومی و ناجا",
-    },
-    {
-      label: "مراکز ناجا",
-      href: "/support/naja-centers",
-      icon: "layers",
-      description: "تعریف و ویرایش مراکز",
     },
     {
       label: "کاربران",

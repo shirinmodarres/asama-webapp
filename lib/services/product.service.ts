@@ -3,10 +3,13 @@ import { ApiError } from "@/lib/api/api-error";
 import {
   mapProductDto,
   mapProductListDto,
+  mapSepidarProductSyncSummaryDto,
 } from "@/lib/mappers/product.mapper";
+import { toRecord } from "@/lib/mappers/mapper-utils";
 import type {
   CreateProductPayload,
   Product,
+  SepidarProductSyncSummary,
   UpdateProductPayload,
   UpdateProductStockPayload,
 } from "@/lib/models/product.model";
@@ -18,6 +21,46 @@ import {
 export async function listProducts(viewerRole?: string): Promise<Product[]> {
   const data = await httpClient.get<unknown>(buildProductsPath(viewerRole));
   return mapProductListDto(data);
+}
+
+export async function listSepidarOrderProducts(): Promise<Product[]> {
+  const params = new URLSearchParams({
+    source: "sepidar",
+    status: "active",
+    sellable: "true",
+  });
+  const data = await httpClient.get<unknown>(`/api/products?${params.toString()}`);
+  const record = toRecord(data);
+  return mapProductListDto(
+    Array.isArray(data) ? data : record.items ?? record.products ?? [],
+  ).filter(
+    (product) =>
+      product.isSyncedFromSepidar &&
+      product.sepidarItemId !== null &&
+      product.status === "active" &&
+      product.isActive !== false &&
+      product.isSellable !== false,
+  );
+}
+
+export async function listOrderProductsBySaleType(
+  saleTypeId: number,
+): Promise<Product[]> {
+  const params = new URLSearchParams({ saleTypeId: String(saleTypeId) });
+  const data = await httpClient.get<unknown>(
+    `/api/products/order-options?${params.toString()}`,
+  );
+  const record = toRecord(data);
+  return mapProductListDto(
+    Array.isArray(data) ? data : record.items ?? record.products ?? [],
+  );
+}
+
+export async function syncPricesFromSepidar(): Promise<SepidarProductSyncSummary> {
+  const data = await httpClient.post<unknown>(
+    "/api/integrations/sepidar/sync/prices",
+  );
+  return mapSepidarProductSyncSummaryDto(data);
 }
 
 export async function getProduct(objectId: string): Promise<Product> {
@@ -79,6 +122,13 @@ export async function updateProductNajaStock(
     normalizeStockPayload(payload),
   );
   return mapProductDto(data);
+}
+
+export async function syncProductsFromSepidar(): Promise<SepidarProductSyncSummary> {
+  const data = await httpClient.post<unknown>(
+    "/api/integrations/sepidar/sync/items",
+  );
+  return mapSepidarProductSyncSummaryDto(data);
 }
 
 function normalizeProductPayload(

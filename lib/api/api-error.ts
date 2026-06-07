@@ -4,6 +4,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED: "لطفاً دوباره وارد شوید.",
   INVALID_CREDENTIALS: "شماره موبایل یا رمز عبور اشتباه است.",
   DUPLICATE_PRODUCT_ID: "شناسه کالا تکراری است.",
+  PRODUCT_MASTER_DATA_READ_ONLY:
+    "اطلاعات اصلی کالا از سپیدار خوانده می‌شود و قابل ویرایش نیست.",
+  PRODUCT_CREATION_DISABLED: "تعریف کالا فقط از طریق سپیدار انجام می‌شود.",
+  CUSTOMER_NOT_ASSIGNED_TO_EXPERT: "این مشتری به شما اختصاص داده نشده است.",
+  CUSTOMER_ALREADY_ASSIGNED:
+    "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
+  CUSTOMER_MUST_BE_FROM_SEPIDAR: "مشتری باید از سپیدار خوانده شده باشد.",
+  PRODUCT_MUST_BE_FROM_SEPIDAR: "کالا باید از سپیدار خوانده شده باشد.",
+  SEPIDAR_PRODUCT_REQUIRED: "کالا باید از سپیدار خوانده شده باشد.",
+  PRODUCT_NOT_SELLABLE: "کالا قابل فروش نیست.",
+  PRODUCT_PRICE_MISSING: "قیمت کالا برای این نوع فروش ثبت نشده است.",
   DUPLICATE_PHONE: "این شماره موبایل قبلاً ثبت شده است.",
   DUPLICATE_CUSTOMER_PHONE:
     "این شماره موبایل قبلاً ثبت شده است.",
@@ -23,11 +34,51 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_DELIVERY_CODE: "کد تأیید دریافت اشتباه است.",
   DELIVERY_PHONE_MISMATCH: "شماره موبایل با اطلاعات سفارش تطابق ندارد.",
   DUPLICATE_WAREHOUSE_UNIT: "این کالا قبلاً ثبت شده است.",
+  DUPLICATE_SERIAL_NUMBER: "سریال کالا قبلاً ثبت شده است.",
+  DUPLICATE_TRACKING_CODE: "کد رهگیری قبلاً ثبت شده است.",
   INSUFFICIENT_SALES_STOCK: "موجودی فروش کافی نیست.",
   INSUFFICIENT_WAREHOUSE_STOCK: "موجودی انبار کافی نیست.",
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
   SALES_STOCK_BELOW_RESERVED:
     "موجودی فروش نمی‌تواند کمتر از موجودی رزروشده باشد.",
+  ZAGROS_STOCK_NOT_CONFIGURED: "انبار زاگرس در تنظیمات موجودی پیدا نشد.",
+  INBOUND_ONLY_ZAGROS_ALLOWED: "ورود و انتقال کالا فقط از انبار زاگرس انجام می‌شود.",
+  STOCK_TRANSFER_INSUFFICIENT_QUANTITY:
+    "موجودی انبار زاگرس برای این انتقال کافی نیست.",
+  INVALID_TRANSFER_STATE: "وضعیت این درخواست انتقال قابل تغییر نیست.",
+  INVENTORY_NOT_FOUND: "موجودی کالا و انبار پیدا نشد.",
+  WAREHOUSE_REQUIRED: "انبار خروج برای این سفارش مشخص نشده است.",
+  ORDER_WAREHOUSE_REQUIRED: "برای این سفارش انبار خروج مشخص نشده است.",
+  WAREHOUSE_SELECTION_REQUIRED:
+    "چند انبار مجاز موجودی کافی دارند؛ لطفاً انبار خروج را انتخاب کنید.",
+  ORDER_STOCK_NOT_AVAILABLE:
+    "موجودی فروش در انبارهای مجاز این کارشناس کافی نیست.",
+  OUTBOUND_STOCK_MISMATCH:
+    "این کالا متعلق به انبار خروج این سفارش نیست.",
+  WAREHOUSE_UNIT_ALREADY_DISPATCHED:
+    "این کالا قبلاً از انبار خارج شده است.",
+  INVENTORY_REAL_QUANTITY_INSUFFICIENT:
+    "موجودی واقعی انبار کافی نیست.",
+  INTERNAL_INVOICE_CREATE_FAILED:
+    "حواله خروج صادر شد اما فاکتور داخلی ایجاد نشد.",
+  ASSIGNMENT_STOCK_REQUIRED:
+    "برای این کارشناس در این مسیر فروش انبار مجاز تعریف نشده است.",
+  RECIPIENT_FIRST_NAME_REQUIRED: "نام الزامی است.",
+  RECIPIENT_LAST_NAME_REQUIRED: "نام خانوادگی الزامی است.",
+  RECIPIENT_NATIONAL_ID_REQUIRED: "کد ملی الزامی است.",
+  RECIPIENT_MOBILE_REQUIRED: "شماره موبایل الزامی است.",
+  NAJA_ORDER_NUMBER_REQUIRED: "شماره سفارش الزامی است.",
+  SEPIDAR_SETTINGS_ENV_ONLY:
+    "تنظیمات سپیدار فعلاً از فایل محیطی خوانده می‌شود.",
+  SEPIDAR_DNS_FAILED:
+    "دامنه سپیدار پیدا نشد. تنظیم DNS یا آدرس Base URL را بررسی کنید.",
+  SEPIDAR_TIMEOUT: "اتصال به سپیدار بیش از حد طول کشید.",
+  SEPIDAR_UNAUTHORIZED: "ورود یا توکن سپیدار معتبر نیست.",
+  SEPIDAR_QUOTATION_CREATE_FAILED:
+    "ثبت پیش‌فاکتور سپیدار ناموفق بود؛ سفارش تأیید نشد.",
+  SEPIDAR_QUOTATION_BAD_RESPONSE:
+    "پاسخ سپیدار برای پیش‌فاکتور معتبر نبود.",
+  SEPIDAR_BAD_RESPONSE: "سپیدار درخواست را نپذیرفت.",
   REVIEW_REASON_REQUIRED: "لطفاً دلیل نیاز به بررسی را انتخاب کنید.",
   INVALID_REVIEW_REASON: "دلیل انتخاب‌شده معتبر نیست.",
   ORDER_CANNOT_NEED_REVIEW: "امکان ارسال این سفارش برای بررسی وجود ندارد.",

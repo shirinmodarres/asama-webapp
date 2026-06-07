@@ -73,12 +73,15 @@ export async function stopShipment(
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       const reasonLabel = getShipmentStopReasonLabel(payload.reasonCode);
-      const data = await httpClient.post<unknown>(`/api/orders/${objectId}/hold`, {
-        reasonCode: payload.reasonCode,
-        reason: reasonLabel,
-        stoppedByName: payload.stoppedByName,
-        heldByName: payload.heldByName ?? payload.stoppedByName,
-      });
+      const data = await httpClient.post<unknown>(
+        `/api/orders/${objectId}/hold`,
+        {
+          reasonCode: payload.reasonCode,
+          reason: reasonLabel,
+          stoppedByName: payload.stoppedByName,
+          heldByName: payload.heldByName ?? payload.stoppedByName,
+        },
+      );
       return mapOrderDto(data);
     }
     throw error;
@@ -115,13 +118,32 @@ function normalizeOrderPayload(
     items: payload.items?.map((item) => ({
       ...item,
       quantity: toNumber(item.quantity),
+      unitPrice:
+        item.unitPrice !== undefined ? toNumber(item.unitPrice) : undefined,
+      priceNoteItemId:
+        item.priceNoteItemId !== undefined && item.priceNoteItemId !== null
+          ? toNumber(item.priceNoteItemId)
+          : item.priceNoteItemId,
     })),
   };
 }
 
-export async function approveOrder(objectId: string): Promise<Order> {
-  const data = await httpClient.post<unknown>(`/api/orders/${objectId}/approve`);
-  return mapOrderDto(data);
+export interface ApproveOrderPayload {
+  stockObjectId?: string;
+}
+
+export async function approveOrder(
+  objectId: string,
+  payload?: ApproveOrderPayload,
+): Promise<Order> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/approve`,
+    payload,
+  );
+  return mapOrderDto({
+    ...((typeof data === "object" && data !== null) ? data : {}),
+    orderStatus: "approved",
+  });
 }
 
 export async function cancelOrder(

@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getOrderStatusLabel,
   getWarehouseStatusLabel,
+  normalizeOrderStatus,
 } from "@/lib/domain/statuses";
 
 type BadgeType = "order" | "warehouse" | "inventory";
@@ -24,22 +25,23 @@ export function StatusBadge({ type, status }: StatusBadgeProps) {
 
 function getBadgeConfig(type: BadgeType, status: string) {
   if (type === "order") {
-    if (status === "pending") {
-      return { label: getOrderStatusLabel(status), variant: "warning" as const };
+    const orderStatus = normalizeOrderStatus(status);
+    if (orderStatus === "pending_approval") {
+      return { label: getOrderStatusLabel(orderStatus), variant: "warning" as const };
     }
-    if (status === "approved") {
-      return { label: getOrderStatusLabel(status), variant: "success" as const };
+    if (orderStatus === "approved") {
+      return { label: getOrderStatusLabel(orderStatus), variant: "success" as const };
     }
-    if (status === "cancelled" || status === "returned") {
-      return { label: getOrderStatusLabel(status), variant: "destructive" as const };
+    if (orderStatus === "cancelled" || orderStatus === "returned") {
+      return { label: getOrderStatusLabel(orderStatus), variant: "destructive" as const };
     }
-    if (status === "returnedAfterInvoice") {
-      return { label: getOrderStatusLabel(status), variant: "warning" as const };
+    if (orderStatus === "returnedAfterInvoice") {
+      return { label: getOrderStatusLabel(orderStatus), variant: "warning" as const };
     }
-    if (status === "invoiced") {
-      return { label: getOrderStatusLabel(status), variant: "brand" as const };
+    if (orderStatus === "invoiced") {
+      return { label: getOrderStatusLabel(orderStatus), variant: "brand" as const };
     }
-    return { label: getOrderStatusLabel(status) || status || "نامشخص", variant: "neutral" as const };
+    return { label: getOrderStatusLabel(orderStatus) || orderStatus || "نامشخص", variant: "neutral" as const };
   }
 
   if (type === "warehouse") {

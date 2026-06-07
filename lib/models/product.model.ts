@@ -6,13 +6,20 @@ export interface Product {
   objectId: string;
   id: string;
   sku: string;
+  barcode: string | null;
+  sepidarItemId: number | null;
+  sepidarCode: string | null;
   name: string;
   brand: string;
   model: string | null;
   category: string;
   unit: string;
   unitPrice: number;
+  priceNoteItemId: number | null;
   description: string | null;
+  isSyncedFromSepidar: boolean;
+  isActive: boolean | null;
+  isSellable: boolean | null;
   status: ProductStatus;
   statusLabel: string;
   totalStock: number;
@@ -25,6 +32,15 @@ export interface Product {
   inventories: ProductWarehouseInventory[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SepidarProductSyncSummary {
+  total: number;
+  processed: number;
+  created: number;
+  updated: number;
+  rejected: number;
+  failed: number;
 }
 
 export interface CreateProductPayload {

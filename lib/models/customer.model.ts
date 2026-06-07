@@ -1,3 +1,5 @@
+import type { SepidarStock } from "@/lib/models/stock.model";
+
 export type CustomerStatus = "active" | "inactive";
 export type CustomerAddressStatus = "active" | "inactive";
 export type ReceiverType = "self" | "other";
@@ -27,6 +29,17 @@ export interface CustomerAddress {
 export interface Customer {
   objectId: string;
   id: string;
+  sepidarCustomerId: string | null;
+  sepidarCustomerCode: string | null;
+  saleType: {
+    objectId: string | null;
+    sepidarSaleTypeId: number | null;
+    title: string | null;
+  } | null;
+  allowedStockObjectIds: string[];
+  allowedSepidarStockIds: number[];
+  allowedStocks: SepidarStock[];
+  isSyncedFromSepidar: boolean;
   fullName: string;
   phone: string;
   nationalId: string | null;

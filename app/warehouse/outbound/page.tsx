@@ -125,8 +125,9 @@ export default function WarehouseOutboundPage() {
     },
     {
       key: "warehouse",
-      header: "انبار",
-      render: (row) => row.warehouseName || "-",
+      header: "انبار خروج",
+      render: (row) =>
+        row.stockTitle ? `انبار خروج: ${row.stockTitle}` : row.warehouseName || "-",
     },
     {
       key: "warehouseStatus",

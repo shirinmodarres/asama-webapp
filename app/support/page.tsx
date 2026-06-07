@@ -48,7 +48,7 @@ export default function SupportPage() {
   ).length;
   const orderNeedsEditCount = orders.filter(
     (order) =>
-      order.orderStatus === "pending" || order.orderStatus === "approved",
+      order.orderStatus === "pending_approval" || order.orderStatus === "approved",
   ).length;
   const najaInventoryCount = products.filter(
     (product) => product.najaInventoryQty > 0,
@@ -83,9 +83,9 @@ export default function SupportPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SupportActionCard
-          title="تعریف کالا"
-          description="ثبت کالاهای جدید و تکمیل اطلاعات پایه"
-          href="/support/products/new"
+          title="کالاهای سپیدار"
+          description="مشاهده و به‌روزرسانی کالاها از سپیدار"
+          href="/support/products"
         />
         <SupportActionCard
           title="ثبت موجودی"

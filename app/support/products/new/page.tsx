@@ -1,75 +1,28 @@
 "use client";
 
+import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import {
-  ProductForm,
-  type CreateProductFormInput,
-} from "@/components/support/product-form";
-import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
-import { getErrorMessage } from "@/lib/api/api-error";
-import { createProduct } from "@/lib/services/product.service";
-import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export default function SupportCreateProductPage() {
-  const router = useRouter();
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">("error");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const onSubmit = async (input: CreateProductFormInput) => {
-    setIsSubmitting(true);
-    setMessage("");
-    setMessageType("error");
-
-    try {
-      await createProduct({
-        id: normalizeDigits(input.id.trim()),
-        name: input.name.trim(),
-        brand: input.brand.trim(),
-        category: input.category.trim(),
-        unit: input.unit.trim(),
-        unitPrice: toNumber(input.unitPrice),
-        description: input.description?.trim() || undefined,
-        status: input.status,
-        totalStock: toNumber(input.totalStock),
-      });
-
-      setMessageType("success");
-      setMessage("کالا با موفقیت ثبت شد.");
-      setTimeout(() => {
-        router.push("/support/products");
-        router.refresh();
-      }, 700);
-    } catch (error) {
-      setMessageType("error");
-      setMessage(getErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <DashboardLayout role="support" title="تعریف کالا">
+    <DashboardLayout role="support" title="کالاها">
       <SectionHeader
-        title="تعریف کالای جدید"
-        description="اطلاعات پایه و تنظیمات اولیه کالا را وارد کنید"
+        title="تعریف کالا از طریق سپیدار"
+        description="اطلاعات اصلی کالا در آساما به صورت دستی ثبت نمی‌شود"
       />
 
-      {message && messageType === "success" ? (
-        <div className="asama-banner px-4 py-3 text-sm">{message}</div>
-      ) : null}
-      {message && messageType === "error" ? (
-        <InlineErrorMessage message={message} />
-      ) : null}
-      <ProductForm
-        mode="create"
-        onSubmit={onSubmit}
-        isSubmitting={isSubmitting}
-        onCancel={() => router.push("/support/products")}
-      />
+      <Card className="p-5">
+        <p className="text-sm leading-8 text-[#334155]">
+          تعریف کالا فقط از طریق سپیدار انجام می‌شود. کالا را در سپیدار تعریف
+          کنید و سپس از فهرست کالاها، به‌روزرسانی کالاها از سپیدار را اجرا کنید.
+        </p>
+        <Button asChild className="mt-5">
+          <Link href="/support/products">بازگشت به فهرست کالاها</Link>
+        </Button>
+      </Card>
     </DashboardLayout>
   );
 }

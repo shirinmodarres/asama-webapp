@@ -18,8 +18,12 @@ export default function NewExpertOrderPage() {
     setIsSubmitting(true);
     try {
       const order = await createOrder({
-        createdByName: getStoredCurrentUser()?.fullName ?? "",
         ...payload,
+        expertUserId: getStoredCurrentUser()?.objectId || undefined,
+        createdByName:
+          getStoredCurrentUser()?.fullName ||
+          getStoredCurrentUser()?.username ||
+          "کارشناس فروش",
       });
       router.push(`/expert/orders/${order.objectId}`);
     } finally {
@@ -33,6 +37,8 @@ export default function NewExpertOrderPage() {
         mode="create"
         submitLabel="ثبت سفارش"
         isSubmitting={isSubmitting}
+        assignedCustomersOnly
+        sepidarProductsOnly
         onSubmit={handleSubmit}
       />
     </DashboardLayout>

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Package,
   PencilLine,
+  PlugZap,
   PlusCircle,
   ReceiptText,
   ShieldCheck,
@@ -48,4 +49,5 @@ export const sidebarIconMap: Record<SidebarIconName, LucideIcon> = {
   users: Users,
   warehouse: Warehouse,
   "building-2": Building2,
+  "plug-zap": PlugZap,
 };
