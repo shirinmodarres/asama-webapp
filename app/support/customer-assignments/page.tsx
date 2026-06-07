@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { AuthUser } from "@/lib/models/auth.model";
 import type {
@@ -149,18 +149,31 @@ export default function SupportCustomerAssignmentsPage() {
         });
       }
       await loadData();
-      setEditingAssignmentId("");
-      setSelectedExpertId("");
+      if (editingAssignmentId) {
+        setEditingAssignmentId("");
+        setSelectedExpertId("");
+        setSelectedSaleTypeId("");
+        setSelectedStockIds([]);
+      }
       setSelectedCustomerId("");
-      setSelectedSaleTypeId("");
-      setSelectedStockIds([]);
       setMessage(
         editingAssignmentId
           ? "اختصاص مشتری با موفقیت به‌روزرسانی شد."
-          : "مشتری با موفقیت به کارشناس اختصاص داده شد.",
+          : "مشتری با موفقیت اختصاص داده شد. می‌توانید مشتری بعدی را انتخاب کنید.",
       );
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      if (
+        submitError instanceof ApiError &&
+        submitError.code === "CUSTOMER_ALREADY_ASSIGNED"
+      ) {
+        setFieldErrors((current) => ({
+          ...current,
+          selectedCustomerId:
+            "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
+        }));
+      } else {
+        setError(getErrorMessage(submitError));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -176,25 +189,16 @@ export default function SupportCustomerAssignmentsPage() {
         })),
     [experts],
   );
-  const customerOptions = useMemo(() => {
-    const assignedCustomerIds = new Set(
-      assignments
-        .filter(
-          (assignment) =>
-            assignment.status === "active" &&
-            assignment.objectId !== editingAssignmentId,
-        )
-        .map((assignment) => assignment.customerObjectId),
-    );
-
-    return customers
+  const customerOptions = useMemo(
+    () =>
+      customers
       .filter((customer) => customer.status === "active")
-      .filter((customer) => !assignedCustomerIds.has(customer.objectId))
       .map((customer) => ({
         value: customer.objectId,
         label: formatCustomerOptionLabel(customer),
-      }));
-  }, [assignments, customers, editingAssignmentId]);
+      })),
+    [customers],
+  );
   const saleTypeOptions = useMemo(
     () =>
       saleTypes.map((saleType) => ({
@@ -514,7 +518,7 @@ export default function SupportCustomerAssignmentsPage() {
                 ? "در حال ثبت..."
                 : editingAssignmentId
                   ? "به‌روزرسانی اختصاص"
-                  : "اختصاص مشتری"}
+                  : "اختصاص و ادامه"}
             </Button>
           </Card>
 
