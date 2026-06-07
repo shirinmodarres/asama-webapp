@@ -46,10 +46,19 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_TRANSFER_STATE: "وضعیت این درخواست انتقال قابل تغییر نیست.",
   INVENTORY_NOT_FOUND: "موجودی کالا و انبار پیدا نشد.",
   WAREHOUSE_REQUIRED: "انبار خروج برای این سفارش مشخص نشده است.",
+  ORDER_WAREHOUSE_REQUIRED: "برای این سفارش انبار خروج مشخص نشده است.",
   WAREHOUSE_SELECTION_REQUIRED:
     "چند انبار مجاز موجودی کافی دارند؛ لطفاً انبار خروج را انتخاب کنید.",
   ORDER_STOCK_NOT_AVAILABLE:
     "موجودی فروش در انبارهای مجاز این کارشناس کافی نیست.",
+  OUTBOUND_STOCK_MISMATCH:
+    "این کالا متعلق به انبار خروج این سفارش نیست.",
+  WAREHOUSE_UNIT_ALREADY_DISPATCHED:
+    "این کالا قبلاً از انبار خارج شده است.",
+  INVENTORY_REAL_QUANTITY_INSUFFICIENT:
+    "موجودی واقعی انبار کافی نیست.",
+  INTERNAL_INVOICE_CREATE_FAILED:
+    "حواله خروج صادر شد اما فاکتور داخلی ایجاد نشد.",
   ASSIGNMENT_STOCK_REQUIRED:
     "برای این کارشناس در این مسیر فروش انبار مجاز تعریف نشده است.",
   RECIPIENT_FIRST_NAME_REQUIRED: "نام الزامی است.",
