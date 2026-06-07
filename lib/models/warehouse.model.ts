@@ -107,6 +107,8 @@ export interface ExitSlip {
   deliveryCounty: string | null;
   deliveryAddress: string | null;
   notes: string | null;
+  internalInvoiceObjectId: string | null;
+  internalInvoiceNumber: string | null;
   items: ExitSlipItemGroup[];
   units: WarehouseItemUnit[];
   createdAt: string;

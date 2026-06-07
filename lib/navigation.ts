@@ -137,6 +137,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "file-text",
       description: "اسناد مالی صادرشده",
     },
+    {
+      label: "فاکتورهای داخلی",
+      href: "/accounting/internal-invoices",
+      icon: "file-check",
+      description: "آماده ثبت در حسابداری",
+    },
   ],
   support: [
     {

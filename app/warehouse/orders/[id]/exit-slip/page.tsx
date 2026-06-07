@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { CheckCircle2, Trash2 } from "lucide-react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -20,7 +21,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
-import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
+import type {
+  ExitSlip,
+  WarehouseItemUnit,
+} from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { getOrder } from "@/lib/services/order.service";
 import {
@@ -37,11 +41,15 @@ interface ExpectedRow {
 
 export default function ExitSlipCreatePage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const scanInputRef = useRef<HTMLInputElement | null>(null);
+  const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
-  const [scannedCode, setScannedCode] = useState("");
+  const [scanValues, setScanValues] = useState({
+    productIdentifier: "",
+    serialNumber: "",
+    trackingCode: "",
+  });
   const [scannedUnits, setScannedUnits] = useState<WarehouseItemUnit[]>([]);
+  const [createdSlip, setCreatedSlip] = useState<ExitSlip | null>(null);
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
@@ -73,7 +81,7 @@ export default function ExitSlipCreatePage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!isLoading) scanInputRef.current?.focus();
+    if (!isLoading) productIdentifierRef.current?.focus();
   }, [isLoading, scannedUnits.length]);
 
   const expectedRows = useMemo<ExpectedRow[]>(() => {
@@ -180,13 +188,25 @@ export default function ExitSlipCreatePage() {
     },
   ];
 
-  const handleScan = async () => {
+  const handleScan = async (
+    field: keyof typeof scanValues,
+    rawValue = scanValues[field],
+  ) => {
     if (!order) return;
-    const normalizedCode = normalizeDigits(scannedCode.trim());
+    const normalizedCode = normalizeDigits(rawValue.trim());
     setFieldErrors({});
     if (!normalizedCode) {
-      setFieldErrors({ scannedCode: "این فیلد الزامی است." });
-      scanInputRef.current?.focus();
+      setFieldErrors({ [field]: "این فیلد الزامی است." });
+      return;
+    }
+    if (
+      scannedUnits.some((unit) =>
+        [unit.productIdentifier, unit.serialNumber, unit.trackingCode].includes(
+          normalizedCode,
+        ),
+      )
+    ) {
+      setFieldErrors({ [field]: "این شناسه قبلاً ثبت شده است." });
       return;
     }
 
@@ -204,17 +224,30 @@ export default function ExitSlipCreatePage() {
         setError("اطلاعات کالای اسکن‌شده کامل نیست.");
         return;
       }
+      const expectedRow = expectedRows.find((row) =>
+        unitMatchesOrderItem(unit, row.item),
+      );
+      if (!expectedRow) {
+        setError("کالای اسکن‌شده در این سفارش وجود ندارد.");
+        return;
+      }
+      if (expectedRow.scannedQuantity >= expectedRow.item.quantity) {
+        setFieldErrors({
+          [field]: "تعداد کالاهای ثبت‌شده بیشتر از تعداد سفارش است.",
+        });
+        return;
+      }
       setScannedUnits((current) =>
         current.some((entry) => entry.objectId === unit.objectId)
           ? current
           : [...current, unit],
       );
-      setScannedCode("");
+      setScanValues((current) => ({ ...current, [field]: "" }));
     } catch (scanError) {
       setError(getErrorMessage(scanError));
     } finally {
       setIsValidating(false);
-      window.setTimeout(() => scanInputRef.current?.focus(), 0);
+      window.setTimeout(() => productIdentifierRef.current?.focus(), 0);
     }
   };
 
@@ -238,12 +271,8 @@ export default function ExitSlipCreatePage() {
         notes: notes.trim() || undefined,
         unitObjectIds,
       });
-      setMessage(
-        "حواله خروج صادر شد و پیامک تأیید دریافت برای گیرنده ثبت/ارسال شد.",
-      );
-      router.push(
-        `/warehouse/exit-slips/${slip.objectId || slip.id}?created=1`,
-      );
+      setCreatedSlip(slip);
+      setMessage("حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.");
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {
@@ -275,6 +304,32 @@ export default function ExitSlipCreatePage() {
 
           <CustomerInfoCard order={order} />
 
+          <Card className="p-5">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <InfoItem
+                label="شماره سفارش"
+                value={formatFaDigits(order.code || order.id)}
+              />
+              <InfoItem
+                label="نوع سفارش"
+                value={order.orderType === "naja" ? "ناجا" : "عادی"}
+              />
+              <InfoItem
+                label="انبار خروج"
+                value={order.stockTitle || order.warehouseName || "-"}
+              />
+              <InfoItem
+                label="نوع فروش"
+                value={order.saleTypeTitle || order.saleType?.title || "-"}
+              />
+            </div>
+            {!order.stockTitle && !order.warehouseName ? (
+              <p className="mt-3 text-xs font-medium text-red-600">
+                برای این سفارش انبار خروج مشخص نشده است.
+              </p>
+            ) : null}
+          </Card>
+
           <DataTable
             columns={expectedColumns}
             rows={expectedRows}
@@ -282,37 +337,64 @@ export default function ExitSlipCreatePage() {
           />
 
           <Card className="p-5">
-            <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>اسکن شناسه / سریال / کد رهگیری</span>
-              <Input
-                ref={scanInputRef}
-                value={scannedCode}
-                onChange={(event) => {
-                  setScannedCode(event.target.value);
+            <div className="grid gap-4 md:grid-cols-3">
+              <ScanField
+                ref={productIdentifierRef}
+                label="شناسه محصول"
+                value={scanValues.productIdentifier}
+                error={fieldErrors.productIdentifier}
+                disabled={isValidating}
+                onChange={(value) => {
+                  setScanValues((current) => ({
+                    ...current,
+                    productIdentifier: value,
+                  }));
                   setFieldErrors((current) => ({
                     ...current,
-                    scannedCode: "",
+                    productIdentifier: "",
                   }));
                 }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    handleScan();
-                  }
-                }}
-                disabled={isValidating}
-                aria-invalid={Boolean(fieldErrors.scannedCode)}
+                onCommit={() => handleScan("productIdentifier")}
               />
-              <FieldError message={fieldErrors.scannedCode} />
-            </label>
-            <Button
-              type="button"
-              className="mt-4"
-              onClick={handleScan}
-              disabled={isValidating}
-            >
-              {isValidating ? "در حال بررسی..." : "ثبت اسکن"}
-            </Button>
+              <ScanField
+                label="سریال محصول"
+                value={scanValues.serialNumber}
+                error={fieldErrors.serialNumber}
+                disabled={isValidating}
+                onChange={(value) => {
+                  setScanValues((current) => ({
+                    ...current,
+                    serialNumber: value,
+                  }));
+                  setFieldErrors((current) => ({
+                    ...current,
+                    serialNumber: "",
+                  }));
+                }}
+                onCommit={() => handleScan("serialNumber")}
+              />
+              <ScanField
+                label="کد رهگیری"
+                value={scanValues.trackingCode}
+                error={fieldErrors.trackingCode}
+                disabled={isValidating}
+                onChange={(value) => {
+                  setScanValues((current) => ({
+                    ...current,
+                    trackingCode: value,
+                  }));
+                  setFieldErrors((current) => ({
+                    ...current,
+                    trackingCode: "",
+                  }));
+                }}
+                onCommit={() => handleScan("trackingCode")}
+              />
+            </div>
+            <p className="mt-3 text-xs leading-6 text-[#6B7280]">
+              بارکدخوان را روی هر کدام از فیلدها قرار دهید؛ Enter همان مقدار را
+              ثبت می‌کند.
+            </p>
           </Card>
 
           {scannedUnits.length > 0 ? (
@@ -335,20 +417,106 @@ export default function ExitSlipCreatePage() {
               type="button"
               className="mt-4"
               onClick={handleSubmit}
-              disabled={!canSubmit || isSubmitting}
+              disabled={!canSubmit || isSubmitting || Boolean(createdSlip)}
             >
               {isSubmitting ? "در حال ثبت..." : "ثبت حواله خروج"}
             </Button>
             {!canSubmit ? (
               <p className="mt-3 text-xs leading-6 text-[#8A5A00]">
-                تا زمانی که تعداد اسکن‌شده هر کالا با تعداد سفارش برابر نشود،
-                امکان ثبت حواله وجود ندارد.
+                تعداد کالاهای ثبت‌شده کمتر از سفارش است.
               </p>
             ) : null}
           </Card>
+
+          {createdSlip ? (
+            <Card className="border-[#B9DFC0] bg-[#F3FAF4] p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 font-semibold text-[#2F6B3A]">
+                    <CheckCircle2 className="size-5" />
+                    حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.
+                  </div>
+                  <div className="mt-3 grid gap-2 text-sm text-[#334155]">
+                    <span>
+                      شماره حواله:{" "}
+                      {formatFaDigits(createdSlip.slipCode || createdSlip.id)}
+                    </span>
+                    <span>
+                      شماره فاکتور داخلی:{" "}
+                      {createdSlip.internalInvoiceNumber
+                        ? formatFaDigits(createdSlip.internalInvoiceNumber)
+                        : "-"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <Link
+                      href={`/warehouse/exit-slips/${createdSlip.objectId || createdSlip.id}`}
+                    >
+                      مشاهده حواله
+                    </Link>
+                  </Button>
+                  {createdSlip.internalInvoiceObjectId ? (
+                    <Button asChild>
+                      <Link
+                        href={`/accounting/internal-invoices/${createdSlip.internalInvoiceObjectId}`}
+                      >
+                        مشاهده فاکتور داخلی
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </Card>
+          ) : null}
         </div>
       )}
     </DashboardLayout>
+  );
+}
+
+const ScanField = forwardRef<
+  HTMLInputElement,
+  {
+    label: string;
+    value: string;
+    error?: string;
+    disabled: boolean;
+    onChange: (value: string) => void;
+    onCommit: () => void;
+  }
+>(function ScanField(
+  { label, value, error, disabled, onChange, onCommit },
+  ref,
+) {
+  return (
+    <label className="grid gap-2 text-sm font-medium text-[#334155]">
+      <span>{label}</span>
+      <Input
+        ref={ref}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            onCommit();
+          }
+        }}
+        disabled={disabled}
+        aria-invalid={Boolean(error)}
+      />
+      <FieldError message={error} />
+    </label>
+  );
+});
+
+function InfoItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
+      <p className="text-xs text-[#6B7280]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[#102034]">{value}</p>
+    </div>
   );
 }
 
