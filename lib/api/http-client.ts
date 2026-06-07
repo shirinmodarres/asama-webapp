@@ -22,6 +22,12 @@ type ApiResponse<T> =
       };
     };
 
+const ASAMA_AUTH_ERROR_CODES = new Set([
+  "UNAUTHORIZED",
+  "AUTH_REQUIRED",
+  "SESSION_EXPIRED",
+]);
+
 interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
@@ -66,13 +72,17 @@ export async function httpRequest<T>(
   const payload = await parseResponseBody(response);
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    const apiError = createApiError(payload, response.status);
+    if (
+      typeof window !== "undefined" &&
+      ASAMA_AUTH_ERROR_CODES.has(apiError.code)
+    ) {
       clearStoredSession();
       if (window.location.pathname !== "/") {
         window.location.replace("/");
       }
     }
-    throw createApiError(payload, response.status);
+    throw apiError;
   }
 
   if (isApiResponse<T>(payload)) {

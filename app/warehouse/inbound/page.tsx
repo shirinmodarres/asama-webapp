@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -143,16 +143,20 @@ export default function WarehouseInboundPage() {
       return;
     }
 
-    const hasDuplicate = units.some(
-      (unit) =>
-        unit.productIdentifier === nextUnit.productIdentifier ||
-        unit.serialNumber === nextUnit.serialNumber ||
-        unit.trackingCode === nextUnit.trackingCode,
-    );
-
-    if (hasDuplicate) {
+    if (
+      units.some((unit) => unit.serialNumber === nextUnit.serialNumber)
+    ) {
       setFieldErrors({
-        trackingCode: "این شناسه یا سریال قبلاً ثبت شده است.",
+        serialNumber: "سریال کالا قبلاً ثبت شده است.",
+      });
+      return;
+    }
+
+    if (
+      units.some((unit) => unit.trackingCode === nextUnit.trackingCode)
+    ) {
+      setFieldErrors({
+        trackingCode: "کد رهگیری قبلاً ثبت شده است.",
       });
       return;
     }
@@ -197,7 +201,19 @@ export default function WarehouseInboundPage() {
       const refreshedProducts = await listProducts("warehouse");
       setProducts(refreshedProducts.filter((product) => product.isSyncedFromSepidar));
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      if (
+        submitError instanceof ApiError &&
+        submitError.code === "DUPLICATE_SERIAL_NUMBER"
+      ) {
+        setError("سریال کالا قبلاً ثبت شده است.");
+      } else if (
+        submitError instanceof ApiError &&
+        submitError.code === "DUPLICATE_TRACKING_CODE"
+      ) {
+        setError("کد رهگیری قبلاً ثبت شده است.");
+      } else {
+        setError(getErrorMessage(submitError));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -327,6 +343,10 @@ export default function WarehouseInboundPage() {
                 <FieldError message={fieldErrors.trackingCode} />
               </label>
             </div>
+            <p className="mt-3 text-xs leading-6 text-[#6B7280]">
+              شناسه کالا می‌تواند تکراری باشد، اما سریال کالا و کد رهگیری نباید
+              تکراری باشند.
+            </p>
             <Button type="button" className="mt-4" onClick={addUnit}>
               افزودن به لیست
             </Button>

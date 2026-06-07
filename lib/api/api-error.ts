@@ -34,6 +34,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_DELIVERY_CODE: "کد تأیید دریافت اشتباه است.",
   DELIVERY_PHONE_MISMATCH: "شماره موبایل با اطلاعات سفارش تطابق ندارد.",
   DUPLICATE_WAREHOUSE_UNIT: "این کالا قبلاً ثبت شده است.",
+  DUPLICATE_SERIAL_NUMBER: "سریال کالا قبلاً ثبت شده است.",
+  DUPLICATE_TRACKING_CODE: "کد رهگیری قبلاً ثبت شده است.",
   INSUFFICIENT_SALES_STOCK: "موجودی فروش کافی نیست.",
   INSUFFICIENT_WAREHOUSE_STOCK: "موجودی انبار کافی نیست.",
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
