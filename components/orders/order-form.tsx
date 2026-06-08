@@ -253,6 +253,7 @@ export function OrderForm({
               productObjectId: product.objectId,
               productName: product.name,
               availableQuantity: product.availableSalesQuantity,
+              availableStocks: product.availableStocks,
             })),
           );
         }
@@ -908,6 +909,7 @@ function hasAssignmentInventory(customer: Customer | null | undefined): boolean 
   return Boolean(
     customer?.saleType?.sepidarSaleTypeId &&
       (customer.allowedStockObjectIds.length > 0 ||
+        customer.allowedSepidarStockIds.length > 0 ||
         customer.allowedStocks.length > 0),
   );
 }

@@ -159,7 +159,17 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
           const stock = toRecord(value);
           return {
             stockObjectId: toStringValue(stock.stockObjectId),
+            sepidarStockId:
+              stock.sepidarStockId === null ||
+              stock.sepidarStockId === undefined
+                ? null
+                : toNumberValue(stock.sepidarStockId),
             stockTitle: toStringValue(stock.stockTitle),
+            realQuantity: toNumberValue(stock.realQuantity),
+            salesQuantity: toNumberValue(stock.salesQuantity),
+            reservedQuantity: toNumberValue(stock.reservedQuantity),
+            useFullRealQuantityForSales:
+              stock.useFullRealQuantityForSales === true,
             availableSalesQuantity: toNumberValue(
               stock.availableSalesQuantity,
             ),

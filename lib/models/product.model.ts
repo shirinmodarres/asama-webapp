@@ -30,7 +30,12 @@ export interface Product {
   availableSalesQuantity: number;
   availableStocks: Array<{
     stockObjectId: string;
+    sepidarStockId: number | null;
     stockTitle: string;
+    realQuantity: number;
+    salesQuantity: number;
+    reservedQuantity: number;
+    useFullRealQuantityForSales: boolean;
     availableSalesQuantity: number;
   }>;
   warehouseAvailableStock: number;
