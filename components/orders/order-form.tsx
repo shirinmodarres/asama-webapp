@@ -740,9 +740,9 @@ export function OrderForm({
             return (
               <div
                 key={item.rowId}
-                className="grid gap-3 border-b border-[#E7EDF3] py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_88px_170px_190px_auto] md:items-center"
+                className="grid gap-3 border-b border-[#E7EDF3] py-4 last:border-b-0 xl:grid-cols-[auto_190px_170px_88px_minmax(280px,1fr)] xl:items-center"
               >
-                <div className="relative">
+                <div className="relative min-w-0">
                   <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                   <SearchableSelect
                     value={item.productId || undefined}
@@ -836,7 +836,7 @@ export function OrderForm({
                   <Trash2 className="size-4" />
                 </Button>
 
-                <p className="text-xs text-[#6B7280] md:col-span-5">
+                <p className="text-xs text-[#6B7280] xl:col-span-5">
                   {product
                     ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
