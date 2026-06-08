@@ -128,6 +128,8 @@ export function mapProductDto(dto: unknown): Product {
     warehouseStock,
     reservedStock,
     availableStock,
+    availableSalesQuantity: availableStock,
+    availableStocks: [],
     warehouseAvailableStock,
     najaInventoryQty,
     inventories,
@@ -143,13 +145,27 @@ export function mapProductListDto(dto: unknown): Product[] {
 export function mapProductOrderOptionDto(dto: unknown): Product {
   const record = toRecord(dto);
   const product = mapProductDto(dto);
+  const availableSalesQuantity = toNumberValue(
+    record.availableSalesQuantity ??
+      record.availableQuantity ??
+      record.availableStock,
+  );
   return {
     ...product,
-    availableStock: toNumberValue(
-      record.availableQuantity ??
-        record.availableSalesQuantity ??
-        record.availableStock,
-    ),
+    availableStock: availableSalesQuantity,
+    availableSalesQuantity,
+    availableStocks: Array.isArray(record.availableStocks)
+      ? record.availableStocks.map((value) => {
+          const stock = toRecord(value);
+          return {
+            stockObjectId: toStringValue(stock.stockObjectId),
+            stockTitle: toStringValue(stock.stockTitle),
+            availableSalesQuantity: toNumberValue(
+              stock.availableSalesQuantity,
+            ),
+          };
+        })
+      : [],
   };
 }
 

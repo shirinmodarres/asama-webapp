@@ -252,7 +252,7 @@ export function OrderForm({
             data.map((product) => ({
               productObjectId: product.objectId,
               productName: product.name,
-              availableQuantity: product.availableStock,
+              availableQuantity: product.availableSalesQuantity,
             })),
           );
         }
@@ -729,7 +729,7 @@ export function OrderForm({
         selectedCustomer?.saleType?.sepidarSaleTypeId &&
         products.length === 0 ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
-            برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است.
+            در انبارهای مجاز این کارشناس کالایی با موجودی قابل فروش پیدا نشد.
           </p>
         ) : null}
 
@@ -759,7 +759,7 @@ export function OrderForm({
                       .map((option) => ({
                         value: option.objectId,
                         label: sepidarProductsOnly
-                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`
+                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatNumber(option.availableSalesQuantity)} ${option.unit}`
                           : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
                       }))}
                     placeholder={
@@ -772,7 +772,7 @@ export function OrderForm({
                       sepidarProductsOnly &&
                       selectedCustomer?.saleType?.sepidarSaleTypeId &&
                       products.length === 0
-                        ? "برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است."
+                        ? "کالایی با موجودی قابل فروش پیدا نشد."
                         : "کالایی پیدا نشد"
                     }
                     triggerClassName="pr-10"
@@ -838,7 +838,7 @@ export function OrderForm({
 
                 <p className="text-xs text-[#6B7280] xl:col-span-5">
                   {product
-                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
+                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableSalesQuantity)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
                 </p>
               </div>

@@ -27,6 +27,12 @@ export interface Product {
   warehouseStock: number;
   reservedStock: number;
   availableStock: number;
+  availableSalesQuantity: number;
+  availableStocks: Array<{
+    stockObjectId: string;
+    stockTitle: string;
+    availableSalesQuantity: number;
+  }>;
   warehouseAvailableStock: number;
   najaInventoryQty: number;
   inventories: ProductWarehouseInventory[];

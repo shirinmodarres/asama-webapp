@@ -158,7 +158,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               data.map((product) => ({
                 productObjectId: product.objectId,
                 productName: product.name,
-                availableQuantity: product.availableStock,
+                availableQuantity: product.availableSalesQuantity,
               })),
             );
           }
@@ -196,7 +196,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatFaDigits(product.availableStock)} ${product.unit}`,
+        label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatFaDigits(product.availableSalesQuantity)} ${product.unit}`,
       })),
     [products],
   );
@@ -379,7 +379,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   searchPlaceholder="جستجو در کالاها"
                   emptyMessage={
                     selectedCustomer?.saleType?.sepidarSaleTypeId
-                      ? "برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است."
+                      ? "کالایی با موجودی قابل فروش پیدا نشد."
                       : "ابتدا مرکز/مشتری را انتخاب کنید."
                   }
                   disabled={
@@ -521,7 +521,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               {" • "}
               قیمت واحد: {formatCurrency(selectedProduct.unitPrice)}
               {" • "}
-              موجودی قابل فروش: {formatFaDigits(selectedProduct.availableStock)}{" "}
+              موجودی قابل فروش:{" "}
+              {formatFaDigits(selectedProduct.availableSalesQuantity)}{" "}
               {selectedProduct.unit}
             </div>
           ) : null}
