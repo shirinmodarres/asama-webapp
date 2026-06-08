@@ -6,9 +6,17 @@ export interface SepidarStock {
   title: string;
   isActive: boolean;
   isZagros: boolean;
+  realInventoryCount: number;
+  salesInventoryCount: number;
+  reservedInventoryCount: number;
   lastSepidarSyncAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export interface SepidarStockInventory {
+  stock: SepidarStock;
+  products: ProductStockInventory[];
 }
 
 export interface ProductStockInventory {

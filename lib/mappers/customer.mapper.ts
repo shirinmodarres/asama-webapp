@@ -50,6 +50,9 @@ export function mapCustomerDto(dto: unknown): Customer {
       .map(toNumberValue)
       .filter((value) => Number.isFinite(value)),
     allowedStocks: toArray(record.allowedStocks).map(mapSepidarStockDto),
+    allowedStockTitles: toArray(record.allowedStockTitles)
+      .map(toStringValue)
+      .filter(Boolean),
     isSyncedFromSepidar:
       toBooleanValue(record.isSyncedFromSepidar ?? record.syncedFromSepidar) ||
       toStringValue(record.source).toLowerCase() === "sepidar",

@@ -22,8 +22,10 @@ const TRANSFER_STATUS_LABELS: Record<string, string> = {
 export function mapSepidarStockDto(dto: unknown): SepidarStock {
   const record = toRecord(dto);
   return {
-    objectId: toStringValue(record.objectId),
-    id: toStringValue(record.id) || toStringValue(record.objectId),
+    objectId: toStringValue(record.objectId ?? record.stockObjectId),
+    id:
+      toStringValue(record.id) ||
+      toStringValue(record.objectId ?? record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null
         ? null
@@ -32,6 +34,9 @@ export function mapSepidarStockDto(dto: unknown): SepidarStock {
     title: toStringValue(record.title),
     isActive: toBooleanValue(record.isActive ?? true),
     isZagros: toBooleanValue(record.isZagros),
+    realInventoryCount: toNumberValue(record.realInventoryCount),
+    salesInventoryCount: toNumberValue(record.salesInventoryCount),
+    reservedInventoryCount: toNumberValue(record.reservedInventoryCount),
     lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
     createdAt: toNullableString(record.createdAt),
     updatedAt: toNullableString(record.updatedAt),

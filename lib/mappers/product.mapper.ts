@@ -59,11 +59,17 @@ export function mapProductDto(dto: unknown): Product {
   const reservedStock = inventories.length
     ? inventoryReservedStock
     : toNumberValue(record.reservedStock);
-  const availableStock = inventories.length
-    ? inventoryAvailableStock
-    : record.availableStock === undefined
-      ? salesStock - reservedStock
-      : toNumberValue(record.availableStock);
+  const backendAvailableQuantity =
+    record.availableQuantity ??
+    record.availableSalesQuantity ??
+    record.availableStock;
+  const availableStock =
+    backendAvailableQuantity !== undefined &&
+    backendAvailableQuantity !== null
+      ? toNumberValue(backendAvailableQuantity)
+      : inventories.length
+        ? inventoryAvailableStock
+        : salesStock - reservedStock;
   const warehouseAvailableStock = inventories.length
     ? inventoryWarehouseAvailableStock
     : record.warehouseAvailableStock === undefined
@@ -132,6 +138,23 @@ export function mapProductDto(dto: unknown): Product {
 
 export function mapProductListDto(dto: unknown): Product[] {
   return Array.isArray(dto) ? dto.map(mapProductDto) : [];
+}
+
+export function mapProductOrderOptionDto(dto: unknown): Product {
+  const record = toRecord(dto);
+  const product = mapProductDto(dto);
+  return {
+    ...product,
+    availableStock: toNumberValue(
+      record.availableQuantity ??
+        record.availableSalesQuantity ??
+        record.availableStock,
+    ),
+  };
+}
+
+export function mapProductOrderOptionListDto(dto: unknown): Product[] {
+  return Array.isArray(dto) ? dto.map(mapProductOrderOptionDto) : [];
 }
 
 export function mapSepidarProductSyncSummaryDto(

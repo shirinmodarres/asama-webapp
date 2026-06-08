@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Lock,
+  RefreshCw,
   Unlock,
   XCircle,
 } from "lucide-react";
@@ -37,7 +38,11 @@ import {
   SHIPMENT_STOP_REASONS,
 } from "@/lib/domain/order-action-reasons";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
-import type { Order, OrderItem } from "@/lib/models/order.model";
+import type {
+  Order,
+  OrderApprovalResult,
+  OrderItem,
+} from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   approveOrder,
@@ -45,6 +50,7 @@ import {
   getOrder,
   markOrderNeedsReview,
   releaseShipment,
+  retryOrderQuotation,
   stopShipment,
 } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -64,6 +70,7 @@ export default function ManagerOrderReviewPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRetryingQuotation, setIsRetryingQuotation] = useState(false);
   const [decision, setDecision] = useState<DecisionType>(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
@@ -74,7 +81,9 @@ export default function ManagerOrderReviewPage() {
   const [selectedStockObjectId, setSelectedStockObjectId] = useState("");
   const [dialogErrors, setDialogErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">("error");
+  const [messageType, setMessageType] = useState<
+    "success" | "warning" | "error"
+  >("error");
 
   useEffect(() => {
     let isMounted = true;
@@ -174,14 +183,34 @@ export default function ManagerOrderReviewPage() {
     },
   ];
 
-  const handleApproveSuccess = (updated: Order) => {
-    setOrder(updated);
-    setMessageType("success");
-    setMessage("سفارش با موفقیت تأیید شد.");
+  const handleApproveSuccess = (result: OrderApprovalResult) => {
+    setOrder((current) => {
+      const refreshed = result.order ?? current;
+      return refreshed
+        ? {
+            ...refreshed,
+            orderStatus: "approved",
+            orderStatusLabel: "تأیید شده",
+            quotationStatus: result.quotationStatus,
+          }
+        : refreshed;
+    });
+    if (result.quotationStatus === "failed") {
+      setMessageType("warning");
+      setMessage(
+        "سفارش با موفقیت تأیید شد، اما ثبت پیش‌فاکتور سپیدار انجام نشد.",
+      );
+    } else {
+      setMessageType("success");
+      setMessage("سفارش با موفقیت تأیید شد.");
+    }
     setDecision(null);
     setStockSelectionOptions([]);
     setSelectedStockObjectId("");
-    setTimeout(() => router.push("/manager/order-tracking"), 700);
+    router.refresh();
+    void getOrder(order.objectId)
+      .then((freshOrder) => setOrder(freshOrder))
+      .catch(() => undefined);
   };
 
   const handleApprovalError = (error: unknown) => {
@@ -216,7 +245,7 @@ export default function ManagerOrderReviewPage() {
     setDialogErrors({});
 
     try {
-      const updated =
+      const result =
         decision === "approve"
           ? await approveOrder(order.objectId)
           : decision === "needs_review"
@@ -228,9 +257,10 @@ export default function ManagerOrderReviewPage() {
                 cancelledByName: currentUserName,
               });
       if (decision === "approve") {
-        handleApproveSuccess(updated);
+        handleApproveSuccess(result as OrderApprovalResult);
         return;
       }
+      const updated = result as Order;
       setOrder(updated);
       setMessageType("success");
       setMessage(
@@ -265,14 +295,45 @@ export default function ManagerOrderReviewPage() {
     setDialogErrors({});
 
     try {
-      const updated = await approveOrder(order.objectId, {
+      const result = await approveOrder(order.objectId, {
         stockObjectId: selectedStockObjectId,
       });
-      handleApproveSuccess(updated);
+      handleApproveSuccess(result);
     } catch (error) {
       handleApprovalError(error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const retryQuotation = async () => {
+    setIsRetryingQuotation(true);
+    setMessage("");
+    try {
+      const result = await retryOrderQuotation(order.objectId);
+      setOrder((current) =>
+        result.order
+          ? result.order
+          : current
+            ? { ...current, quotationStatus: result.quotationStatus }
+            : current,
+      );
+      if (result.quotationStatus === "success") {
+        setMessageType("success");
+        setMessage("پیش‌فاکتور سپیدار با موفقیت ثبت شد.");
+      } else {
+        setMessageType("warning");
+        setMessage("ثبت پیش‌فاکتور سپیدار انجام نشد.");
+      }
+      router.refresh();
+      void getOrder(order.objectId)
+        .then((freshOrder) => setOrder(freshOrder))
+        .catch(() => undefined);
+    } catch (retryError) {
+      setMessageType("error");
+      setMessage(getErrorMessage(retryError));
+    } finally {
+      setIsRetryingQuotation(false);
     }
   };
 
@@ -339,6 +400,11 @@ export default function ManagerOrderReviewPage() {
           {message}
         </div>
       ) : null}
+      {message && messageType === "warning" ? (
+        <div className="rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] p-3 text-sm text-[#8A5A00]">
+          {message}
+        </div>
+      ) : null}
       {message && messageType === "error" ? (
         <InlineErrorMessage message={message} />
       ) : null}
@@ -401,10 +467,6 @@ export default function ManagerOrderReviewPage() {
                         ? formatFaDigits(order.najaOrderNumber)
                         : "-"
                     }
-                  />
-                  <InfoItem
-                    label="وضعیت پیش‌فاکتور سپیدار"
-                    value={getQuotationStatusLabel(order)}
                   />
                 </>
               ) : null}
@@ -560,6 +622,34 @@ export default function ManagerOrderReviewPage() {
           ) : null}
 
           <CustomerInfoCard order={order} />
+
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-[#1F3A5F]">
+                  وضعیت پیش‌فاکتور سپیدار
+                </h3>
+                <div className="mt-3">{getQuotationStatusBadge(order)}</div>
+              </div>
+              {order.quotationStatus === "failed" ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isRetryingQuotation}
+                  onClick={retryQuotation}
+                >
+                  <RefreshCw
+                    className={
+                      isRetryingQuotation ? "size-4 animate-spin" : "size-4"
+                    }
+                  />
+                  {isRetryingQuotation
+                    ? "در حال تلاش مجدد..."
+                    : "تلاش مجدد برای ثبت پیش‌فاکتور"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
 
           <DataTable
             columns={columns}
@@ -948,17 +1038,24 @@ function formatReviewRemaining(order: Order): string | null {
     : null;
 }
 
-function getQuotationStatusLabel(order: Order): string {
-  if (order.sepidarIntegrationStatus === "quotation_failed") {
-    return "ثبت پیش‌فاکتور ناموفق بود.";
+function getQuotationStatusBadge(order: Order): ReactNode {
+  if (order.quotationStatus === "failed") {
+    return (
+      <Badge variant="destructive" dot>
+        پیش‌فاکتور سپیدار ثبت نشده
+      </Badge>
+    );
   }
-
-  if (
-    order.sepidarQuotationId ||
-    order.sepidarIntegrationStatus === "quotation_created"
-  ) {
-    return "پیش‌فاکتور ثبت شد.";
+  if (order.quotationStatus === "success") {
+    return (
+      <Badge variant="success" dot>
+        پیش‌فاکتور سپیدار ثبت شده
+      </Badge>
+    );
   }
-
-  return "ثبت نشده";
+  return (
+    <Badge variant="warning" dot>
+      در انتظار ارسال به سپیدار
+    </Badge>
+  );
 }

@@ -2,6 +2,7 @@ import { httpClient } from "@/lib/api/http-client";
 import {
   mapProductStockInventoryDto,
   mapProductStockInventoryListDto,
+  mapSepidarStockDto,
   mapSepidarStockListDto,
   mapStockTransferRequestDto,
   mapStockTransferRequestListDto,
@@ -10,9 +11,11 @@ import type {
   CreateStockTransferPayload,
   ProductStockInventory,
   SepidarStock,
+  SepidarStockInventory,
   StockTransferRequest,
   UpdateProductStockInventoryPayload,
 } from "@/lib/models/stock.model";
+import { toRecord } from "@/lib/mappers/mapper-utils";
 import { toNumber } from "@/lib/utils/number-format";
 
 export async function listSepidarStocks(): Promise<SepidarStock[]> {
@@ -27,6 +30,24 @@ export async function listSupportStocks(): Promise<SepidarStock[]> {
   return mapSepidarStockListDto(data);
 }
 
+export async function listStocks(): Promise<SepidarStock[]> {
+  const data = await httpClient.get<unknown>("/api/stocks");
+  return mapSepidarStockListDto(data);
+}
+
+export async function getSepidarStockInventory(
+  objectId: string,
+): Promise<SepidarStockInventory> {
+  const data = await httpClient.get<unknown>(
+    `/api/stocks/${objectId}/inventory`,
+  );
+  const record = toRecord(data);
+  return {
+    stock: mapSepidarStockDto(record.stock),
+    products: mapProductStockInventoryListDto(record.products),
+  };
+}
+
 export async function listStockTransfers(filters?: {
   status?: string;
 }): Promise<StockTransferRequest[]> {
@@ -37,6 +58,12 @@ export async function listManagerStockTransfers(filters?: {
   status?: string;
 }): Promise<StockTransferRequest[]> {
   return listTransfersFromPath("/api/manager/stock-transfers", filters);
+}
+
+export async function listWarehouseStockTransfers(filters?: {
+  status?: string;
+}): Promise<StockTransferRequest[]> {
+  return listTransfersFromPath("/api/warehouse/stock-transfers", filters);
 }
 
 async function listTransfersFromPath(
@@ -82,11 +109,20 @@ export async function rejectStockTransfer(
   return mapStockTransferRequestDto(data);
 }
 
-export async function listProductStockInventory(): Promise<
-  ProductStockInventory[]
-> {
+export async function listProductStockInventory(filters?: {
+  stockObjectId?: string;
+  productObjectId?: string;
+}): Promise<ProductStockInventory[]> {
+  const params = new URLSearchParams();
+  if (filters?.stockObjectId) {
+    params.set("stockObjectId", filters.stockObjectId);
+  }
+  if (filters?.productObjectId) {
+    params.set("productObjectId", filters.productObjectId);
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
   const data = await httpClient.get<unknown>(
-    "/api/support/product-stock-inventory",
+    `/api/support/product-stock-inventory${suffix}`,
   );
   return mapProductStockInventoryListDto(data);
 }

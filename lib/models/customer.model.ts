@@ -39,6 +39,7 @@ export interface Customer {
   allowedStockObjectIds: string[];
   allowedSepidarStockIds: number[];
   allowedStocks: SepidarStock[];
+  allowedStockTitles: string[];
   isSyncedFromSepidar: boolean;
   fullName: string;
   phone: string;

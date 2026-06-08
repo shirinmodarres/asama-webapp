@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     "اطلاعات اصلی کالا از سپیدار خوانده می‌شود و قابل ویرایش نیست.",
   PRODUCT_CREATION_DISABLED: "تعریف کالا فقط از طریق سپیدار انجام می‌شود.",
   CUSTOMER_NOT_ASSIGNED_TO_EXPERT: "این مشتری به شما اختصاص داده نشده است.",
+  ASSIGNMENT_NOT_FOUND: "برای این مشتری تنظیمات فروش تعریف نشده است.",
   CUSTOMER_ALREADY_ASSIGNED:
     "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
   CUSTOMER_MUST_BE_FROM_SEPIDAR: "مشتری باید از سپیدار خوانده شده باشد.",

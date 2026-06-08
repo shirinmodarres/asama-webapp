@@ -1,21 +1,20 @@
 import { httpClient } from "@/lib/api/http-client";
-import { ApiError } from "@/lib/api/api-error";
 import { mapOrderListDto } from "@/lib/mappers/order.mapper";
 import { mapProductListDto } from "@/lib/mappers/product.mapper";
+import { mapProductStockInventoryListDto } from "@/lib/mappers/stock.mapper";
 import {
   mapExitSlipDto,
   mapExitSlipPdfDataDto,
   mapExitSlipListDto,
   mapProductWarehouseInventoryListDto,
-  mapWarehouseDto,
   mapWarehouseInboundReceiptDto,
   mapWarehouseInboundReceiptListDto,
   mapWarehouseItemUnitDto,
   mapWarehouseItemUnitListDto,
-  mapWarehouseListDto,
 } from "@/lib/mappers/warehouse.mapper";
 import type { Order } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
+import type { ProductStockInventory } from "@/lib/models/stock.model";
 import type {
   ConfirmDeliveryPayload,
   CreateExitSlipPayload,
@@ -25,51 +24,10 @@ import type {
   ProductWarehouseInventory,
   UpdateInboundReceiptPayload,
   ValidateExitSlipScanPayload,
-  Warehouse,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
 } from "@/lib/models/warehouse.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
-
-export interface WarehousePayload {
-  name: string;
-  code: string;
-  type: string;
-  allowedOrderTypes: Array<"normal" | "naja">;
-  isDefault?: boolean;
-  status?: string;
-}
-
-export async function listWarehouses(): Promise<Warehouse[]> {
-  const data = await httpClient.get<unknown>("/api/warehouses");
-  return mapWarehouseListDto(data);
-}
-
-export async function getWarehouse(objectId: string): Promise<Warehouse> {
-  const data = await httpClient.get<unknown>(`/api/warehouses/${objectId}`);
-  return mapWarehouseDto(data);
-}
-
-export async function createWarehouse(
-  payload: WarehousePayload,
-): Promise<Warehouse> {
-  const data = await httpClient.post<unknown>(
-    "/api/warehouses",
-    normalizeWarehousePayload(payload),
-  );
-  return mapWarehouseDto(data);
-}
-
-export async function updateWarehouse(
-  objectId: string,
-  payload: Partial<WarehousePayload>,
-): Promise<Warehouse> {
-  const data = await httpClient.put<unknown>(
-    `/api/warehouses/${objectId}`,
-    normalizeWarehousePayload(payload),
-  );
-  return mapWarehouseDto(data);
-}
 
 export async function getWarehouseInventory(
   filters?: Record<string, string | undefined>,
@@ -132,22 +90,11 @@ export async function listWarehouseOrders(): Promise<Order[]> {
   return mapOrderListDto(data);
 }
 
-export async function listWarehouseInventory(): Promise<Product[]> {
-  try {
-    const data = await httpClient.get<unknown>("/api/warehouse/inventory");
-    return mapProductListDto(data);
-  } catch (error) {
-    // Backward compatible while older backend deployments do not expose
-    // /api/warehouse/inventory yet. The warehouse viewer role still returns
-    // warehouseStock from the product serializer.
-    if (error instanceof ApiError && error.status === 404) {
-      const fallbackData = await httpClient.get<unknown>(
-        "/api/products?viewerRole=warehouse",
-      );
-      return mapProductListDto(fallbackData);
-    }
-    throw error;
-  }
+export async function listWarehouseInventory(): Promise<
+  ProductStockInventory[]
+> {
+  const data = await httpClient.get<unknown>("/api/warehouse/inventory");
+  return mapProductStockInventoryListDto(data);
 }
 
 export async function validateExitSlipScan(
@@ -238,16 +185,6 @@ function normalizeInboundPayload(
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
     })),
-  };
-}
-
-function normalizeWarehousePayload(
-  payload: Partial<WarehousePayload>,
-): Record<string, unknown> {
-  return {
-    ...payload,
-    code: payload.code ? normalizeDigits(payload.code) : payload.code,
-    allowedOrderTypes: payload.allowedOrderTypes ?? [],
   };
 }
 
