@@ -145,10 +145,15 @@ export function mapProductListDto(dto: unknown): Product[] {
 export function mapProductOrderOptionDto(dto: unknown): Product {
   const record = toRecord(dto);
   const product = mapProductDto(dto);
+  const hasAvailableSalesQuantity = Object.prototype.hasOwnProperty.call(
+    record,
+    "availableSalesQuantity",
+  );
+  if (!hasAvailableSalesQuantity && process.env.NODE_ENV === "development") {
+    console.warn("[ORDER_OPTIONS_MISSING_INVENTORY_FIELD]", record);
+  }
   const availableSalesQuantity = toNumberValue(
-    record.availableSalesQuantity ??
-      record.availableQuantity ??
-      record.availableStock,
+    record.availableSalesQuantity,
   );
   return {
     ...product,
