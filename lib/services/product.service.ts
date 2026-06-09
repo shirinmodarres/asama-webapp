@@ -62,9 +62,18 @@ export async function listOrderProductsBySaleType(
     `/api/products/order-options?${params.toString()}`,
   );
   const record = toRecord(data);
-  return mapProductOrderOptionListDto(
+  const products = mapProductOrderOptionListDto(
     Array.isArray(data) ? data : record.items ?? record.products ?? [],
   );
+  console.log(
+    "[FRONTEND_ORDER_OPTIONS]",
+    products.map((product) => ({
+      code: product.sepidarCode || product.sku,
+      name: product.name,
+      availableSalesQuantity: product.availableSalesQuantity,
+    })),
+  );
+  return products;
 }
 
 export async function syncPricesFromSepidar(): Promise<SepidarProductSyncSummary> {
