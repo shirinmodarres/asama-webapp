@@ -6,18 +6,6 @@ export type WarehouseUnitStatus =
   | "returned";
 
 export type WarehouseType = "general" | "naja" | "other" | string;
-export type WarehouseOrderType = "normal" | "naja";
-
-export interface Warehouse {
-  objectId: string;
-  id: string;
-  name: string;
-  code: string;
-  type: WarehouseType;
-  allowedOrderTypes: WarehouseOrderType[];
-  isDefault: boolean;
-  status: "active" | "inactive" | string;
-}
 
 export interface ProductWarehouseInventory {
   warehouseId: string;

@@ -8,7 +8,9 @@ import type {
   LockShipmentPayload,
   MarkOrderNeedsReviewPayload,
   Order,
+  OrderApprovalResult,
   OrderFilters,
+  QuotationStatus,
   ReleaseShipmentPayload,
   ResolveOrderReviewPayload,
   StopShipmentPayload,
@@ -135,15 +137,21 @@ export interface ApproveOrderPayload {
 export async function approveOrder(
   objectId: string,
   payload?: ApproveOrderPayload,
-): Promise<Order> {
+): Promise<OrderApprovalResult> {
   const data = await httpClient.post<unknown>(
     `/api/orders/${objectId}/approve`,
     payload,
   );
-  return mapOrderDto({
-    ...((typeof data === "object" && data !== null) ? data : {}),
-    orderStatus: "approved",
-  });
+  return mapApprovalResult(objectId, data);
+}
+
+export async function retryOrderQuotation(
+  objectId: string,
+): Promise<OrderApprovalResult> {
+  const data = await httpClient.post<unknown>(
+    `/api/orders/${objectId}/retry-quotation`,
+  );
+  return mapApprovalResult(objectId, data);
 }
 
 export async function cancelOrder(
@@ -195,4 +203,45 @@ function buildOrdersPath(filters?: OrderFilters): string {
 
   const query = params.toString();
   return query ? `/api/orders?${query}` : "/api/orders";
+}
+
+function mapApprovalResult(
+  _objectId: string,
+  data: unknown,
+): OrderApprovalResult {
+  const record =
+    data && typeof data === "object"
+      ? (data as Record<string, unknown>)
+      : {};
+  const nestedOrder =
+    record.order && typeof record.order === "object"
+      ? (record.order as Record<string, unknown>)
+      : null;
+  const quotationStatus = normalizeQuotationStatus(
+    record.quotationStatus ?? nestedOrder?.quotationStatus,
+  );
+  const orderSource = nestedOrder ?? record;
+  const hasOrderData = Boolean(
+    orderSource.objectId || orderSource.id || orderSource.orderCode,
+  );
+  const order = hasOrderData
+    ? mapOrderDto({
+        ...orderSource,
+        orderStatus: "approved",
+        quotationStatus,
+      })
+    : null;
+
+  return {
+    order,
+    quotationStatus,
+    warning:
+      typeof record.warning === "string" && record.warning.trim()
+        ? record.warning
+        : null,
+  };
+}
+
+function normalizeQuotationStatus(value: unknown): QuotationStatus {
+  return value === "success" || value === "failed" ? value : "pending";
 }

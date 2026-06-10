@@ -17,17 +17,15 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
-import type { Warehouse } from "@/lib/models/warehouse.model";
-import {
-  listWarehouseOrders,
-  listWarehouses,
-} from "@/lib/services/warehouse.service";
+import type { SepidarStock } from "@/lib/models/stock.model";
+import { listStocks } from "@/lib/services/stock.service";
+import { listWarehouseOrders } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function WarehouseOutboundPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [warehouseId, setWarehouseId] = useState("all");
+  const [stocks, setStocks] = useState<SepidarStock[]>([]);
+  const [stockObjectId, setStockObjectId] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -41,13 +39,13 @@ export default function WarehouseOutboundPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [orderData, warehouseData] = await Promise.all([
+        const [orderData, stockData] = await Promise.all([
           listWarehouseOrders(),
-          listWarehouses(),
+          listStocks(),
         ]);
         if (!isMounted) return;
         setOrders(orderData);
-        setWarehouses(warehouseData);
+        setStocks(stockData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -66,9 +64,9 @@ export default function WarehouseOutboundPage() {
     return orders
       .filter(
         (order) =>
-          warehouseId === "all" ||
-          !order.warehouseId ||
-          order.warehouseId === warehouseId,
+          stockObjectId === "all" ||
+          !order.stockObjectId ||
+          order.stockObjectId === stockObjectId,
       )
       .filter((order) => {
         if (!query) return true;
@@ -79,23 +77,23 @@ export default function WarehouseOutboundPage() {
         );
       })
       .filter((order) => isWithinDateRange(order.createdAt, dateFrom, dateTo));
-  }, [dateFrom, dateTo, orders, search, warehouseId]);
+  }, [dateFrom, dateTo, orders, search, stockObjectId]);
 
   const hasActiveFilters =
     search.trim().length > 0 ||
-    warehouseId !== "all" ||
+    stockObjectId !== "all" ||
     dateFrom.length > 0 ||
     dateTo.length > 0;
 
-  const warehouseOptions = useMemo(
+  const stockOptions = useMemo(
     () => [
       { value: "all", label: "همه انبارها" },
-      ...warehouses.map((warehouse) => ({
-        value: warehouse.objectId,
-        label: warehouse.name,
+      ...stocks.map((stock) => ({
+        value: stock.objectId,
+        label: stock.title,
       })),
     ],
-    [warehouses],
+    [stocks],
   );
 
   const columns: DataTableColumn<Order>[] = [
@@ -157,9 +155,9 @@ export default function WarehouseOutboundPage() {
       header: "عملیات",
       render: (row) => {
         const warehouseMatches =
-          warehouseId === "all" ||
-          !row.warehouseId ||
-          row.warehouseId === warehouseId;
+          stockObjectId === "all" ||
+          !row.stockObjectId ||
+          row.stockObjectId === stockObjectId;
         const canCreateExitSlip =
           row.orderStatus === "approved" &&
           row.warehouseStatus === "reviewing" &&
@@ -202,9 +200,9 @@ export default function WarehouseOutboundPage() {
             <div className="relative">
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <SearchableSelect
-                value={warehouseId}
-                onValueChange={setWarehouseId}
-                options={warehouseOptions}
+                value={stockObjectId}
+                onValueChange={setStockObjectId}
+                options={stockOptions}
                 placeholder="همه انبارها"
                 searchPlaceholder="جستجو در انبارها"
                 emptyMessage="انباری پیدا نشد"
@@ -226,7 +224,7 @@ export default function WarehouseOutboundPage() {
               className="inline-flex w-fit shrink-0 items-center gap-2"
               onClick={() => {
                 setSearch("");
-                setWarehouseId("all");
+                setStockObjectId("all");
                 setDateFrom("");
                 setDateTo("");
               }}

@@ -97,7 +97,13 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       label: "موجودی واقعی انبار",
       href: "/warehouse/inventory",
       icon: "boxes",
-      description: "موجودی واقعی کالا",
+      description: "موجودی انبارهای سپیدار",
+    },
+    {
+      label: "انتقال‌ها",
+      href: "/warehouse/stock-transfers",
+      icon: "truck",
+      description: "انتقال بین انبارها",
     },
     {
       label: "خروج کالا",
@@ -188,16 +194,10 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "درخواست انتقال از زاگرس",
     },
     {
-      label: "موجودی ناجا",
-      href: "/support/naja-inventory",
-      icon: "package",
-      description: "موجودی اختصاصی ناجا",
-    },
-    {
-      label: "انبارها",
+      label: "انبارهای سپیدار",
       href: "/support/warehouses",
       icon: "warehouse",
-      description: "انبارهای عمومی و ناجا",
+      description: "فهرست و موجودی انبارها",
     },
     {
       label: "کاربران",

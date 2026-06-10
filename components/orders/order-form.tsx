@@ -27,7 +27,10 @@ import {
   listCustomers,
 } from "@/lib/services/customer.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
-import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
+import {
+  getAssignedCustomerForExpert,
+  listAssignedCustomersForExpert,
+} from "@/lib/services/expert-customer.service";
 import {
   listOrderProductsBySaleType,
   listProducts,
@@ -83,12 +86,16 @@ export function OrderForm({
 }: OrderFormProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedAssignment, setSelectedAssignment] =
+    useState<Customer | null>(null);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(!sepidarProductsOnly);
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [productsError, setProductsError] = useState("");
   const [customersError, setCustomersError] = useState("");
+  const [assignmentError, setAssignmentError] = useState("");
+  const [isLoadingAssignment, setIsLoadingAssignment] = useState(false);
   const [items, setItems] = useState<DraftItem[]>(() =>
     initialOrder ? mapOrderItems(initialOrder.items, []) : [createEmptyRow(0)],
   );
@@ -167,12 +174,54 @@ export function OrderForm({
   useEffect(() => {
     let isMounted = true;
 
+    async function loadAssignment() {
+      setSelectedAssignment(null);
+      setAssignmentError("");
+      if (!assignedCustomersOnly || !selectedCustomerId) return;
+
+      setIsLoadingAssignment(true);
+      try {
+        const assignment = await getAssignedCustomerForExpert(
+          selectedCustomerId,
+          getStoredCurrentUser()?.objectId,
+        );
+        if (!isMounted) return;
+        setSelectedAssignment(assignment);
+        if (process.env.NODE_ENV === "development") {
+          console.debug("[OrderForm] assignment inventory source", {
+            customer: assignment,
+            assignment: {
+              customerObjectId: assignment.objectId,
+              allowedStockObjectIds: assignment.allowedStockObjectIds,
+            },
+            saleType: assignment.saleType,
+            allowedStocks: assignment.allowedStocks,
+            allowedStockTitles: assignment.allowedStockTitles,
+          });
+        }
+      } catch (assignmentLoadError) {
+        if (!isMounted) return;
+        setAssignmentError(getErrorMessage(assignmentLoadError));
+      } finally {
+        if (isMounted) setIsLoadingAssignment(false);
+      }
+    }
+
+    loadAssignment();
+    return () => {
+      isMounted = false;
+    };
+  }, [assignedCustomersOnly, selectedCustomerId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
     async function loadProductsBySaleType() {
       if (!sepidarProductsOnly) return;
 
-      const customer = customers.find(
-        (entry) => entry.objectId === selectedCustomerId,
-      );
+      const customer = assignedCustomersOnly
+        ? selectedAssignment
+        : customers.find((entry) => entry.objectId === selectedCustomerId);
       const saleTypeId = customer?.saleType?.sepidarSaleTypeId;
 
       setProducts([]);
@@ -181,16 +230,33 @@ export function OrderForm({
         setIsLoadingProducts(false);
         return;
       }
-      if (!saleTypeId) {
+      if (
+        !saleTypeId ||
+        (assignedCustomersOnly && !hasAssignmentInventory(customer))
+      ) {
         setIsLoadingProducts(false);
         return;
       }
 
       setIsLoadingProducts(true);
       try {
-        const data = await listOrderProductsBySaleType(saleTypeId);
+        const data = await listOrderProductsBySaleType(saleTypeId, {
+          customerObjectId: customer.objectId,
+          expertUserId: getStoredCurrentUser()?.objectId,
+        });
         if (!isMounted) return;
         setProducts(data);
+        if (process.env.NODE_ENV === "development") {
+          console.debug(
+            "[OrderForm] assignment product availability",
+            data.map((product) => ({
+              productObjectId: product.objectId,
+              productName: product.name,
+              availableQuantity: product.availableSalesQuantity,
+              availableStocks: product.availableStocks,
+            })),
+          );
+        }
         if (initialOrder) {
           setItems(mapOrderItems(initialOrder.items, data));
         }
@@ -208,7 +274,14 @@ export function OrderForm({
     return () => {
       isMounted = false;
     };
-  }, [customers, initialOrder, selectedCustomerId, sepidarProductsOnly]);
+  }, [
+    assignedCustomersOnly,
+    customers,
+    initialOrder,
+    selectedAssignment,
+    selectedCustomerId,
+    sepidarProductsOnly,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -280,9 +353,9 @@ export function OrderForm({
     const product = productsById[item.productId];
     return sum + item.quantity * (product?.unitPrice ?? 0);
   }, 0);
-  const selectedCustomer = customers.find(
-    (customer) => customer.objectId === selectedCustomerId,
-  );
+  const selectedCustomer =
+    (assignedCustomersOnly ? selectedAssignment : null) ??
+    customers.find((customer) => customer.objectId === selectedCustomerId);
   const selectedAddress = addresses.find(
     (address) => address.objectId === selectedAddressId,
   );
@@ -328,6 +401,17 @@ export function OrderForm({
 
     if (assignedCustomersOnly && !selectedCustomerId) {
       setFieldErrors({ selectedCustomerId: "لطفاً مشتری را انتخاب کنید." });
+      return;
+    }
+
+    if (
+      assignedCustomersOnly &&
+      selectedCustomerId &&
+      !hasAssignmentInventory(selectedAssignment)
+    ) {
+      setFieldErrors({
+        selectedCustomerId: "برای این مشتری تنظیمات فروش تعریف نشده است.",
+      });
       return;
     }
 
@@ -446,6 +530,8 @@ export function OrderForm({
                 if (sepidarProductsOnly) {
                   setProducts([]);
                   setProductsError("");
+                  setSelectedAssignment(null);
+                  setAssignmentError("");
                   setItems([createEmptyRow(0)]);
                   setRowErrors({});
                 }
@@ -474,6 +560,9 @@ export function OrderForm({
               invalid={Boolean(fieldErrors.selectedCustomerId)}
             />
             <FieldError message={fieldErrors.selectedCustomerId} />
+            {assignmentError ? (
+              <FieldError message="برای این مشتری تنظیمات فروش تعریف نشده است." />
+            ) : null}
             {customersError ? (
               <FieldError message={customersError} />
             ) : assignedCustomersOnly &&
@@ -540,20 +629,14 @@ export function OrderForm({
               ) : null}
             </div>
             {assignedCustomersOnly ? (
-              selectedCustomer.allowedStocks.length ? (
+              getAllowedStockTitles(selectedCustomer).length ? (
                 <div className="mt-3 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-xs leading-6 text-[#2F6B3A]">
                   انبارهای مجاز:{" "}
-                  {selectedCustomer.allowedStocks
-                    .map((stock) =>
-                      [stock.code ? formatFaDigits(stock.code) : null, stock.title]
-                        .filter(Boolean)
-                        .join(" - "),
-                    )
-                    .join("، ")}
+                  {getAllowedStockTitles(selectedCustomer).join("، ")}
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
-                  برای این کارشناس انبار مجاز تعریف نشده است.
+                  برای این مشتری تنظیمات فروش تعریف نشده است.
                 </div>
               )
             ) : null}
@@ -636,9 +719,9 @@ export function OrderForm({
         !productsError &&
         sepidarProductsOnly &&
         selectedCustomerId &&
-        !selectedCustomer?.saleType?.sepidarSaleTypeId ? (
+        !hasAssignmentInventory(selectedCustomer) ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
-            برای این مشتری نوع فروش مشخص نشده است.
+            برای این مشتری تنظیمات فروش تعریف نشده است.
           </p>
         ) : null}
         {!isLoadingProducts &&
@@ -647,7 +730,7 @@ export function OrderForm({
         selectedCustomer?.saleType?.sepidarSaleTypeId &&
         products.length === 0 ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
-            برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است.
+            در انبارهای مجاز این کارشناس کالایی با موجودی قابل فروش پیدا نشد.
           </p>
         ) : null}
 
@@ -658,9 +741,9 @@ export function OrderForm({
             return (
               <div
                 key={item.rowId}
-                className="grid gap-3 border-b border-[#E7EDF3] py-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_88px_170px_190px_auto] md:items-center"
+                className="grid gap-3 border-b border-[#E7EDF3] py-4 last:border-b-0 xl:grid-cols-[auto_190px_170px_88px_minmax(280px,1fr)] xl:items-center"
               >
-                <div className="relative">
+                <div className="relative min-w-0">
                   <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                   <SearchableSelect
                     value={item.productId || undefined}
@@ -677,7 +760,7 @@ export function OrderForm({
                       .map((option) => ({
                         value: option.objectId,
                         label: sepidarProductsOnly
-                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)}`
+                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatNumber(option.availableSalesQuantity)} ${option.unit}`
                           : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
                       }))}
                     placeholder={
@@ -690,14 +773,15 @@ export function OrderForm({
                       sepidarProductsOnly &&
                       selectedCustomer?.saleType?.sepidarSaleTypeId &&
                       products.length === 0
-                        ? "برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است."
+                        ? "کالایی با موجودی قابل فروش پیدا نشد."
                         : "کالایی پیدا نشد"
                     }
                     triggerClassName="pr-10"
                     disabled={
                       sepidarProductsOnly &&
                       (!selectedCustomerId ||
-                        !selectedCustomer?.saleType?.sepidarSaleTypeId ||
+                        !hasAssignmentInventory(selectedCustomer) ||
+                        isLoadingAssignment ||
                         isLoadingProducts ||
                         Boolean(productsError))
                     }
@@ -753,9 +837,9 @@ export function OrderForm({
                   <Trash2 className="size-4" />
                 </Button>
 
-                <p className="text-xs text-[#6B7280] md:col-span-5">
+                <p className="text-xs text-[#6B7280] xl:col-span-5">
                   {product
-                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
+                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableSalesQuantity)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
                 </p>
               </div>
@@ -786,6 +870,10 @@ export function OrderForm({
               isLoadingCustomers ||
               Boolean(productsError) ||
               Boolean(customersError) ||
+              Boolean(assignmentError) ||
+              (assignedCustomersOnly &&
+                selectedCustomerId !== "" &&
+                !hasAssignmentInventory(selectedCustomer)) ||
               (assignedCustomersOnly && customers.length === 0)
             }
           >
@@ -808,9 +896,33 @@ export function OrderForm({
         totalAmount={totalAmount}
         status={initialOrder?.orderStatus ?? "pending_approval"}
         warehouseStatus={initialOrder?.warehouseStatus ?? "reserved"}
+        saleTypeTitle={selectedCustomer?.saleType?.title}
+        stockTitles={
+          selectedCustomer ? getAllowedStockTitles(selectedCustomer) : []
+        }
       />
     </section>
   );
+}
+
+function hasAssignmentInventory(customer: Customer | null | undefined): boolean {
+  return Boolean(
+    customer?.saleType?.sepidarSaleTypeId &&
+      (customer.allowedStockObjectIds.length > 0 ||
+        customer.allowedSepidarStockIds.length > 0 ||
+        customer.allowedStocks.length > 0),
+  );
+}
+
+function getAllowedStockTitles(customer: Customer): string[] {
+  if (customer.allowedStocks.length) {
+    return customer.allowedStocks.map((stock) =>
+      [stock.code ? formatFaDigits(stock.code) : null, stock.title]
+        .filter(Boolean)
+        .join(" - "),
+    );
+  }
+  return customer.allowedStockTitles;
 }
 
 function createEmptyRow(index: number): DraftItem {

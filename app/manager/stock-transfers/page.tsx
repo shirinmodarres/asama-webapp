@@ -97,12 +97,12 @@ export default function ManagerStockTransfersPage() {
     },
     {
       key: "quantity",
-      header: "تعداد",
+      header: "تعداد کالا",
       render: (row) => formatNumber(row.quantity),
     },
     {
       key: "requestedAt",
-      header: "زمان درخواست",
+      header: "تاریخ",
       render: (row) => (row.requestedAt ? formatDateTime(row.requestedAt) : "-"),
     },
     {

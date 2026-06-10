@@ -3,6 +3,7 @@ import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 
 export type OrderType = "normal" | "naja";
 export type FulfillmentStatus = "normal" | "onHold";
+export type QuotationStatus = "success" | "failed" | "pending";
 
 export interface OrderItem {
   objectId: string;
@@ -95,6 +96,7 @@ export interface Order {
   returnReason: string | null;
   sepidarQuotationId: number | null;
   sepidarQuotationNumber: number | string | null;
+  quotationStatus: QuotationStatus;
   sepidarIntegrationStatus: string | null;
   sepidarLastError: string | null;
   createdAt: string;
@@ -149,6 +151,12 @@ export interface MarkOrderNeedsReviewPayload {
 
 export interface ResolveOrderReviewPayload {
   resolvedByName: string;
+}
+
+export interface OrderApprovalResult {
+  order: Order | null;
+  quotationStatus: QuotationStatus;
+  warning: string | null;
 }
 
 export type StopShipmentPayload = LockShipmentPayload;

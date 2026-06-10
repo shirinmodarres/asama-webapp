@@ -50,8 +50,8 @@ export default function SupportPage() {
     (order) =>
       order.orderStatus === "pending_approval" || order.orderStatus === "approved",
   ).length;
-  const najaInventoryCount = products.filter(
-    (product) => product.najaInventoryQty > 0,
+  const activeProductCount = products.filter(
+    (product) => product.status === "active",
   ).length;
 
   return (
@@ -75,9 +75,9 @@ export default function SupportPage() {
           hint="برای ویرایش ویژه قابل بررسی"
         />
         <ManagerSummaryCard
-          title="اقلام دارای موجودی ناجا"
-          value={najaInventoryCount}
-          hint="اقلام قابل ثبت در ناجا"
+          title="کالاهای فعال"
+          value={activeProductCount}
+          hint="کالاهای فعال همگام‌شده"
         />
       </section>
 
@@ -98,9 +98,9 @@ export default function SupportPage() {
           href="/support/orders"
         />
         <SupportActionCard
-          title="موجودی ناجا"
-          description="تعریف و به روزرسانی موجودی اختصاصی سفارش های ناجا"
-          href="/support/naja-inventory"
+          title="انبارهای سپیدار"
+          description="مشاهده انبارها و موجودی همگام‌سازی‌شده"
+          href="/support/warehouses"
         />
       </section>
     </DashboardLayout>

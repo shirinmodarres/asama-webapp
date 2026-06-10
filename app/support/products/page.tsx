@@ -127,11 +127,6 @@ export default function SupportProductsPage() {
       render: (row) => formatNumber(row.salesStock),
     },
     {
-      key: "najaInventoryQty",
-      header: "موجودی ناجا",
-      render: (row) => formatNumber(row.najaInventoryQty),
-    },
-    {
       key: "warehouseStock",
       header: "موجودی کل انبارها",
       render: (row) => formatNumber(row.warehouseStock),

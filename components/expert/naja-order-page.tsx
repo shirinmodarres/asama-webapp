@@ -17,7 +17,10 @@ import { formatCurrency } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
-import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
+import {
+  getAssignedCustomerForExpert,
+  listAssignedCustomersForExpert,
+} from "@/lib/services/expert-customer.service";
 import { createNajaOrder } from "@/lib/services/naja.service";
 import { listOrderProductsBySaleType } from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
@@ -32,8 +35,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const router = useRouter();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [selectedAssignment, setSelectedAssignment] =
+    useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+  const [isLoadingAssignment, setIsLoadingAssignment] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerObjectId, setCustomerObjectId] = useState("");
   const [productId, setProductId] = useState("");
@@ -49,6 +55,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       "کارشناس ناجا",
   );
   const [error, setError] = useState("");
+  const [assignmentError, setAssignmentError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -77,11 +84,52 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     };
   }, []);
 
-  const selectedCustomer =
-    customers.find((customer) => customer.objectId === customerObjectId) ?? null;
+  const selectedCustomer = selectedAssignment;
   const selectedProduct =
     products.find((product) => product.objectId === productId) ?? null;
   const totalAmount = selectedProduct ? selectedProduct.unitPrice * quantity : 0;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAssignment() {
+      setSelectedAssignment(null);
+      setAssignmentError("");
+      if (!customerObjectId) return;
+
+      setIsLoadingAssignment(true);
+      try {
+        const assignment = await getAssignedCustomerForExpert(
+          customerObjectId,
+          getStoredCurrentUser()?.objectId,
+        );
+        if (!isMounted) return;
+        setSelectedAssignment(assignment);
+        if (process.env.NODE_ENV === "development") {
+          console.debug("[NajaOrderForm] assignment inventory source", {
+            customer: assignment,
+            assignment: {
+              customerObjectId: assignment.objectId,
+              allowedStockObjectIds: assignment.allowedStockObjectIds,
+            },
+            saleType: assignment.saleType,
+            allowedStocks: assignment.allowedStocks,
+            allowedStockTitles: assignment.allowedStockTitles,
+          });
+        }
+      } catch (assignmentLoadError) {
+        if (!isMounted) return;
+        setAssignmentError(getErrorMessage(assignmentLoadError));
+      } finally {
+        if (isMounted) setIsLoadingAssignment(false);
+      }
+    }
+
+    loadAssignment();
+    return () => {
+      isMounted = false;
+    };
+  }, [customerObjectId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,15 +139,31 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       setProductId("");
       setError("");
       const saleTypeId = selectedCustomer?.saleType?.sepidarSaleTypeId;
-      if (!selectedCustomer || !saleTypeId) {
+      if (!hasAssignmentInventory(selectedCustomer) || !saleTypeId) {
         setIsLoadingProducts(false);
         return;
       }
 
       setIsLoadingProducts(true);
       try {
-        const data = await listOrderProductsBySaleType(saleTypeId);
-        if (isMounted) setProducts(data);
+        const data = await listOrderProductsBySaleType(saleTypeId, {
+          customerObjectId: selectedCustomer.objectId,
+          expertUserId: getStoredCurrentUser()?.objectId,
+        });
+        if (isMounted) {
+          setProducts(data);
+          if (process.env.NODE_ENV === "development") {
+            console.debug(
+              "[NajaOrderForm] assignment product availability",
+              data.map((product) => ({
+                productObjectId: product.objectId,
+                productName: product.name,
+                availableQuantity: product.availableSalesQuantity,
+                availableStocks: product.availableStocks,
+              })),
+            );
+          }
+        }
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -133,7 +197,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)}`,
+        label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatFaDigits(product.availableSalesQuantity)} ${product.unit}`,
       })),
     [products],
   );
@@ -146,11 +210,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     if (!customerObjectId) {
       nextErrors.customerObjectId = "لطفاً مشتری/مرکز ناجا را انتخاب کنید.";
     }
-    if (selectedCustomer && !selectedCustomer.saleType?.sepidarSaleTypeId) {
-      nextErrors.customerObjectId = "برای این مشتری نوع فروش مشخص نشده است.";
-    }
-    if (!selectedCustomer?.allowedStocks.length) {
-      nextErrors.customerObjectId = "برای این کارشناس انبار مجاز تعریف نشده است.";
+    if (customerObjectId && !hasAssignmentInventory(selectedCustomer)) {
+      nextErrors.customerObjectId =
+        "برای این مشتری تنظیمات فروش تعریف نشده است.";
     }
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
     if (!productId) nextErrors.items = "حداقل یک کالا به سفارش اضافه کنید.";
@@ -237,6 +299,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   value={customerObjectId}
                   onValueChange={(value) => {
                     setCustomerObjectId(value);
+                    setSelectedAssignment(null);
+                    setAssignmentError("");
                     setFieldErrors((current) => ({
                       ...current,
                       customerObjectId: "",
@@ -251,6 +315,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   invalid={Boolean(fieldErrors.customerObjectId)}
                 />
                 <FieldError message={fieldErrors.customerObjectId} />
+                {assignmentError ? (
+                  <FieldError message="برای این مشتری تنظیمات فروش تعریف نشده است." />
+                ) : null}
               </div>
             </label>
 
@@ -273,31 +340,26 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   </span>
                   <span>نوع فروش: {selectedCustomer.saleType?.title || "-"}</span>
                 </div>
-                {selectedCustomer.allowedStocks.length ? (
+                {getAllowedStockTitles(selectedCustomer).length ? (
                   <div className="mt-3 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-xs leading-6 text-[#2F6B3A]">
                     انبارهای مجاز:{" "}
-                    {selectedCustomer.allowedStocks
-                      .map((stock) =>
-                        [stock.code ? formatFaDigits(stock.code) : null, stock.title]
-                          .filter(Boolean)
-                          .join(" - "),
-                      )
-                      .join("، ")}
+                    {getAllowedStockTitles(selectedCustomer).join("، ")}
                   </div>
                 ) : (
                   <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
-                    برای این کارشناس انبار مجاز تعریف نشده است.
+                    برای این مشتری تنظیمات فروش تعریف نشده است.
                   </div>
                 )}
               </div>
             ) : null}
 
             <div className="rounded-[18px] border border-[#DDEAE0] bg-[#F3FAF4] p-4 text-sm leading-7 text-[#2F6B3A] md:col-span-2">
-              موجودی بر اساس انبار اختصاص‌یافته به این کارشناس بررسی می‌شود.
+              موجودی قابل فروش بر اساس انبارهای مجاز تخصیص این مشتری از سرور
+              دریافت می‌شود.
             </div>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
-              <span>کالای ناجا</span>
+              <span>کالا</span>
               <div className="relative">
                 <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
@@ -315,15 +377,16 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                       ? "انتخاب کالا"
                       : "ابتدا مرکز/مشتری را انتخاب کنید."
                   }
-                  searchPlaceholder="جستجو در کالاهای ناجا"
+                  searchPlaceholder="جستجو در کالاها"
                   emptyMessage={
                     selectedCustomer?.saleType?.sepidarSaleTypeId
-                      ? "برای نوع فروش انتخاب‌شده قیمتی ثبت نشده است."
+                      ? "کالایی با موجودی قابل فروش پیدا نشد."
                       : "ابتدا مرکز/مشتری را انتخاب کنید."
                   }
                   disabled={
                     !selectedCustomer ||
-                    !selectedCustomer.saleType?.sepidarSaleTypeId ||
+                    !hasAssignmentInventory(selectedCustomer) ||
+                    isLoadingAssignment ||
                     isLoadingProducts
                   }
                   triggerClassName="pr-10"
@@ -458,6 +521,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 : ""}
               {" • "}
               قیمت واحد: {formatCurrency(selectedProduct.unitPrice)}
+              {" • "}
+              موجودی قابل فروش:{" "}
+              {formatFaDigits(selectedProduct.availableSalesQuantity)}{" "}
+              {selectedProduct.unit}
             </div>
           ) : null}
 
@@ -475,7 +542,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               disabled={
                 isSubmitting ||
                 isLoading ||
+                isLoadingAssignment ||
                 isLoadingProducts ||
+                Boolean(assignmentError) ||
+                !hasAssignmentInventory(selectedCustomer) ||
                 customers.length === 0
               }
             >
@@ -492,8 +562,32 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           totalAmount={totalAmount}
           status="pending_approval"
           warehouseStatus="reserved"
+          saleTypeTitle={selectedCustomer?.saleType?.title}
+          stockTitles={
+            selectedCustomer ? getAllowedStockTitles(selectedCustomer) : []
+          }
         />
       </section>
     </DashboardLayout>
   );
+}
+
+function hasAssignmentInventory(customer: Customer | null | undefined): boolean {
+  return Boolean(
+    customer?.saleType?.sepidarSaleTypeId &&
+      (customer.allowedStockObjectIds.length > 0 ||
+        customer.allowedSepidarStockIds.length > 0 ||
+        customer.allowedStocks.length > 0),
+  );
+}
+
+function getAllowedStockTitles(customer: Customer): string[] {
+  if (customer.allowedStocks.length) {
+    return customer.allowedStocks.map((stock) =>
+      [stock.code ? formatFaDigits(stock.code) : null, stock.title]
+        .filter(Boolean)
+        .join(" - "),
+    );
+  }
+  return customer.allowedStockTitles;
 }

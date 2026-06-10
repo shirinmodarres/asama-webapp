@@ -59,11 +59,17 @@ export function mapProductDto(dto: unknown): Product {
   const reservedStock = inventories.length
     ? inventoryReservedStock
     : toNumberValue(record.reservedStock);
-  const availableStock = inventories.length
-    ? inventoryAvailableStock
-    : record.availableStock === undefined
-      ? salesStock - reservedStock
-      : toNumberValue(record.availableStock);
+  const backendAvailableQuantity =
+    record.availableQuantity ??
+    record.availableSalesQuantity ??
+    record.availableStock;
+  const availableStock =
+    backendAvailableQuantity !== undefined &&
+    backendAvailableQuantity !== null
+      ? toNumberValue(backendAvailableQuantity)
+      : inventories.length
+        ? inventoryAvailableStock
+        : salesStock - reservedStock;
   const warehouseAvailableStock = inventories.length
     ? inventoryWarehouseAvailableStock
     : record.warehouseAvailableStock === undefined
@@ -122,6 +128,8 @@ export function mapProductDto(dto: unknown): Product {
     warehouseStock,
     reservedStock,
     availableStock,
+    availableSalesQuantity: availableStock,
+    availableStocks: [],
     warehouseAvailableStock,
     najaInventoryQty,
     inventories,
@@ -132,6 +140,52 @@ export function mapProductDto(dto: unknown): Product {
 
 export function mapProductListDto(dto: unknown): Product[] {
   return Array.isArray(dto) ? dto.map(mapProductDto) : [];
+}
+
+export function mapProductOrderOptionDto(dto: unknown): Product {
+  const record = toRecord(dto);
+  const product = mapProductDto(dto);
+  const hasAvailableSalesQuantity = Object.prototype.hasOwnProperty.call(
+    record,
+    "availableSalesQuantity",
+  );
+  if (!hasAvailableSalesQuantity && process.env.NODE_ENV === "development") {
+    console.warn("[ORDER_OPTIONS_MISSING_INVENTORY_FIELD]", record);
+  }
+  const availableSalesQuantity = toNumberValue(
+    record.availableSalesQuantity,
+  );
+  return {
+    ...product,
+    availableStock: availableSalesQuantity,
+    availableSalesQuantity,
+    availableStocks: Array.isArray(record.availableStocks)
+      ? record.availableStocks.map((value) => {
+          const stock = toRecord(value);
+          return {
+            stockObjectId: toStringValue(stock.stockObjectId),
+            sepidarStockId:
+              stock.sepidarStockId === null ||
+              stock.sepidarStockId === undefined
+                ? null
+                : toNumberValue(stock.sepidarStockId),
+            stockTitle: toStringValue(stock.stockTitle),
+            realQuantity: toNumberValue(stock.realQuantity),
+            salesQuantity: toNumberValue(stock.salesQuantity),
+            reservedQuantity: toNumberValue(stock.reservedQuantity),
+            useFullRealQuantityForSales:
+              stock.useFullRealQuantityForSales === true,
+            availableSalesQuantity: toNumberValue(
+              stock.availableSalesQuantity,
+            ),
+          };
+        })
+      : [],
+  };
+}
+
+export function mapProductOrderOptionListDto(dto: unknown): Product[] {
+  return Array.isArray(dto) ? dto.map(mapProductOrderOptionDto) : [];
 }
 
 export function mapSepidarProductSyncSummaryDto(

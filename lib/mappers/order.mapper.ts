@@ -25,6 +25,7 @@ import type {
   Order,
   OrderItem,
   OrderType,
+  QuotationStatus,
 } from "@/lib/models/order.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
@@ -231,6 +232,11 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarQuotationNumber === null
         ? null
         : toStringValue(record.sepidarQuotationNumber),
+    quotationStatus: mapQuotationStatus(
+      record.quotationStatus,
+      record.sepidarIntegrationStatus,
+      record.sepidarQuotationId,
+    ),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
     sepidarLastError: toNullableString(record.sepidarLastError),
     createdAt: toStringValue(record.createdAt),
@@ -279,6 +285,36 @@ function normalizeOrderStatus(value: string): string {
 
 function mapFulfillmentStatus(value: unknown): FulfillmentStatus {
   return value === "onHold" ? "onHold" : "normal";
+}
+
+function mapQuotationStatus(
+  value: unknown,
+  integrationStatus: unknown,
+  quotationId: unknown,
+): QuotationStatus {
+  const explicit = toStringValue(value);
+  if (explicit === "success" || explicit === "failed" || explicit === "pending") {
+    return explicit;
+  }
+
+  const integration = toStringValue(integrationStatus);
+  if (integration === "quotation_failed" || integration === "failed") {
+    return "failed";
+  }
+  if (
+    quotationId !== undefined &&
+    quotationId !== null &&
+    quotationId !== ""
+  ) {
+    return "success";
+  }
+  if (
+    integration === "quotation_created" ||
+    integration === "success"
+  ) {
+    return "success";
+  }
+  return "pending";
 }
 
 function getFulfillmentStatusLabel(status: FulfillmentStatus): string {

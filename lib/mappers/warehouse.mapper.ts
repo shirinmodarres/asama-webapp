@@ -12,7 +12,6 @@ import type {
   ExitSlipItemUnit,
   ExitSlipPdfData,
   ProductWarehouseInventory,
-  Warehouse,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
   WarehouseUnitStatus,
@@ -26,36 +25,6 @@ const UNIT_STATUS_LABELS: Record<WarehouseUnitStatus, string> = {
   delivered: "تحویل شده",
   returned: "برگشتی",
 };
-
-export function mapWarehouseDto(dto: unknown): Warehouse {
-  const record = toRecord(dto);
-  return {
-    objectId: toStringValue(record.objectId),
-    id: toStringValue(record.id) || toStringValue(record.objectId),
-    name: toStringValue(record.name),
-    code: normalizeDigits(toStringValue(record.code)),
-    type: toStringValue(record.type) || "general",
-    allowedOrderTypes: toArray(record.allowedOrderTypes)
-      .map((value) => toStringValue(value))
-      .filter((value): value is "normal" | "naja" =>
-        value === "normal" || value === "naja",
-      ),
-    isDefault: toBooleanValue(record.isDefault),
-    status: toStringValue(record.status) || "active",
-  };
-}
-
-export function mapWarehouseListDto(dto: unknown): Warehouse[] {
-  const record = toRecord(dto);
-  const source = Array.isArray(dto)
-    ? dto
-    : toArray(record.items).length
-      ? record.items
-      : toArray(record.data).length
-        ? record.data
-        : record.results;
-  return toArray(source).map(mapWarehouseDto);
-}
 
 export function mapProductWarehouseInventoryDto(
   dto: unknown,

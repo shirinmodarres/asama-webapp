@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/api-error";
 import {
   mapProductDto,
   mapProductListDto,
+  mapProductOrderOptionListDto,
   mapSepidarProductSyncSummaryDto,
 } from "@/lib/mappers/product.mapper";
 import { toRecord } from "@/lib/mappers/mapper-utils";
@@ -45,15 +46,34 @@ export async function listSepidarOrderProducts(): Promise<Product[]> {
 
 export async function listOrderProductsBySaleType(
   saleTypeId: number,
+  context?: {
+    customerObjectId?: string;
+    expertUserId?: string;
+  },
 ): Promise<Product[]> {
   const params = new URLSearchParams({ saleTypeId: String(saleTypeId) });
+  if (context?.customerObjectId) {
+    params.set("customerObjectId", context.customerObjectId);
+  }
+  if (context?.expertUserId) {
+    params.set("expertUserId", context.expertUserId);
+  }
   const data = await httpClient.get<unknown>(
     `/api/products/order-options?${params.toString()}`,
   );
   const record = toRecord(data);
-  return mapProductListDto(
+  const products = mapProductOrderOptionListDto(
     Array.isArray(data) ? data : record.items ?? record.products ?? [],
   );
+  console.log(
+    "[FRONTEND_ORDER_OPTIONS]",
+    products.map((product) => ({
+      code: product.sepidarCode || product.sku,
+      name: product.name,
+      availableSalesQuantity: product.availableSalesQuantity,
+    })),
+  );
+  return products;
 }
 
 export async function syncPricesFromSepidar(): Promise<SepidarProductSyncSummary> {

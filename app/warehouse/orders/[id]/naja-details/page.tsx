@@ -84,7 +84,7 @@ export default function WarehouseNajaDetailsPage() {
         completedByName: "رضا احمدی",
       });
       setOrder(updated);
-      setMessage("اطلاعات انبار ناجا ثبت شد.");
+      setMessage("اطلاعات سفارش ناجا ثبت شد.");
       setTimeout(() => {
         router.push("/finance/ready");
         router.refresh();
