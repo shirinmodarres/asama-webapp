@@ -50,22 +50,15 @@ export default function ExitSlipDetailsPage() {
     };
   }, [params.id]);
 
-  const deliveryLink =
-    slip?.deliveryLink ||
-    (slip?.deliveryToken ? `/delivery/${slip.deliveryToken}` : "");
+  const deliveryLink = slip?.deliveryLink || "";
   const totalQuantity =
     slip?.items.reduce((sum, item) => sum + item.quantity, 0) ??
     slip?.units.length ??
     0;
 
-  const getAbsoluteDeliveryLink = () =>
-    typeof window !== "undefined" && deliveryLink.startsWith("/")
-      ? `${window.location.origin}${deliveryLink}`
-      : deliveryLink;
-
   const copyDeliveryLink = async () => {
     if (!deliveryLink) return;
-    await navigator.clipboard.writeText(getAbsoluteDeliveryLink());
+    await navigator.clipboard.writeText(deliveryLink);
     setCopyMessage("لینک تأیید دریافت کپی شد.");
   };
 
@@ -128,7 +121,7 @@ export default function ExitSlipDetailsPage() {
                 <dt className="text-xs text-[#6B7280]">لینک تأیید دریافت</dt>
                 <dd className="mt-2 flex items-center justify-between gap-3 text-sm font-medium text-[#1F3A5F]">
                   <span className="max-w-[220px] truncate text-left" dir="ltr">
-                    {deliveryLink ? getAbsoluteDeliveryLink() : "-"}
+                    {deliveryLink || "-"}
                   </span>
                   <Button
                     type="button"

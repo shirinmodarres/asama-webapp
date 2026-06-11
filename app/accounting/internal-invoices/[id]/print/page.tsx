@@ -284,14 +284,6 @@ function Total({
   );
 }
 
-function Signature({ label }: { label: string }) {
-  return (
-    <div className="border-t border-[#94A3B8] pt-3 text-center text-sm font-semibold">
-      {label}
-    </div>
-  );
-}
-
 function formatUnitCodes(item: InternalInvoice["items"][number]): string {
   const values = [
     ...item.serialNumbers.map((value) => `سریال: ${formatFaDigits(value)}`),
