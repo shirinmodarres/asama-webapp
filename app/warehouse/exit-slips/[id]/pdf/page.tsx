@@ -98,7 +98,7 @@ export default function ExitSlipPdfPage() {
             <p className="text-sm text-[#6B7280]">اطلاعات حواله یافت نشد.</p>
           ) : (
             <div className="space-y-6">
-              <header className="relative min-h-[120px] pb-5 pt-16">
+              <header className="relative min-h-33 pb-4 pt-14">
                 <div className="absolute left-0 top-0 w-[265px] border-r-2 border-[#7BC68A] bg-white px-4  text-right text-sm leading-8 text-[#334155] ">
                   <p>کد حواله: {formatFaDigits(data.slipCode)}</p>
                   <p>کد سفارش: {formatFaDigits(data.orderCode)}</p>
@@ -153,7 +153,11 @@ export default function ExitSlipPdfPage() {
               <section className="space-y-4">
                 {data.items.map((item) => (
                   <div
-                    key={item.productObjectId || item.productSku || item.productName}
+                    key={
+                      item.productObjectId ||
+                      item.productSku ||
+                      item.productName
+                    }
                     className="rounded-lg border border-[#D7DEE6] p-3"
                   >
                     <div className="grid gap-3 sm:grid-cols-3">
@@ -161,7 +165,9 @@ export default function ExitSlipPdfPage() {
                       <Info
                         label="کد کالا"
                         value={
-                          item.productSku ? formatFaDigits(item.productSku) : "-"
+                          item.productSku
+                            ? formatFaDigits(item.productSku)
+                            : "-"
                         }
                       />
                       <Info label="تعداد" value={formatNumber(item.quantity)} />
@@ -189,8 +195,7 @@ export default function ExitSlipPdfPage() {
                         {item.units.map((unit, index) => (
                           <tr
                             key={
-                              unit.unitObjectId ||
-                              `${item.productSku}-${index}`
+                              unit.unitObjectId || `${item.productSku}-${index}`
                             }
                           >
                             <td className="border border-[#D7DEE6] px-3 py-2">

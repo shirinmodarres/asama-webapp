@@ -235,6 +235,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     const requestedQuantity = toNumber(quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
       nextErrors.quantity = POSITIVE_NUMBER_MESSAGE;
+    } else if (
+      selectedProduct &&
+      requestedQuantity > selectedProduct.availableSalesQuantity
+    ) {
+      nextErrors.quantity = "موجودی قابل فروش کافی نیست";
     }
     if (selectedProduct && selectedProduct.unitPrice <= 0) {
       nextErrors.productId = "قیمت کالا برای این نوع فروش ثبت نشده است.";
@@ -400,6 +405,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               <span>تعداد</span>
               <Input
                 inputMode="numeric"
+                min={1}
+                max={selectedProduct?.availableSalesQuantity}
                 value={quantity}
                 onChange={(event) => {
                   setQuantity(toNumber(event.target.value));

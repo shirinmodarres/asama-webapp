@@ -132,7 +132,11 @@ export function mapOrderDto(dto: unknown): Order {
         customerRecord.nationalId,
     ),
     customerPhone: normalizeNullablePhone(
-      record.customerPhone ?? record.phoneNumber ?? customerRecord.phone,
+      record.customerPhone ??
+        record.customerMobile ??
+        record.phoneNumber ??
+        customerRecord.phone ??
+        customerRecord.mobile,
     ),
     deliveryAddressTitle: toNullableString(
       record.deliveryAddressTitle ?? addressRecord.title,
@@ -146,6 +150,10 @@ export function mapOrderDto(dto: unknown): Order {
     ),
     deliveryFullAddress: toNullableString(
       record.deliveryFullAddress ??
+        record.customerAddressSnapshot ??
+        (typeof record.customerAddress === "string"
+          ? record.customerAddress
+          : undefined) ??
         record.fullAddress ??
         addressRecord.fullAddress,
     ),

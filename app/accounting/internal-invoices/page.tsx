@@ -16,6 +16,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime } from "@/lib/expert/utils";
 import type { InternalInvoice } from "@/lib/models/internal-invoice.model";
+import { getInternalInvoiceStatusLabel } from "@/lib/mappers/internal-invoice.mapper";
 import { listInternalInvoices } from "@/lib/services/internal-invoice.service";
 import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 
@@ -65,6 +66,8 @@ export default function InternalInvoicesPage() {
             invoice.orderNumber.toLowerCase().includes(query) ||
             invoice.exitSlipNumber.toLowerCase().includes(query) ||
             (invoice.customerName ?? "").toLowerCase().includes(query) ||
+            (invoice.customerMobile ?? "").toLowerCase().includes(query) ||
+            (invoice.customerPhone ?? "").toLowerCase().includes(query) ||
             (invoice.stockTitle ?? "").toLowerCase().includes(query);
           const matchesStatus =
             statusFilter === "all" || invoice.status === statusFilter;
@@ -116,8 +119,17 @@ export default function InternalInvoicesPage() {
       key: "status",
       header: "وضعیت",
       render: (row) => (
-        <Badge variant={row.status === "entered" ? "success" : "warning"} dot>
-          {row.statusLabel}
+        <Badge
+          variant={
+            row.status === "entered_manually"
+              ? "success"
+              : row.status === "cancelled"
+                ? "destructive"
+                : "warning"
+          }
+          dot
+        >
+          {getInternalInvoiceStatusLabel(row.status, row.statusLabel)}
         </Badge>
       ),
     },
@@ -134,7 +146,7 @@ export default function InternalInvoicesPage() {
           href={`/accounting/internal-invoices/${row.objectId || row.id}`}
           className="btn-primary inline-flex rounded-xl px-3 py-2 text-xs font-medium text-white"
         >
-          {row.status === "entered"
+          {row.status !== "ready_for_accounting"
             ? "مشاهده جزئیات"
             : "مشاهده و ثبت در حسابداری"}
         </Link>
@@ -167,9 +179,15 @@ export default function InternalInvoicesPage() {
                 onValueChange={setStatusFilter}
                 options={[
                   { value: "all", label: "همه وضعیت‌ها" },
-                  { value: "ready", label: "آماده ثبت" },
-                  { value: "pending_entry", label: "آماده ثبت" },
-                  { value: "entered", label: "ثبت‌شده در حسابداری" },
+                  {
+                    value: "ready_for_accounting",
+                    label: "آماده ثبت در حسابداری",
+                  },
+                  {
+                    value: "entered_manually",
+                    label: "ثبت‌شده در حسابداری",
+                  },
+                  { value: "cancelled", label: "لغوشده" },
                 ]}
                 placeholder="همه وضعیت‌ها"
                 searchPlaceholder="جستجو در وضعیت‌ها"

@@ -58,6 +58,13 @@ export function mapCustomerDto(dto: unknown): Customer {
       toStringValue(record.source).toLowerCase() === "sepidar",
     fullName: toStringValue(record.fullName ?? record.title ?? record.name),
     phone: normalizePhone(toStringValue(record.phone ?? record.mobile)),
+    mobile: toNullableString(record.mobile)
+      ? normalizePhone(toStringValue(record.mobile))
+      : null,
+    address: toNullableString(record.address),
+    postalCode: toNullableString(record.postalCode)
+      ? normalizeDigits(toStringValue(record.postalCode))
+      : null,
     nationalId: record.nationalId
       ? normalizeDigits(toStringValue(record.nationalId))
       : null,

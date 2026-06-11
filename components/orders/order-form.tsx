@@ -468,23 +468,41 @@ export function OrderForm({
       return;
     }
 
-    if (!sepidarProductsOnly) {
-      const requestedByProduct = new Map<string, number>();
-      normalizedItems.forEach((item) => {
-        requestedByProduct.set(
-          item.productId,
-          (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
-        );
-      });
-      const insufficientProduct = Array.from(requestedByProduct.entries()).find(
-        ([productId, quantity]) =>
-          quantity > (productsById[productId]?.availableStock ?? 0),
+    const requestedByProduct = new Map<string, number>();
+    normalizedItems.forEach((item) => {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
       );
-      if (insufficientProduct) {
-        const product = productsById[insufficientProduct[0]];
-        setError(`موجودی قابل فروش برای «${product?.name ?? "کالا"}» کافی نیست.`);
-        return;
-      }
+    });
+    const insufficientProduct = Array.from(requestedByProduct.entries()).find(
+      ([productId, quantity]) => {
+        const product = productsById[productId];
+        const availableQuantity = sepidarProductsOnly
+          ? product?.availableSalesQuantity
+          : product?.availableStock;
+        return quantity > (availableQuantity ?? 0);
+      },
+    );
+    if (insufficientProduct) {
+      const product = productsById[insufficientProduct[0]];
+      const affectedRows = items.filter(
+        (item) => item.productId === insufficientProduct[0],
+      );
+      setRowErrors(
+        affectedRows.reduce<
+          Record<string, { productId?: string; quantity?: string }>
+        >((result, item) => {
+          result[item.rowId] = {
+            quantity: "موجودی قابل فروش کافی نیست",
+          };
+          return result;
+        }, {}),
+      );
+      setError(
+        `موجودی قابل فروش برای «${product?.name ?? "کالا"}» کافی نیست.`,
+      );
+      return;
     }
 
     if (selectedCustomerId && !selectedAddressId) {
@@ -793,6 +811,14 @@ export function OrderForm({
                 <div>
                   <Input
                     inputMode="numeric"
+                    min={1}
+                    max={
+                      product
+                        ? sepidarProductsOnly
+                          ? product.availableSalesQuantity
+                          : product.availableStock
+                        : undefined
+                    }
                     value={item.quantity}
                     onChange={(event) =>
                       updateRow(item.rowId, {

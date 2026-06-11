@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { PanelRoleKey } from "@/lib/domain/roles";
 import { formatNumber } from "@/lib/expert/utils";
-import type { ProductStockInventory } from "@/lib/models/stock.model";
-import { listWarehouseInventory } from "@/lib/services/warehouse.service";
+import type { SepidarStock } from "@/lib/models/stock.model";
+import { listStocks } from "@/lib/services/stock.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface StockInventoryViewProps {
@@ -30,7 +30,7 @@ export function StockInventoryView({
   sectionTitle,
   description,
 }: StockInventoryViewProps) {
-  const [inventories, setInventories] = useState<ProductStockInventory[]>([]);
+  const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -41,8 +41,8 @@ export function StockInventoryView({
       setIsLoading(true);
       setError("");
       try {
-        const data = await listWarehouseInventory();
-        if (isMounted) setInventories(data);
+        const data = await listStocks();
+        if (isMounted) setStocks(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -57,47 +57,46 @@ export function StockInventoryView({
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return inventories.filter(
+    return stocks.filter(
       (row) =>
         !query ||
-        row.productName.toLowerCase().includes(query) ||
-        row.productSku.toLowerCase().includes(query) ||
-        row.stockTitle.toLowerCase().includes(query),
+        row.title.toLowerCase().includes(query) ||
+        (row.code ?? "").toLowerCase().includes(query),
     );
-  }, [inventories, search]);
+  }, [stocks, search]);
 
-  const groups = useMemo(() => groupByStock(rows), [rows]);
-
-  const columns: DataTableColumn<ProductStockInventory>[] = [
+  const columns: DataTableColumn<SepidarStock>[] = [
     {
-      key: "code",
-      header: "کد کالا",
-      render: (row) => formatFaDigits(row.productSku || "-"),
-    },
-    {
-      key: "name",
-      header: "نام کالا",
-      render: (row) => row.productName || "-",
+      key: "warehouse",
+      header: "نام انبار",
+      render: (row) => (
+        <div>
+          <p className="font-semibold text-[#1F3A5F]">{row.title || "-"}</p>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            {formatFaDigits(row.code || "-")}
+          </p>
+        </div>
+      ),
     },
     {
       key: "real",
       header: "موجودی واقعی",
-      render: (row) => formatNumber(row.realQuantity),
+      render: (row) => formatNumber(row.realInventoryCount),
     },
     {
       key: "sales",
       header: "موجودی فروش",
-      render: (row) => formatNumber(row.salesQuantity),
+      render: (row) => formatNumber(row.salesInventoryCount),
     },
     {
       key: "reserved",
       header: "رزرو شده",
-      render: (row) => formatNumber(row.reservedQuantity),
+      render: (row) => formatNumber(row.reservedInventoryCount),
     },
     {
       key: "available",
       header: "موجودی قابل فروش",
-      render: (row) => formatNumber(row.availableSalesQuantity),
+      render: (row) => formatNumber(row.availableSalesInventoryCount),
     },
   ];
 
@@ -113,7 +112,7 @@ export function StockInventoryView({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="جستجو بر اساس کالا، کد یا انبار"
+              placeholder="جستجو بر اساس نام یا کد انبار"
               className="pr-10"
             />
           </div>
@@ -124,21 +123,12 @@ export function StockInventoryView({
         <LoadingState title="در حال دریافت موجودی انبارهای سپیدار" />
       ) : error ? (
         <PageErrorMessage title="دریافت موجودی انجام نشد" message={error} />
-      ) : groups.length ? (
-        <div className="space-y-5">
-          {groups.map((group) => (
-            <section key={group.stockId} className="space-y-3">
-              <h2 className="text-base font-semibold text-[#1F3A5F]">
-                {group.stockTitle}
-              </h2>
-              <DataTable
-                columns={columns}
-                rows={group.rows}
-                rowKey={(row) => row.objectId}
-              />
-            </section>
-          ))}
-        </div>
+      ) : rows.length ? (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.objectId}
+        />
       ) : (
         <EmptyState
           title="موجودی یافت نشد"
@@ -146,35 +136,5 @@ export function StockInventoryView({
         />
       )}
     </DashboardLayout>
-  );
-}
-
-function groupByStock(rows: ProductStockInventory[]) {
-  const groups = new Map<
-    string,
-    {
-      stockId: string;
-      stockTitle: string;
-      rows: ProductStockInventory[];
-    }
-  >();
-
-  for (const row of rows) {
-    const key =
-      row.stockObjectId ||
-      (row.sepidarStockId !== null ? String(row.sepidarStockId) : "") ||
-      row.stockTitle ||
-      "unknown";
-    const group = groups.get(key) ?? {
-      stockId: key,
-      stockTitle: row.stockTitle || "انبار سپیدار",
-      rows: [],
-    };
-    group.rows.push(row);
-    groups.set(key, group);
-  }
-
-  return Array.from(groups.values()).sort((a, b) =>
-    a.stockTitle.localeCompare(b.stockTitle, "fa"),
   );
 }

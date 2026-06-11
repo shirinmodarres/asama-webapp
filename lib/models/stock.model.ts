@@ -9,6 +9,7 @@ export interface SepidarStock {
   realInventoryCount: number;
   salesInventoryCount: number;
   reservedInventoryCount: number;
+  availableSalesInventoryCount: number;
   lastSepidarSyncAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -69,6 +70,7 @@ export interface StockTransferRequest {
 
 export interface CreateStockTransferPayload {
   productObjectId: string;
+  sourceStockObjectId: string;
   destinationStockObjectId: string;
   quantity: number;
   note?: string;

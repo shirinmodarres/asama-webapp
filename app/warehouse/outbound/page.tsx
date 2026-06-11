@@ -117,15 +117,27 @@ export default function WarehouseOutboundPage() {
       render: (row) => row.receiverFullName || row.customerName || "-",
     },
     {
-      key: "items",
-      header: "تعداد آیتم",
-      render: (row) => formatNumber(row.items.length),
+      key: "products",
+      header: "کالا",
+      cellClassName: "max-w-[320px] whitespace-normal leading-7",
+      render: (row) =>
+        row.items
+          .map((item) => item.productName || item.productSku || "-")
+          .join("، "),
+    },
+    {
+      key: "quantity",
+      header: "تعداد",
+      render: (row) =>
+        formatNumber(
+          row.items.reduce((sum, item) => sum + item.quantity, 0),
+        ),
     },
     {
       key: "warehouse",
-      header: "انبار خروج",
+      header: "انبار اختصاص‌یافته",
       render: (row) =>
-        row.stockTitle ? `انبار خروج: ${row.stockTitle}` : row.warehouseName || "-",
+        row.stockTitle || row.warehouseName || "-",
     },
     {
       key: "warehouseStatus",

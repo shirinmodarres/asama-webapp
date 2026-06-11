@@ -99,6 +99,16 @@ export default function SupportWarehousesPage() {
       render: (row) => formatNumber(row.salesInventoryCount),
     },
     {
+      key: "reserved",
+      header: "موجودی رزروشده",
+      render: (row) => formatNumber(row.reservedInventoryCount),
+    },
+    {
+      key: "available-sales",
+      header: "موجودی قابل فروش",
+      render: (row) => formatNumber(row.availableSalesInventoryCount),
+    },
+    {
       key: "status",
       header: "وضعیت",
       render: (row) => (

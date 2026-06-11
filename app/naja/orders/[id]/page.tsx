@@ -182,7 +182,11 @@ export default function NajaOrderDetailsPage() {
                 value={order.saleTypeTitle || order.saleType?.title || "-"}
               />
               <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
-              <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+              <InfoItem label="موبایل مشتری" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+              <InfoItem
+                label="آدرس مشتری"
+                value={order.deliveryFullAddress || "-"}
+              />
               <InfoItem
                 label="نام و نام خانوادگی تحویل‌گیرنده"
                 value={
@@ -236,6 +240,11 @@ export default function NajaOrderDetailsPage() {
               ) : null}
               {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
+            {!order.customerPhone || !order.deliveryFullAddress ? (
+              <div className="mt-4 rounded-xl border border-[#F3D08B] bg-[#FFF8E8] px-4 py-3 text-sm text-[#8A6116]">
+                اطلاعات تماس یا آدرس مشتری از سپیدار پیدا نشد.
+              </div>
+            ) : null}
           </div>
 
           <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />

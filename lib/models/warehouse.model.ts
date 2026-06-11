@@ -131,7 +131,6 @@ export interface ExitSlipPdfData {
 
 export interface CreateInboundReceiptPayload {
   productObjectId: string;
-  warehouseId?: string;
   units: Array<{
     productIdentifier: string;
     serialNumber: string;

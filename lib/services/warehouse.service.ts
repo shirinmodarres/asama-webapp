@@ -177,9 +177,6 @@ function normalizeInboundPayload(
 ): CreateInboundReceiptPayload {
   return {
     ...payload,
-    warehouseId: payload.warehouseId
-      ? normalizeDigits(payload.warehouseId)
-      : payload.warehouseId,
     units: payload.units.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),

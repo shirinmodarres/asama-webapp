@@ -43,6 +43,9 @@ export interface Customer {
   isSyncedFromSepidar: boolean;
   fullName: string;
   phone: string;
+  mobile: string | null;
+  address: string | null;
+  postalCode: string | null;
   nationalId: string | null;
   assignedExpertName: string | null;
   status: CustomerStatus;

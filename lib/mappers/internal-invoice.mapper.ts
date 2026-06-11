@@ -13,10 +13,25 @@ import type {
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 const STATUS_LABELS: Record<string, string> = {
-  ready: "آماده ثبت",
-  pending_entry: "آماده ثبت",
-  entered: "ثبت‌شده در حسابداری",
+  ready_for_accounting: "آماده ثبت در حسابداری",
+  ready_for_accountin: "آماده ثبت در حسابداری",
+  entered_manually: "ثبت‌شده در حسابداری",
+  cancelled: "لغوشده",
 };
+
+export function getInternalInvoiceStatusLabel(
+  status: string,
+  statusLabel?: unknown,
+): string {
+  const providedLabel = toStringValue(statusLabel);
+  if (
+    providedLabel &&
+    !Object.prototype.hasOwnProperty.call(STATUS_LABELS, providedLabel)
+  ) {
+    return providedLabel;
+  }
+  return STATUS_LABELS[status] || STATUS_LABELS[providedLabel] || status;
+}
 
 export function mapInternalInvoiceItemDto(dto: unknown): InternalInvoiceItem {
   const record = toRecord(dto);
@@ -26,6 +41,7 @@ export function mapInternalInvoiceItemDto(dto: unknown): InternalInvoiceItem {
 
   return {
     objectId: toStringValue(record.objectId),
+    rowNumber: toNumberValue(record.rowNumber),
     productObjectId: toStringValue(
       record.productObjectId ?? record.productId ?? product.objectId,
     ),
@@ -38,12 +54,24 @@ export function mapInternalInvoiceItemDto(dto: unknown): InternalInvoiceItem {
           product.code,
       ),
     ),
+    sepidarCode: normalizeDigits(
+      toStringValue(record.sepidarCode ?? record.productCode),
+    ),
     productName: toStringValue(
       record.productName ?? record.title ?? product.name ?? product.title,
     ),
     quantity,
     unitPrice,
     lineTotal: toNumberValue(record.lineTotal) || quantity * unitPrice,
+    serialNumbers: toArray(record.serialNumbers).map((value) =>
+      normalizeDigits(toStringValue(value)),
+    ),
+    trackingCodes: toArray(record.trackingCodes).map((value) =>
+      normalizeDigits(toStringValue(value)),
+    ),
+    productIdentifiers: toArray(record.productIdentifiers).map((value) =>
+      normalizeDigits(toStringValue(value)),
+    ),
     units: mapWarehouseItemUnitListDto(record.units),
   };
 }
@@ -54,7 +82,11 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
   const record = Object.keys(nested).length ? nested : wrapper;
   const order = toRecord(record.order);
   const exitSlip = toRecord(record.exitSlip);
-  const status = toStringValue(record.status) || "ready";
+  const rawStatus = toStringValue(record.status) || "ready_for_accounting";
+  const status =
+    rawStatus === "ready_for_accountin"
+      ? "ready_for_accounting"
+      : rawStatus;
 
   return {
     objectId: toStringValue(record.objectId),
@@ -67,6 +99,7 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
           record.code,
       ),
     ),
+    invoiceDate: toStringValue(record.invoiceDate ?? record.createdAt),
     orderObjectId: toStringValue(
       record.orderObjectId ?? record.orderId ?? order.objectId,
     ),
@@ -86,7 +119,38 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
           exitSlip.code,
       ),
     ),
-    customerName: toNullableString(record.customerName),
+    customerName: toNullableString(
+      record.customerName ?? order.customerName,
+    ),
+    customerCode: toNullableString(
+      record.customerCode ?? record.sepidarCustomerCode,
+    ),
+    sepidarCustomerCode: toNullableString(
+      record.sepidarCustomerCode ?? record.customerCode,
+    ),
+    customerMobile: toNullableString(
+      record.customerMobile ?? order.customerMobile ?? order.customerPhone,
+    )
+      ? normalizePhone(
+          toStringValue(
+            record.customerMobile ?? order.customerMobile ?? order.customerPhone,
+          ),
+        )
+      : null,
+    customerPhone: toNullableString(
+      record.customerPhone ?? order.customerPhone ?? order.customerMobile,
+    )
+      ? normalizePhone(
+          toStringValue(
+            record.customerPhone ?? order.customerPhone ?? order.customerMobile,
+          ),
+        )
+      : null,
+    customerAddress: toNullableString(
+      record.customerAddress ??
+        order.customerAddressSnapshot ??
+        order.deliveryFullAddress,
+    ),
     stockTitle: toNullableString(
       record.stockTitle ?? record.warehouseTitle ?? record.warehouseName,
     ),
@@ -107,17 +171,18 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
         )
       : null,
     grossAmount: toNumberValue(record.grossAmount ?? record.totalAmount),
-    discount: toNumberValue(record.discount),
-    tax: toNumberValue(record.tax),
-    duty: toNumberValue(record.duty),
-    addition: toNumberValue(record.addition),
+    discount: toNumberValue(record.discountAmount ?? record.discount),
+    tax: toNumberValue(record.taxAmount ?? record.tax),
+    duty: toNumberValue(record.dutyAmount ?? record.duty),
+    addition: toNumberValue(record.additionAmount ?? record.addition),
     netAmount: toNumberValue(record.netAmount ?? record.payableAmount),
     status,
-    statusLabel:
-      toStringValue(record.statusLabel) || STATUS_LABELS[status] || status,
+    statusLabel: getInternalInvoiceStatusLabel(status, record.statusLabel),
     manualInvoiceNumber: toNullableString(record.manualInvoiceNumber),
     accountantNote: toNullableString(record.accountantNote),
-    enteredAt: toNullableString(record.enteredAt),
+    enteredAt: toNullableString(
+      record.enteredManuallyAt ?? record.enteredAt,
+    ),
     pdfUrl: toNullableString(record.pdfUrl),
     items: toArray(record.items).map(mapInternalInvoiceItemDto),
     createdAt: toStringValue(record.createdAt),

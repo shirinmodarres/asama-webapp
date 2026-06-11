@@ -211,6 +211,11 @@ export default function WarehouseInboundPage() {
         submitError.code === "DUPLICATE_TRACKING_CODE"
       ) {
         setError("کد رهگیری قبلاً ثبت شده است.");
+      } else if (
+        submitError instanceof ApiError &&
+        submitError.code === "ZAGROS_STOCK_NOT_CONFIGURED"
+      ) {
+        setError("انبار زاگرس در تنظیمات موجودی پیدا نشد.");
       } else {
         setError(getErrorMessage(submitError));
       }
@@ -242,7 +247,7 @@ export default function WarehouseInboundPage() {
 
           <Card className="p-5">
             <div className="mb-4 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A]">
-              ورود کالا فقط در انبار زاگرس ثبت می‌شود.
+              تمام ورود کالاها در انبار زاگرس ثبت می‌شوند.
             </div>
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -284,10 +289,6 @@ export default function WarehouseInboundPage() {
                 <InfoItem label="شناسه/کد" value={formatFaDigits(selectedProduct.sku)} />
                 <InfoItem label="برند" value={selectedProduct.brand || "-"} />
                 <InfoItem label="مدل" value={selectedProduct.model || "-"} />
-                <InfoItem
-                  label="موجودی واقعی انبار"
-                  value={formatNumber(selectedProduct.warehouseStock)}
-                />
               </dl>
             ) : null}
           </Card>

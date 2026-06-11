@@ -19,10 +19,12 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import type { SepidarStock, StockTransferRequest } from "@/lib/models/stock.model";
+import type { ProductStockInventory } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
 import {
   createStockTransfer,
+  listProductStockInventory,
   listSepidarStocks,
   listStockTransfers,
 } from "@/lib/services/stock.service";
@@ -33,7 +35,12 @@ export default function SupportStockTransfersPage() {
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [transfers, setTransfers] = useState<StockTransferRequest[]>([]);
   const [productId, setProductId] = useState("");
+  const [sourceStockId, setSourceStockId] = useState("");
   const [destinationStockId, setDestinationStockId] = useState("");
+  const [productInventories, setProductInventories] = useState<
+    ProductStockInventory[]
+  >([]);
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +79,30 @@ export default function SupportStockTransfersPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    async function loadProductInventory() {
+      setProductInventories([]);
+      if (!productId) return;
+      setIsLoadingInventory(true);
+      try {
+        const data = await listProductStockInventory({
+          productObjectId: productId,
+        });
+        if (!isMounted) return;
+        setProductInventories(data);
+      } catch (loadError) {
+        if (isMounted) setError(getErrorMessage(loadError));
+      } finally {
+        if (isMounted) setIsLoadingInventory(false);
+      }
+    }
+    loadProductInventory();
+    return () => {
+      isMounted = false;
+    };
+  }, [productId]);
+
   const productOptions = useMemo(
     () =>
       products.map((product) => ({
@@ -81,23 +112,39 @@ export default function SupportStockTransfersPage() {
     [products],
   );
 
-  const stockOptions = useMemo(
+  const sourceStockOptions = useMemo(
     () =>
       stocks
-        .filter((stock) => stock.isActive && !stock.isZagros)
+        .filter((stock) => stock.isActive)
         .map((stock) => ({
           value: stock.objectId,
           label: `${stock.code || "-"} - ${stock.title}`,
         })),
     [stocks],
   );
+  const destinationStockOptions = useMemo(
+    () => sourceStockOptions.filter((stock) => stock.value !== sourceStockId),
+    [sourceStockId, sourceStockOptions],
+  );
+  const sourceInventory = productInventories.find(
+    (inventory) => inventory.stockObjectId === sourceStockId,
+  );
+  const destinationInventory = productInventories.find(
+    (inventory) => inventory.stockObjectId === destinationStockId,
+  );
 
   const submitTransfer = async () => {
     const nextErrors: Record<string, string> = {};
     const normalizedQuantity = toNumber(quantity);
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
+    if (!sourceStockId)
+      nextErrors.sourceStockId = "لطفاً انبار مبدأ را انتخاب کنید.";
     if (!destinationStockId)
       nextErrors.destinationStockId = "لطفاً انبار مقصد را انتخاب کنید.";
+    if (sourceStockId && destinationStockId === sourceStockId) {
+      nextErrors.destinationStockId =
+        "انبار مبدأ و مقصد باید متفاوت باشند.";
+    }
     if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
       nextErrors.quantity = "تعداد باید بیشتر از صفر باشد.";
     }
@@ -110,6 +157,7 @@ export default function SupportStockTransfersPage() {
     try {
       await createStockTransfer({
         productObjectId: productId,
+        sourceStockObjectId: sourceStockId,
         destinationStockObjectId: destinationStockId,
         quantity: normalizedQuantity,
         note: note.trim() || undefined,
@@ -120,7 +168,9 @@ export default function SupportStockTransfersPage() {
       });
       await loadData();
       setProductId("");
+      setSourceStockId("");
       setDestinationStockId("");
+      setProductInventories([]);
       setQuantity("");
       setNote("");
       setMessage("درخواست انتقال موجودی ثبت شد.");
@@ -168,7 +218,7 @@ export default function SupportStockTransfersPage() {
     <DashboardLayout role="support" title="انتقال موجودی">
       <SectionHeader
         title="درخواست انتقال موجودی"
-        description="انتقال داخلی از انبار زاگرس به انبارهای فروش را ثبت کنید."
+        description="انتقال داخلی بین انبارهای سپیدار را برای تأیید مدیر ثبت کنید."
       />
 
       {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
@@ -180,15 +230,14 @@ export default function SupportStockTransfersPage() {
         <div className="space-y-5">
           <Card className="p-5">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A] md:col-span-2">
-                انبار مبدأ: انبار زاگرس
-              </div>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کالا</span>
                 <SearchableSelect
                   value={productId || undefined}
                   onValueChange={(value) => {
                     setProductId(value);
+                    setSourceStockId("");
+                    setDestinationStockId("");
                     setFieldErrors((current) => ({ ...current, productId: "" }));
                   }}
                   options={productOptions}
@@ -198,6 +247,36 @@ export default function SupportStockTransfersPage() {
                   invalid={Boolean(fieldErrors.productId)}
                 />
                 <FieldError message={fieldErrors.productId} />
+              </label>
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>انبار مبدأ</span>
+                <SearchableSelect
+                  value={sourceStockId || undefined}
+                  onValueChange={(value) => {
+                    setSourceStockId(value);
+                    if (value === destinationStockId) {
+                      setDestinationStockId("");
+                    }
+                    setFieldErrors((current) => ({
+                      ...current,
+                      sourceStockId: "",
+                    }));
+                  }}
+                  options={sourceStockOptions}
+                  placeholder="انتخاب انبار مبدأ"
+                  searchPlaceholder="جستجو در انبارها"
+                  emptyMessage="انبار مبدأیی پیدا نشد"
+                  invalid={Boolean(fieldErrors.sourceStockId)}
+                />
+                <FieldError message={fieldErrors.sourceStockId} />
+                {productId && sourceStockId ? (
+                  <p className="text-xs text-[#6B7280]">
+                    موجودی واقعی مبدأ:{" "}
+                    {isLoadingInventory
+                      ? "در حال دریافت..."
+                      : formatNumber(sourceInventory?.realQuantity ?? 0)}
+                  </p>
+                ) : null}
               </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>انبار مقصد</span>
@@ -210,13 +289,21 @@ export default function SupportStockTransfersPage() {
                       destinationStockId: "",
                     }));
                   }}
-                  options={stockOptions}
+                  options={destinationStockOptions}
                   placeholder="انتخاب انبار مقصد"
                   searchPlaceholder="جستجو در انبارها"
                   emptyMessage="انبار مقصدی پیدا نشد"
                   invalid={Boolean(fieldErrors.destinationStockId)}
                 />
                 <FieldError message={fieldErrors.destinationStockId} />
+                {productId && destinationStockId ? (
+                  <p className="text-xs text-[#6B7280]">
+                    موجودی واقعی مقصد:{" "}
+                    {isLoadingInventory
+                      ? "در حال دریافت..."
+                      : formatNumber(destinationInventory?.realQuantity ?? 0)}
+                  </p>
+                ) : null}
               </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>تعداد</span>

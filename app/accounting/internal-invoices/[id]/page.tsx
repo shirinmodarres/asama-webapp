@@ -35,6 +35,7 @@ import {
   getInternalInvoice,
   markInternalInvoiceEntered,
 } from "@/lib/services/internal-invoice.service";
+import { getInternalInvoiceStatusLabel } from "@/lib/mappers/internal-invoice.mapper";
 import {
   formatFaCurrency,
   formatFaDigits,
@@ -101,6 +102,11 @@ export default function InternalInvoiceDetailPage() {
 
   const columns: DataTableColumn<InternalInvoiceItem>[] = [
     {
+      key: "row",
+      header: "ردیف",
+      render: (row) => formatFaNumber(row.rowNumber),
+    },
+    {
       key: "code",
       header: "کد کالا",
       render: (row) => formatFaDigits(row.productCode) || "-",
@@ -126,21 +132,22 @@ export default function InternalInvoiceDetailPage() {
       header: "سریال / کد رهگیری",
       cellClassName: "max-w-[320px] whitespace-normal",
       render: (row) =>
-        row.units.length
-          ? row.units
-              .map((unit) =>
-                [
-                  unit.serialNumber
-                    ? `سریال ${formatFaDigits(unit.serialNumber)}`
-                    : null,
-                  unit.trackingCode
-                    ? `رهگیری ${formatFaDigits(unit.trackingCode)}`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" / "),
-              )
-              .join("، ")
+        row.serialNumbers.length ||
+        row.trackingCodes.length ||
+        row.productIdentifiers.length
+          ? [
+              row.serialNumbers.length
+                ? `سریال: ${row.serialNumbers.map(formatFaDigits).join("، ")}`
+                : null,
+              row.trackingCodes.length
+                ? `رهگیری: ${row.trackingCodes.map(formatFaDigits).join("، ")}`
+                : null,
+              row.productIdentifiers.length
+                ? `شناسه: ${row.productIdentifiers.map(formatFaDigits).join("، ")}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" / ")
           : "-",
     },
   ];
@@ -173,17 +180,14 @@ export default function InternalInvoiceDetailPage() {
                       دانلود فاکتور داخلی
                     </a>
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => window.print()}
-                  >
+                ) : null}
+                <Button asChild variant="outline">
+                  <Link href={`/accounting/internal-invoices/${params.id}/print`}>
                     <Printer className="size-4" />
                     چاپ فاکتور
-                  </Button>
-                )}
-                {invoice.status !== "entered" ? (
+                  </Link>
+                </Button>
+                {invoice.status === "ready_for_accounting" ? (
                   <Button type="button" onClick={() => setIsDialogOpen(true)}>
                     علامت‌گذاری به عنوان ثبت‌شده در حسابداری
                   </Button>
@@ -202,17 +206,45 @@ export default function InternalInvoiceDetailPage() {
               <Info label="شماره سفارش" value={formatFaDigits(invoice.orderNumber) || "-"} />
               <Info label="شماره حواله خروج" value={formatFaDigits(invoice.exitSlipNumber) || "-"} />
               <Info label="مشتری" value={invoice.customerName || "-"} />
+              <Info
+                label="کد مشتری"
+                value={formatFaDigits(
+                  invoice.sepidarCustomerCode || invoice.customerCode,
+                ) || "-"}
+              />
+              <Info
+                label="موبایل مشتری"
+                value={formatFaDigits(
+                  invoice.customerMobile || invoice.customerPhone,
+                ) || "-"}
+              />
+              <Info
+                label="آدرس مشتری"
+                value={invoice.customerAddress || "-"}
+              />
               <Info label="انبار خروج" value={invoice.stockTitle || "-"} />
               <Info label="نوع فروش" value={invoice.saleTypeTitle || "-"} />
-              <Info label="تاریخ ایجاد" value={formatDateTime(invoice.createdAt)} />
+              <Info
+                label="تاریخ فاکتور"
+                value={formatDateTime(invoice.invoiceDate || invoice.createdAt)}
+              />
               <div>
                 <p className="text-xs text-[#6B7280]">وضعیت</p>
                 <Badge
                   className="mt-2"
-                  variant={invoice.status === "entered" ? "success" : "warning"}
+                  variant={
+                    invoice.status === "entered_manually"
+                      ? "success"
+                      : invoice.status === "cancelled"
+                        ? "destructive"
+                        : "warning"
+                  }
                   dot
                 >
-                  {invoice.statusLabel}
+                  {getInternalInvoiceStatusLabel(
+                    invoice.status,
+                    invoice.statusLabel,
+                  )}
                 </Badge>
               </div>
               {invoice.manualInvoiceNumber ? (
