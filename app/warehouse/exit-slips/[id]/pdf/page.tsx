@@ -8,6 +8,11 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { ExitSlipPdfData } from "@/lib/models/warehouse.model";
 import { getExitSlipPdfData } from "@/lib/services/warehouse.service";
+import {
+  isNajaExitSlip,
+  resolveExitSlipPdfCustomer,
+  resolveExitSlipPdfRecipient,
+} from "@/lib/utils/exit-slip-customer";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ExitSlipPdfPage() {
@@ -45,6 +50,59 @@ export default function ExitSlipPdfPage() {
     };
   }, [params.id]);
 
+  const resolvedCustomer = data ? resolveExitSlipPdfCustomer(data) : null;
+  const resolvedRecipient = data ? resolveExitSlipPdfRecipient(data) : null;
+  const isNajaOrder =
+    data && resolvedRecipient
+      ? isNajaExitSlip(data.order?.orderType, resolvedRecipient)
+      : false;
+  const itemRows =
+    data?.items.flatMap((item) => {
+      if (!item.units.length) {
+        return [
+          {
+            key: item.productObjectId || item.productSku || item.productName,
+            productName: item.productName,
+            productSku: item.productSku,
+            quantity: item.quantity,
+            productIdentifier: "",
+            serialNumber: "",
+            trackingCode: "",
+          },
+        ];
+      }
+
+      return item.units.map((unit, index) => ({
+        key:
+          unit.unitObjectId ||
+          `${item.productObjectId || item.productSku}-${index}`,
+        productName: item.productName,
+        productSku: item.productSku,
+        quantity: index === 0 ? item.quantity : null,
+        productIdentifier: unit.productIdentifier,
+        serialNumber: unit.serialNumber,
+        trackingCode: unit.trackingCode,
+      }));
+    }) ?? [];
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "development" ||
+      !data ||
+      !resolvedCustomer ||
+      !resolvedRecipient
+    ) {
+      return;
+    }
+
+    console.log("[EXIT_SLIP_CUSTOMER_DATA]", {
+      exitSlip: data,
+      order: data.order,
+      resolvedCustomer,
+      resolvedRecipient,
+    });
+  }, [data, resolvedCustomer, resolvedRecipient]);
+
   return (
     <main
       dir="rtl"
@@ -53,8 +111,15 @@ export default function ExitSlipPdfPage() {
       <style jsx global>{`
         @media print {
           @page {
-            size: A4;
-            margin: 12mm;
+            size: A5 portrait;
+            margin: 0;
+          }
+          html,
+          body {
+            width: 148mm;
+            min-height: 210mm;
+            margin: 0 !important;
+            background: white !important;
           }
           .no-print {
             display: none !important;
@@ -62,32 +127,42 @@ export default function ExitSlipPdfPage() {
           .pdf-page {
             box-shadow: none !important;
             border: 0 !important;
-            width: 100% !important;
-            min-height: 297mm !important;
+            width: 148mm !important;
+            min-height: 210mm !important;
             border-radius: 0 !important;
+          }
+          .print-content {
+            padding: 8mm 8mm 7mm !important;
+          }
+          .print-section,
+          .print-table-row {
+            break-inside: avoid;
+          }
+          .items-table thead {
+            display: table-header-group;
           }
         }
       `}</style>
 
-      <div className="no-print mx-auto mb-4 flex max-w-[210mm] justify-end">
+      <div className="no-print mx-auto mb-4 flex max-w-[148mm] justify-end">
         <Button type="button" onClick={() => window.print()}>
           چاپ / ذخیره PDF
         </Button>
       </div>
 
-      <section className="pdf-page relative mx-auto min-h-[297mm] w-full max-w-[210mm] overflow-hidden rounded-xl border border-[#D7DEE6] bg-white shadow-sm">
+      <section className="pdf-page relative mx-auto min-h-[210mm] w-full max-w-[148mm] overflow-hidden rounded-lg border border-[#D7DEE6] bg-white shadow-sm">
         <div className="pointer-events-none absolute inset-0 z-0 opacity-100">
           <Image
             src="/1.jpg"
             alt="Asama Letterhead"
             fill
             priority
-            sizes="210mm"
+            sizes="148mm"
             className="object-cover"
           />
         </div>
 
-        <div className="relative z-10 p-8">
+        <div className="print-content relative z-10 px-5 pb-5 pt-4">
           {isLoading ? (
             <p className="text-sm text-[#6B7280]">
               در حال دریافت اطلاعات حواله...
@@ -97,141 +172,204 @@ export default function ExitSlipPdfPage() {
           ) : !data ? (
             <p className="text-sm text-[#6B7280]">اطلاعات حواله یافت نشد.</p>
           ) : (
-            <div className="space-y-6">
-              <header className="relative min-h-33 pb-4 pt-14">
-                <div className="absolute left-0 top-0 w-[265px] border-r-2 border-[#7BC68A] bg-white px-4  text-right text-sm leading-8 text-[#334155] ">
-                  <p>کد حواله: {formatFaDigits(data.slipCode)}</p>
-                  <p>کد سفارش: {formatFaDigits(data.orderCode)}</p>
-                  <p>
-                    تاریخ صدور:{" "}
-                    {data.issueDate ? formatDateTime(data.issueDate) : "-"}
-                  </p>
+            <div className="space-y-3 text-[10px] leading-5">
+              <header className="relative flex justify-between min-h-20">
+                <div className="absolute left-0 top-0  border-r-2 border-[#7BC68A] bg-white/95 px-3 py-1.5 text-[9px] leading-5 text-[#334155]">
+                  <InlineInfo
+                    label="کد حواله"
+                    value={formatFaDigits(data.slipCode) || "-"}
+                  />
+                  <InlineInfo
+                    label="کد سفارش"
+                    value={formatFaDigits(data.orderCode) || "-"}
+                  />
+                  <InlineInfo
+                    label="تاریخ صدور"
+                    value={
+                      data.issueDate ? formatDateTime(data.issueDate) : "-"
+                    }
+                  />
                 </div>
               </header>
 
-              <div className="flex justify-center py-2">
-                <div className="rounded-xl bg-white px-8 ">
-                  <h1 className="text-2xl font-bold text-[#102034]">
+              <div className="flex justify-center">
+                <div className="bg-white/95 px-6 py-1">
+                  <h1 className="text-lg font-bold text-[#102034]">
                     حواله خروج کالا
                   </h1>
                 </div>
               </div>
 
-              <section className="grid gap-3 sm:grid-cols-2">
-                <Info label="مشتری" value={data.customer.name || "-"} />
-                <Info
-                  label="شماره مشتری"
-                  value={
-                    data.customer.phone
-                      ? formatFaDigits(data.customer.phone)
-                      : "-"
-                  }
-                />
-                <Info
-                  label="گیرنده بار"
-                  value={data.receiver.fullName || "-"}
-                />
-                <Info
-                  label="موبایل گیرنده"
-                  value={
-                    data.receiver.phone
-                      ? formatFaDigits(data.receiver.phone)
-                      : "-"
-                  }
-                />
-                <Info
-                  label="آدرس تحویل"
-                  value={
-                    data.deliveryAddress.formatted ||
-                    data.deliveryAddress.fullAddress ||
-                    "-"
-                  }
-                  className="sm:col-span-2"
-                />
-              </section>
-
-              <section className="space-y-4">
-                {data.items.map((item) => (
-                  <div
-                    key={
-                      item.productObjectId ||
-                      item.productSku ||
-                      item.productName
+              <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
+                <h2 className="mb-1.5 border-b border-[#E2E8F0] pb-1 text-[11px] font-bold text-[#1F3A5F]">
+                  اطلاعات مرکز / مشتری سپیدار
+                </h2>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                  <InlineInfo
+                    label="نام مشتری/مرکز"
+                    value={resolvedCustomer?.name || "-"}
+                  />
+                  <InlineInfo
+                    label="کد مشتری سپیدار"
+                    value={
+                      resolvedCustomer?.sepidarCustomerCode
+                        ? formatFaDigits(resolvedCustomer.sepidarCustomerCode)
+                        : "-"
                     }
-                    className="rounded-lg border border-[#D7DEE6] p-3"
-                  >
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <Info label="کالا" value={item.productName || "-"} />
-                      <Info
-                        label="کد کالا"
-                        value={
-                          item.productSku
-                            ? formatFaDigits(item.productSku)
-                            : "-"
-                        }
-                      />
-                      <Info label="تعداد" value={formatNumber(item.quantity)} />
-                    </div>
-
-                    <p className="mt-4 text-sm font-semibold text-[#1F3A5F]">
-                      شناسه‌های ثبت‌شده:
-                    </p>
-                    <table className="mt-2 w-full border-collapse text-right text-sm">
-                      <thead>
-                        <tr className="bg-[#F8FBFD]">
-                          {["شناسه محصول", "سریال", "کد رهگیری"].map(
-                            (header) => (
-                              <th
-                                key={header}
-                                className="border border-[#D7DEE6] px-3 py-2 font-semibold text-[#1F3A5F]"
-                              >
-                                {header}
-                              </th>
-                            ),
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {item.units.map((unit, index) => (
-                          <tr
-                            key={
-                              unit.unitObjectId || `${item.productSku}-${index}`
-                            }
-                          >
-                            <td className="border border-[#D7DEE6] px-3 py-2">
-                              {unit.productIdentifier
-                                ? formatFaDigits(unit.productIdentifier)
-                                : "-"}
-                            </td>
-                            <td className="border border-[#D7DEE6] px-3 py-2">
-                              {unit.serialNumber
-                                ? formatFaDigits(unit.serialNumber)
-                                : "-"}
-                            </td>
-                            <td className="border border-[#D7DEE6] px-3 py-2">
-                              {unit.trackingCode
-                                ? formatFaDigits(unit.trackingCode)
-                                : "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
+                  />
+                  <InlineInfo
+                    label="موبایل/تلفن"
+                    value={
+                      resolvedCustomer?.phone
+                        ? formatFaDigits(resolvedCustomer.phone)
+                        : "-"
+                    }
+                  />
+                  <InlineInfo
+                    label="آدرس"
+                    value={resolvedCustomer?.address || "-"}
+                    className="col-span-2"
+                  />
+                </dl>
               </section>
 
-              <section className="grid gap-3 sm:grid-cols-2">
-                <Info
-                  label="کد تأیید دریافت"
-                  value={
-                    data.deliveryCode ? formatFaDigits(data.deliveryCode) : "-"
-                  }
-                />
-                <Info label="توضیحات" value={data.notes || "-"} />
+              {isNajaOrder ? (
+                <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
+                  <h2 className="mb-1.5 border-b border-[#E2E8F0] pb-1 text-[11px] font-bold text-[#1F3A5F]">
+                    اطلاعات تحویل‌گیرنده ناجا
+                  </h2>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    <InlineInfo
+                      label="نام و نام خانوادگی"
+                      value={resolvedRecipient?.fullName || "-"}
+                    />
+                    <InlineInfo
+                      label="کد ملی"
+                      value={
+                        resolvedRecipient?.nationalId
+                          ? formatFaDigits(resolvedRecipient.nationalId)
+                          : "-"
+                      }
+                    />
+                    <InlineInfo
+                      label="موبایل"
+                      value={
+                        resolvedRecipient?.mobile
+                          ? formatFaDigits(resolvedRecipient.mobile)
+                          : "-"
+                      }
+                    />
+                    <InlineInfo
+                      label="شماره سفارش ناجا"
+                      value={
+                        resolvedRecipient?.najaOrderNumber
+                          ? formatFaDigits(resolvedRecipient.najaOrderNumber)
+                          : "-"
+                      }
+                    />
+                  </dl>
+                </section>
+              ) : (
+                <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
+                  <h2 className="mb-1.5 border-b border-[#E2E8F0] pb-1 text-[11px] font-bold text-[#1F3A5F]">
+                    اطلاعات تحویل
+                  </h2>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                    <InlineInfo
+                      label="گیرنده بار"
+                      value={data.receiver.fullName || "-"}
+                    />
+                    <InlineInfo
+                      label="موبایل گیرنده"
+                      value={
+                        data.receiver.phone
+                          ? formatFaDigits(data.receiver.phone)
+                          : "-"
+                      }
+                    />
+                    <InlineInfo
+                      label="آدرس تحویل"
+                      value={
+                        data.deliveryAddress.formatted ||
+                        data.deliveryAddress.fullAddress ||
+                        "-"
+                      }
+                      className="col-span-2"
+                    />
+                  </dl>
+                </section>
+              )}
+
+              <section className="print-section overflow-hidden rounded-md border border-[#94A3B8] bg-white/95">
+                <h2 className="border-b border-[#94A3B8] px-3 py-1.5 text-[11px] font-bold text-[#1F3A5F]">
+                  کالاها و شناسه‌های ثبت‌شده
+                </h2>
+                <table className="items-table w-full table-fixed border-collapse text-right text-[8px] leading-4">
+                  <thead>
+                    <tr className="bg-[#EDF3F7] text-[#1F3A5F]">
+                      <TableHeader className="w-6">ردیف</TableHeader>
+                      <TableHeader className="w-[23%]">کالا</TableHeader>
+                      <TableHeader className="w-[12%]">کد کالا</TableHeader>
+                      <TableHeader className="w-8">تعداد</TableHeader>
+                      <TableHeader>شناسه محصول</TableHeader>
+                      <TableHeader>سریال</TableHeader>
+                      <TableHeader>کد رهگیری</TableHeader>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemRows.map((row, index) => (
+                      <tr
+                        key={row.key}
+                        className="print-table-row border-t border-[#CBD5E1]"
+                      >
+                        <TableCell>{formatNumber(index + 1)}</TableCell>
+                        <TableCell>{row.productName || "-"}</TableCell>
+                        <TableCell>
+                          {row.productSku
+                            ? formatFaDigits(row.productSku)
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {row.quantity === null
+                            ? ""
+                            : formatNumber(row.quantity)}
+                        </TableCell>
+                        <TableCell>
+                          {row.productIdentifier
+                            ? formatFaDigits(row.productIdentifier)
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {row.serialNumber
+                            ? formatFaDigits(row.serialNumber)
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {row.trackingCode
+                            ? formatFaDigits(row.trackingCode)
+                            : "-"}
+                        </TableCell>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </section>
 
-              <footer className="grid gap-8 pt-12 sm:grid-cols-2">
+              <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                  <InlineInfo
+                    label="کد تأیید دریافت"
+                    value={
+                      data.deliveryCode
+                        ? formatFaDigits(data.deliveryCode)
+                        : "-"
+                    }
+                  />
+                  <InlineInfo label="توضیحات" value={data.notes || "-"} />
+                </dl>
+              </section>
+
+              <footer className="grid grid-cols-2 gap-8 pt-7">
                 <Signature label="امضای انباردار" />
                 <Signature label="امضای تحویل‌گیرنده" />
               </footer>
@@ -243,7 +381,7 @@ export default function ExitSlipPdfPage() {
   );
 }
 
-function Info({
+function InlineInfo({
   label,
   value,
   className = "",
@@ -253,17 +391,41 @@ function Info({
   className?: string;
 }) {
   return (
-    <div className={`rounded-lg border border-[#D7DEE6] p-3 ${className}`}>
-      <dt className="text-xs text-[#6B7280]">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold leading-7">{value}</dd>
+    <div className={`flex min-w-0 items-start gap-1 ${className}`}>
+      <dt className="shrink-0 font-medium text-[#64748B]">{label}:</dt>
+      <dd className="min-w-0 font-semibold text-[#102034]">{value}</dd>
     </div>
+  );
+}
+
+function TableHeader({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <th
+      className={`border-l border-[#CBD5E1] px-1 py-1 font-bold last:border-l-0 ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function TableCell({ children }: { children: React.ReactNode }) {
+  return (
+    <td className="break-words border-l border-[#E2E8F0] px-1 py-1 align-top last:border-l-0">
+      {children}
+    </td>
   );
 }
 
 function Signature({ label }: { label: string }) {
   return (
-    <div className="pt-10">
-      <div className="border-t border-[#94A3B8] pt-3 text-center text-sm font-semibold">
+    <div className="pt-6">
+      <div className="border-t border-[#94A3B8] pt-1.5 text-center text-[9px] font-semibold">
         {label}
       </div>
     </div>
