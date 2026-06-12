@@ -129,6 +129,7 @@ export function mapProductDto(dto: unknown): Product {
     reservedStock,
     availableStock,
     availableSalesQuantity: availableStock,
+    hasAvailableSalesQuantity: false,
     availableStocks: [],
     warehouseAvailableStock,
     najaInventoryQty,
@@ -150,15 +151,18 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
     "availableSalesQuantity",
   );
   if (!hasAvailableSalesQuantity && process.env.NODE_ENV === "development") {
-    console.warn("[ORDER_OPTIONS_MISSING_INVENTORY_FIELD]", record);
+    console.warn(
+      "[ORDER_OPTIONS_MISSING_AVAILABLE_SALES_QUANTITY]",
+      record,
+    );
   }
   const availableSalesQuantity = toNumberValue(
     record.availableSalesQuantity,
   );
   return {
     ...product,
-    availableStock: availableSalesQuantity,
     availableSalesQuantity,
+    hasAvailableSalesQuantity,
     availableStocks: Array.isArray(record.availableStocks)
       ? record.availableStocks.map((value) => {
           const stock = toRecord(value);

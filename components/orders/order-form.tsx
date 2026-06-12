@@ -41,6 +41,10 @@ import {
 } from "@/lib/utils/address-format";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 import {
+  formatOrderAvailableQuantity,
+  logOrderDropdownProductSource,
+} from "@/lib/utils/order-product-availability";
+import {
   POSITIVE_NUMBER_MESSAGE,
   SELECT_REQUIRED_MESSAGE,
 } from "@/lib/utils/form-validation";
@@ -481,6 +485,13 @@ export function OrderForm({
         const availableQuantity = sepidarProductsOnly
           ? product?.availableSalesQuantity
           : product?.availableStock;
+        if (
+          sepidarProductsOnly &&
+          product &&
+          !product.hasAvailableSalesQuantity
+        ) {
+          return false;
+        }
         return quantity > (availableQuantity ?? 0);
       },
     );
@@ -775,12 +786,17 @@ export function OrderForm({
                           option.availableStock > 0 ||
                           option.objectId === item.productId,
                       )
-                      .map((option) => ({
-                        value: option.objectId,
-                        label: sepidarProductsOnly
-                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatNumber(option.availableSalesQuantity)} ${option.unit}`
-                          : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
-                      }))}
+                      .map((option) => {
+                        if (sepidarProductsOnly) {
+                          logOrderDropdownProductSource(option);
+                        }
+                        return {
+                          value: option.objectId,
+                          label: sepidarProductsOnly
+                            ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
+                            : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
+                        };
+                      })}
                     placeholder={
                       sepidarProductsOnly && !selectedCustomerId
                         ? "ابتدا مشتری را انتخاب کنید."
@@ -815,7 +831,9 @@ export function OrderForm({
                     max={
                       product
                         ? sepidarProductsOnly
-                          ? product.availableSalesQuantity
+                          ? product.hasAvailableSalesQuantity
+                            ? product.availableSalesQuantity
+                            : undefined
                           : product.availableStock
                         : undefined
                     }
@@ -865,7 +883,7 @@ export function OrderForm({
 
                 <p className="text-xs text-[#6B7280] xl:col-span-5">
                   {product
-                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableSalesQuantity)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
+                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatOrderAvailableQuantity(product, formatNumber)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
                 </p>
               </div>

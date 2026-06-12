@@ -28,6 +28,7 @@ export interface Product {
   reservedStock: number;
   availableStock: number;
   availableSalesQuantity: number;
+  hasAvailableSalesQuantity: boolean;
   availableStocks: Array<{
     stockObjectId: string;
     sepidarStockId: number | null;
