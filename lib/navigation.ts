@@ -87,12 +87,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "file-check",
       description: "رسیدهای ثبت‌شده",
     },
-    {
-      label: "موجودی واقعی انبار",
-      href: "/warehouse/inventory",
-      icon: "boxes",
-      description: "موجودی انبارهای سپیدار",
-    },
+    // {
+    //   label: "موجودی واقعی انبار",
+    //   href: "/warehouse/inventory",
+    //   icon: "boxes",
+    //   description: "موجودی انبارهای سپیدار",
+    // },
     {
       label: "انتقال‌ها",
       href: "/warehouse/stock-transfers",
