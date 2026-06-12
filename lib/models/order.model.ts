@@ -50,7 +50,9 @@ export interface Order {
   externalOrderNumber: string | null;
   najaOrderNumber: string | null;
   customerNationalId: string | null;
+  customerMobile: string | null;
   customerPhone: string | null;
+  customerAddress: string | null;
   deliveryAddressTitle: string | null;
   deliveryProvince: string | null;
   deliveryCity: string | null;

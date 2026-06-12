@@ -6,6 +6,7 @@ import {
   toRecord,
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
+import { mapOrderDto } from "@/lib/mappers/order.mapper";
 import type {
   ExitSlip,
   ExitSlipItemGroup,
@@ -221,6 +222,9 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     record.internalInvoice ?? nestedSlip.internalInvoice,
   );
   const source = Object.keys(nestedSlip).length ? nestedSlip : record;
+  const orderSource = source.order ?? record.order;
+  const orderRecord = toRecord(orderSource);
+  const order = Object.keys(orderRecord).length ? mapOrderDto(orderSource) : null;
   const deliveryAddress = toRecord(source.deliveryAddress);
   const fullAddress = toNullableString(
     source.deliveryFullAddress ??
@@ -258,9 +262,40 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
       ? normalizePhone(toStringValue(source.deliveryConfirmedByPhone))
       : null,
     customerName: toNullableString(source.customerName),
+    sepidarCustomerCode: toNullableString(
+      source.sepidarCustomerCode ?? orderRecord.sepidarCustomerCode,
+    ),
+    customerMobile: normalizeNullablePhone(
+      source.customerMobile ?? orderRecord.customerMobile,
+    ),
     customerPhone: source.customerPhone
       ? normalizePhone(toStringValue(source.customerPhone))
-      : null,
+      : normalizeNullablePhone(orderRecord.customerPhone),
+    customerAddress: toNullableString(
+      source.customerAddress ??
+        source.customerAddressSnapshot ??
+        orderRecord.customerAddress ??
+        orderRecord.customerAddressSnapshot ??
+        orderRecord.deliveryFullAddress,
+    ),
+    recipientFirstName: toNullableString(
+      source.recipientFirstName ?? orderRecord.recipientFirstName,
+    ),
+    recipientLastName: toNullableString(
+      source.recipientLastName ?? orderRecord.recipientLastName,
+    ),
+    recipientNationalId: normalizeNullableDigits(
+      source.recipientNationalId ?? orderRecord.recipientNationalId,
+    ),
+    recipientMobile: normalizeNullablePhone(
+      source.recipientMobile ?? orderRecord.recipientMobile,
+    ),
+    najaOrderNumber: normalizeNullableDigits(
+      source.najaOrderNumber ??
+        source.externalOrderNumber ??
+        orderRecord.najaOrderNumber ??
+        orderRecord.externalOrderNumber,
+    ),
     receiverFullName: toNullableString(
       source.receiverFullName ?? source.receiverName,
     ),
@@ -290,6 +325,7 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
         internalInvoice.invoiceNumber ??
         internalInvoice.invoiceCode,
     ),
+    order,
     items: items.length ? items : groupUnitsByProduct(units),
     units,
     createdAt: toStringValue(source.createdAt),
@@ -304,6 +340,9 @@ export function mapExitSlipListDto(dto: unknown): ExitSlip[] {
 export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
   const record = toRecord(dto);
   const customer = toRecord(record.customer);
+  const recipient = toRecord(record.recipient);
+  const orderRecord = toRecord(record.order);
+  const order = Object.keys(orderRecord).length ? mapOrderDto(record.order) : null;
   const receiver = toRecord(record.receiver);
   const deliveryAddress = toRecord(record.deliveryAddress);
 
@@ -322,8 +361,53 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
     orderCode: normalizeDigits(toStringValue(record.orderCode)),
     issueDate: toNullableString(record.issueDate),
     customer: {
-      name: toNullableString(customer.name),
-      phone: customer.phone ? normalizePhone(toStringValue(customer.phone)) : null,
+      name: toNullableString(
+        customer.name ?? record.customerName ?? orderRecord.customerName,
+      ),
+      sepidarCustomerCode: toNullableString(
+        customer.sepidarCustomerCode ??
+          record.sepidarCustomerCode ??
+          orderRecord.sepidarCustomerCode,
+      ),
+      mobile: normalizeNullablePhone(
+        customer.mobile ?? record.customerMobile ?? orderRecord.customerMobile,
+      ),
+      phone: normalizeNullablePhone(
+        customer.phone ?? record.customerPhone ?? orderRecord.customerPhone,
+      ),
+      address: toNullableString(
+        customer.address ??
+          record.customerAddress ??
+          orderRecord.customerAddress ??
+          orderRecord.customerAddressSnapshot ??
+          orderRecord.deliveryFullAddress,
+      ),
+    },
+    recipient: {
+      firstName: toNullableString(
+        recipient.firstName ??
+          record.recipientFirstName ??
+          orderRecord.recipientFirstName,
+      ),
+      lastName: toNullableString(
+        recipient.lastName ??
+          record.recipientLastName ??
+          orderRecord.recipientLastName,
+      ),
+      nationalId: normalizeNullableDigits(
+        recipient.nationalId ??
+          record.recipientNationalId ??
+          orderRecord.recipientNationalId,
+      ),
+      mobile: normalizeNullablePhone(
+        recipient.mobile ?? record.recipientMobile ?? orderRecord.recipientMobile,
+      ),
+      najaOrderNumber: normalizeNullableDigits(
+        recipient.najaOrderNumber ??
+          record.najaOrderNumber ??
+          orderRecord.najaOrderNumber ??
+          orderRecord.externalOrderNumber,
+      ),
     },
     receiver: {
       fullName: toNullableString(receiver.fullName),
@@ -342,9 +426,20 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
       ? normalizeDigits(toStringValue(record.deliveryCode))
       : null,
     notes: toNullableString(record.notes),
+    order,
   };
 }
 
 function hasGroupedItems(value: unknown): boolean {
   return toArray(value).some((item) => Array.isArray(toRecord(item).units));
+}
+
+function normalizeNullableDigits(value: unknown): string | null {
+  const normalized = normalizeDigits(toStringValue(value));
+  return normalized || null;
+}
+
+function normalizeNullablePhone(value: unknown): string | null {
+  const normalized = normalizePhone(toStringValue(value));
+  return normalized || null;
 }
