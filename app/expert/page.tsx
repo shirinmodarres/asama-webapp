@@ -142,7 +142,7 @@ export default function ExpertPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-[#102034]">
-                            {order.code}
+                            {formatFaDigits(order.code)}
                           </p>
                           <p className="mt-1 text-sm text-[#6B7280]">
                             {order.customerName || "بدون نام مشتری"}

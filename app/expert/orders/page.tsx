@@ -19,6 +19,7 @@ import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
 import { ListFilter, PlusCircle, Search, X } from "lucide-react";
 import Link from "next/link";
+import { formatFaDigits } from "@/lib/utils/number-format";
 import { useEffect, useMemo, useState } from "react";
 
 export default function ExpertOrdersPage() {
@@ -100,7 +101,9 @@ export default function ExpertOrdersPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
       ),
     },
     {

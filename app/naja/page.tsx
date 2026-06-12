@@ -124,7 +124,7 @@ export default function NajaDashboardPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-[#102034]">
-                          {order.code}
+                          {formatFaDigits(order.code)}
                         </p>
                         <Badge variant="warning">ناجا</Badge>
                       </div>

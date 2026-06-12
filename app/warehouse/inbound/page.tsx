@@ -228,7 +228,7 @@ export default function WarehouseInboundPage() {
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: `${product.name} - ${product.brand}`,
+        label: `${formatFaDigits(product.name)} - ${formatFaDigits(product.brand)}`,
       })),
     [products],
   );

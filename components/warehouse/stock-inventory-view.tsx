@@ -71,7 +71,9 @@ export function StockInventoryView({
       header: "نام انبار",
       render: (row) => (
         <div>
-          <p className="font-semibold text-[#1F3A5F]">{row.title || "-"}</p>
+          <p className="font-semibold text-[#1F3A5F]">
+            {formatFaDigits(row.title || "-")}
+          </p>
           <p className="mt-1 text-xs text-[#6B7280]">
             {formatFaDigits(row.code || "-")}
           </p>

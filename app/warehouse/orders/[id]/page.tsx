@@ -44,7 +44,14 @@ export default function WarehouseOrderDetailsPage() {
 
   const columns = useMemo<DataTableColumn<Order["items"][number]>[]>(
     () => [
-      { key: "name", header: "نام کالا", render: (row) => row.productName || row.productSku || "-" },
+      {
+        key: "name",
+        header: "نام کالا",
+        render: (row) =>
+          row.productName
+            ? formatFaDigits(row.productName)
+            : formatFaDigits(row.productSku || "-"),
+      },
       { key: "brand", header: "برند", render: (row) => row.brand || "-" },
       { key: "quantity", header: "تعداد", render: (row) => formatNumber(row.quantity) },
       { key: "tracking", header: "کد رهگیری", render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-" },
@@ -62,7 +69,10 @@ export default function WarehouseOrderDetailsPage() {
         <EmptyState title="سفارش یافت نشد" description="شناسه سفارش معتبر نیست." />
       ) : (
         <>
-          <SectionHeader title={`سفارش ${order.code || order.id}`} description="جزئیات سفارش برای عملیات انبار" />
+          <SectionHeader
+            title={`سفارش ${formatFaDigits(order.code || order.id)}`}
+            description="جزئیات سفارش برای عملیات انبار"
+          />
           <CustomerInfoCard order={order} />
           <DataTable columns={columns} rows={order.items} rowKey={(row) => row.objectId || row.productId} />
         </>

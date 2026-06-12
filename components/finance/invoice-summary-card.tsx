@@ -10,6 +10,7 @@ import {
   getOrderItemCount,
   getOrderTotalQuantity,
 } from "@/lib/expert/utils";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface InvoiceSummaryCardProps {
   invoice?: Invoice;
@@ -36,7 +37,10 @@ export function InvoiceSummaryCard({
 
       {invoice ? (
         <div className="mt-5 space-y-3 text-sm">
-          <Row label="شماره فاکتور" value={invoice.invoiceNumber} />
+          <Row
+            label="شماره فاکتور"
+            value={formatFaDigits(invoice.invoiceNumber)}
+          />
           <Row label="تاریخ صدور" value={formatDateTime(invoice.issuedAt)} />
           <Row
             label="تعداد آیتم"

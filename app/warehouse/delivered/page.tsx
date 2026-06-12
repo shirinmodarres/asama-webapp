@@ -18,6 +18,7 @@ import type { Order } from "@/lib/models/order.model";
 import type { ExitSlip } from "@/lib/models/warehouse.model";
 import { listOrders } from "@/lib/services/order.service";
 import { listExitSlips } from "@/lib/services/warehouse.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -129,10 +130,16 @@ export default function WarehouseDeliveredPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.order.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.order.code)}
+        </span>
       ),
     },
-    { key: "slip", header: "شماره حواله", render: (row) => row.slipNumber },
+    {
+      key: "slip",
+      header: "شماره حواله",
+      render: (row) => formatFaDigits(row.slipNumber),
+    },
     {
       key: "delivery-date",
       header: "تاریخ تحویل",

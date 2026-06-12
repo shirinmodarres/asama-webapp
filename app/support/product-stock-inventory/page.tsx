@@ -18,7 +18,7 @@ import {
   listProductStockInventory,
   updateProductStockInventory,
 } from "@/lib/services/stock.service";
-import { toNumber } from "@/lib/utils/number-format";
+import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 
 interface DraftState {
   salesQuantity: string;
@@ -112,7 +112,9 @@ export default function SupportProductStockInventoryPage() {
       render: (row) => (
         <div>
           <p className="font-semibold text-[#1F3A5F]">{row.productName || "-"}</p>
-          <p className="mt-1 text-xs text-[#6B7280]">{row.productSku || "-"}</p>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            {formatFaDigits(row.productSku || "-")}
+          </p>
         </div>
       ),
     },

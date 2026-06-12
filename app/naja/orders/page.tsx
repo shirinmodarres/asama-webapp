@@ -110,7 +110,9 @@ export default function NajaOrdersPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
       ),
     },
     {

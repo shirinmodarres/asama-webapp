@@ -122,7 +122,9 @@ export default function WarehouseOutboundPage() {
       cellClassName: "max-w-[320px] whitespace-normal leading-7",
       render: (row) =>
         row.items
-          .map((item) => item.productName || item.productSku || "-")
+          .map((item) =>
+            formatFaDigits(item.productName || item.productSku || "-"),
+          )
           .join("، "),
     },
     {

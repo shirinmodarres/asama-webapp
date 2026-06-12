@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { formatFaDigits } from "@/lib/utils/number-format";
 import { useEffect, useState } from "react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -48,7 +49,10 @@ export default function FinanceReconciliationPage() {
         <EmptyState title="سفارش یافت نشد" description="شناسه سفارش معتبر نیست." />
       ) : (
         <>
-          <SectionHeader title={`تطبیق ${order.code || order.id}`} description="اطلاعات مشتری و آدرس تحویل برای صدور فاکتور" />
+          <SectionHeader
+            title={`تطبیق ${formatFaDigits(order.code || order.id)}`}
+            description="اطلاعات مشتری و آدرس تحویل برای صدور فاکتور"
+          />
           <CustomerInfoCard order={order} />
           <EmptyState title="جزئیات تطبیق در انتظار endpoint نهایی است" description="اطلاعات مشتری از سفارش backend نمایش داده می شود." />
         </>

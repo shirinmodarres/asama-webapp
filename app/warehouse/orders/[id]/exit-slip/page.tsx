@@ -124,7 +124,10 @@ export default function ExitSlipCreatePage() {
     {
       key: "product",
       header: "کالا",
-      render: (row) => row.item.productName || row.item.productSku,
+      render: (row) =>
+        row.item.productName
+          ? formatFaDigits(row.item.productName)
+          : formatFaDigits(row.item.productSku),
     },
     {
       key: "ordered",

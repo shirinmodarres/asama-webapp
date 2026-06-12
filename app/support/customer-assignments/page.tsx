@@ -203,7 +203,7 @@ export default function SupportCustomerAssignmentsPage() {
     () =>
       saleTypes.map((saleType) => ({
         value: saleType.objectId,
-        label: `${saleType.sepidarSaleTypeId ?? "-"} - ${saleType.title || "-"}${
+        label: `${formatFaDigits(saleType.sepidarSaleTypeId ?? "-")} - ${saleType.title || "-"}${
           saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
         }`,
       })),
@@ -215,7 +215,7 @@ export default function SupportCustomerAssignmentsPage() {
         .filter((stock) => stock.isActive)
         .map((stock) => ({
           value: stock.objectId,
-          label: `${stock.code || "-"} - ${stock.title}`,
+          label: `${formatFaDigits(stock.code || "-")} - ${stock.title}`,
         })),
     [stocks],
   );

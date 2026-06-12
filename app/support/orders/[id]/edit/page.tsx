@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { formatFaDigits } from "@/lib/utils/number-format";
 import type { Order } from "@/lib/models/order.model";
 import { getOrder, updatePendingOrder } from "@/lib/services/order.service";
 
@@ -92,7 +93,7 @@ export default function SupportOrderEditPage() {
         <>
           <SectionHeader
             title="ویرایش اطلاعات سفارش"
-            description={`اصلاح سفارش ${order.code} با همان فیلدهای ثبت سفارش`}
+            description={`اصلاح سفارش ${formatFaDigits(order.code)} با همان فیلدهای ثبت سفارش`}
             actions={
               <Link
                 href="/support/orders"

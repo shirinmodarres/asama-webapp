@@ -15,6 +15,7 @@ import {
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Order } from "@/lib/models/order.model";
 import { getOrder, updatePendingOrder } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function EditExpertOrderPage() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function EditExpertOrderPage() {
       ) : (
         <>
           <SectionHeader
-            title={`ویرایش ${order.code}`}
+            title={`ویرایش ${formatFaDigits(order.code)}`}
             description="فیلدهای این فرم با ثبت سفارش جدید یکسان است."
             actions={
               <Link

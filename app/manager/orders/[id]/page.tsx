@@ -166,7 +166,9 @@ export default function ManagerOrderReviewPage() {
       header: "نام کالا",
       render: (row) => (
         <span className="font-medium text-[#1F3A5F]">
-          {row.productName || row.productSku || "کالای نامشخص"}
+          {row.productName
+            ? formatFaDigits(row.productName)
+            : formatFaDigits(row.productSku || "کالای نامشخص")}
         </span>
       ),
     },
@@ -416,7 +418,10 @@ export default function ManagerOrderReviewPage() {
               مشخصات سفارش
             </h3>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <InfoItem label="کد سفارش" value={order.code || "-"} />
+              <InfoItem
+                label="کد سفارش"
+                value={formatFaDigits(order.code || "-")}
+              />
               <InfoItem
                 label="منبع سفارش"
                 value={order.orderType === "naja" ? "ناجا" : "عادی"}

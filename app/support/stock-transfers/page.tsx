@@ -28,7 +28,7 @@ import {
   listSepidarStocks,
   listStockTransfers,
 } from "@/lib/services/stock.service";
-import { toNumber } from "@/lib/utils/number-format";
+import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 
 export default function SupportStockTransfersPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -107,7 +107,7 @@ export default function SupportStockTransfersPage() {
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: `${product.sepidarCode || product.sku} - ${product.name}`,
+        label: `${formatFaDigits(product.sepidarCode || product.sku)} - ${formatFaDigits(product.name)}`,
       })),
     [products],
   );
@@ -118,7 +118,7 @@ export default function SupportStockTransfersPage() {
         .filter((stock) => stock.isActive)
         .map((stock) => ({
           value: stock.objectId,
-          label: `${stock.code || "-"} - ${stock.title}`,
+          label: `${formatFaDigits(stock.code || "-")} - ${stock.title}`,
         })),
     [stocks],
   );
