@@ -1,6 +1,7 @@
 import type { Order } from "@/lib/models/order.model";
 
 export type WarehouseUnitStatus =
+  | "available"
   | "in_stock"
   | "reserved_for_order"
   | "dispatched"

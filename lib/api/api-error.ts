@@ -46,6 +46,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INBOUND_ONLY_ZAGROS_ALLOWED: "ورود و انتقال کالا فقط از انبار زاگرس انجام می‌شود.",
   STOCK_TRANSFER_INSUFFICIENT_QUANTITY:
     "موجودی انبار زاگرس برای این انتقال کافی نیست.",
+  TRANSFER_UNITS_NOT_AVAILABLE:
+    "تعداد واحدهای قابل انتقال در انبار مبدا کافی نیست.",
   INVALID_TRANSFER_STATE: "وضعیت این درخواست انتقال قابل تغییر نیست.",
   INVENTORY_NOT_FOUND: "موجودی کالا و انبار پیدا نشد.",
   WAREHOUSE_REQUIRED: "انبار خروج برای این سفارش مشخص نشده است.",

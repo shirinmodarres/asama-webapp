@@ -20,6 +20,7 @@ import type {
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 const UNIT_STATUS_LABELS: Record<WarehouseUnitStatus, string> = {
+  available: "موجود در انبار",
   in_stock: "موجود در انبار",
   reserved_for_order: "رزرو شده برای سفارش",
   dispatched: "خارج شده از انبار",
