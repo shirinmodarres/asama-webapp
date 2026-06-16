@@ -16,6 +16,11 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { ExitSlip } from "@/lib/models/warehouse.model";
 import { getExitSlip } from "@/lib/services/warehouse.service";
+import {
+  isNajaExitSlip,
+  resolveExitSlipCustomer,
+  resolveExitSlipRecipient,
+} from "@/lib/utils/exit-slip-customer";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ExitSlipDetailsPage() {
@@ -50,22 +55,39 @@ export default function ExitSlipDetailsPage() {
     };
   }, [params.id]);
 
-  const deliveryLink =
-    slip?.deliveryLink ||
-    (slip?.deliveryToken ? `/delivery/${slip.deliveryToken}` : "");
+  const deliveryLink = slip?.deliveryLink || "";
   const totalQuantity =
     slip?.items.reduce((sum, item) => sum + item.quantity, 0) ??
     slip?.units.length ??
     0;
+  const resolvedCustomer = slip ? resolveExitSlipCustomer(slip) : null;
+  const resolvedRecipient = slip ? resolveExitSlipRecipient(slip) : null;
+  const isNajaOrder =
+    slip && resolvedRecipient
+      ? isNajaExitSlip(slip.order?.orderType, resolvedRecipient)
+      : false;
 
-  const getAbsoluteDeliveryLink = () =>
-    typeof window !== "undefined" && deliveryLink.startsWith("/")
-      ? `${window.location.origin}${deliveryLink}`
-      : deliveryLink;
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "development" ||
+      !slip ||
+      !resolvedCustomer ||
+      !resolvedRecipient
+    ) {
+      return;
+    }
+
+    console.log("[EXIT_SLIP_CUSTOMER_DATA]", {
+      exitSlip: slip,
+      order: slip.order,
+      resolvedCustomer,
+      resolvedRecipient,
+    });
+  }, [resolvedCustomer, resolvedRecipient, slip]);
 
   const copyDeliveryLink = async () => {
     if (!deliveryLink) return;
-    await navigator.clipboard.writeText(getAbsoluteDeliveryLink());
+    await navigator.clipboard.writeText(deliveryLink);
     setCopyMessage("لینک تأیید دریافت کپی شد.");
   };
 
@@ -128,7 +150,7 @@ export default function ExitSlipDetailsPage() {
                 <dt className="text-xs text-[#6B7280]">لینک تأیید دریافت</dt>
                 <dd className="mt-2 flex items-center justify-between gap-3 text-sm font-medium text-[#1F3A5F]">
                   <span className="max-w-[220px] truncate text-left" dir="ltr">
-                    {deliveryLink ? getAbsoluteDeliveryLink() : "-"}
+                    {deliveryLink || "-"}
                   </span>
                   <Button
                     type="button"
@@ -156,28 +178,78 @@ export default function ExitSlipDetailsPage() {
           </section>
           <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <h3 className="text-base font-semibold text-[#1F3A5F]">
-              مشتری و آدرس تحویل
+              اطلاعات مرکز / مشتری سپیدار
             </h3>
-            {slip.customerName ||
-            slip.customerPhone ||
-            slip.deliveryFullAddress ? (
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <InfoItem
+                label="نام مشتری/مرکز"
+                value={resolvedCustomer?.name || "-"}
+              />
+              <InfoItem
+                label="کد مشتری سپیدار"
+                value={
+                  resolvedCustomer?.sepidarCustomerCode
+                    ? formatFaDigits(resolvedCustomer.sepidarCustomerCode)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="موبایل/تلفن"
+                value={
+                  resolvedCustomer?.phone
+                    ? formatFaDigits(resolvedCustomer.phone)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="آدرس"
+                value={resolvedCustomer?.address || "-"}
+                className="sm:col-span-2"
+              />
+            </dl>
+          </section>
+          {isNajaOrder ? (
+            <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-[#1F3A5F]">
+                اطلاعات تحویل‌گیرنده ناجا
+              </h3>
               <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                <InfoItem label="نام مشتری" value={slip.customerName || "-"} />
                 <InfoItem
-                  label="شماره موبایل"
+                  label="نام و نام خانوادگی"
+                  value={resolvedRecipient?.fullName || "-"}
+                />
+                <InfoItem
+                  label="کد ملی"
                   value={
-                    slip.customerPhone
-                      ? formatFaDigits(slip.customerPhone)
+                    resolvedRecipient?.nationalId
+                      ? formatFaDigits(resolvedRecipient.nationalId)
                       : "-"
                   }
                 />
                 <InfoItem
-                  label="آدرس تحویل"
+                  label="موبایل"
                   value={
-                    slip.deliveryAddress || slip.deliveryFullAddress || "-"
+                    resolvedRecipient?.mobile
+                      ? formatFaDigits(resolvedRecipient.mobile)
+                      : "-"
                   }
-                  className="sm:col-span-2"
                 />
+                <InfoItem
+                  label="شماره سفارش ناجا"
+                  value={
+                    resolvedRecipient?.najaOrderNumber
+                      ? formatFaDigits(resolvedRecipient.najaOrderNumber)
+                      : "-"
+                  }
+                />
+              </dl>
+            </section>
+          ) : (
+            <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-[#1F3A5F]">
+                اطلاعات گیرنده و تحویل
+              </h3>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                 <InfoItem
                   label="گیرنده بار"
                   value={slip.receiverFullName || "-"}
@@ -201,12 +273,8 @@ export default function ExitSlipDetailsPage() {
                   </dd>
                 </div>
               </dl>
-            ) : (
-              <p className="mt-4 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm text-[#6B7280]">
-                اطلاعات مشتری ثبت نشده است.
-              </p>
-            )}
-          </section>
+            </section>
+          )}
           {slip.items.length > 0 ? (
             <ExitSlipProductGroups items={slip.items} />
           ) : null}

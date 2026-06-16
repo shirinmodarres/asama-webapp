@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatFaDigits } from "@/lib/utils/number-format";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InvoiceTable } from "@/components/finance/invoice-table";
 import { DateRangeFilter } from "@/components/shared/date-range-filter";
@@ -112,13 +113,15 @@ export default function FinanceReadyPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.order.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.order.code)}
+        </span>
       ),
     },
     {
       key: "slip",
       header: "شماره حواله خروج",
-      render: (row) => row.slipNumber,
+      render: (row) => formatFaDigits(row.slipNumber),
     },
     {
       key: "createdBy",

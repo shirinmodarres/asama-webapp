@@ -112,7 +112,7 @@ export default function FinanceNajaInvoicePage() {
   return (
     <DashboardLayout role="finance" title="فاکتور ناجا">
       <SectionHeader
-        title={`فاکتور ناجا برای ${order.code}`}
+        title={`فاکتور ناجا برای ${formatFaDigits(order.code)}`}
         description="این مسیر بدون تطبیق حواله خروج، مستقیما فاکتور را به نام ناجا صادر می کند."
         actions={<OrderSourceBadge source="naja" />}
       />

@@ -18,6 +18,7 @@ import { listOrders } from "@/lib/services/order.service";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function SupportOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -88,7 +89,9 @@ export default function SupportOrdersPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
       ),
     },
     { key: "creator", header: "ثبت کننده", render: (row) => row.createdByName },
@@ -112,14 +115,24 @@ export default function SupportOrdersPage() {
     {
       key: "actions",
       header: "عملیات",
-      render: (row) => (
-        <Link
-          href={`/support/orders/${row.objectId}/edit`}
-          className="rounded-xl border border-[#F59E0B] bg-[#FFFBEB] px-3 py-1.5 text-xs text-[#92400E]"
-        >
-          ویرایش ویژه
-        </Link>
-      ),
+      render: (row) =>
+        canSupportEditOrder(row) ? (
+          <Link
+            href={`/support/orders/${row.objectId}/edit`}
+            className="rounded-xl border border-[#F59E0B] bg-[#FFFBEB] px-3 py-1.5 text-xs text-[#92400E]"
+          >
+            ویرایش ویژه
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            title="بعد از صدور حواله خروج امکان ویرایش سفارش وجود ندارد."
+            className="cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-1.5 text-xs text-[#64748B]"
+          >
+            ویرایش ویژه
+          </button>
+        ),
     },
   ];
 
@@ -194,4 +207,8 @@ export default function SupportOrdersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function canSupportEditOrder(order: Order): boolean {
+  return !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
 }

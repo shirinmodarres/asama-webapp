@@ -1,5 +1,6 @@
 import type { NajaCenter } from "@/lib/models/naja-center.model";
 import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
+import type { Product } from "@/lib/models/product.model";
 
 export type OrderType = "normal" | "naja";
 export type FulfillmentStatus = "normal" | "onHold";
@@ -50,7 +51,9 @@ export interface Order {
   externalOrderNumber: string | null;
   najaOrderNumber: string | null;
   customerNationalId: string | null;
+  customerMobile: string | null;
   customerPhone: string | null;
+  customerAddress: string | null;
   deliveryAddressTitle: string | null;
   deliveryProvince: string | null;
   deliveryCity: string | null;
@@ -118,6 +121,11 @@ export interface CreateOrderPayload {
   customerAddressObjectId?: string;
   saleTypeObjectId?: string;
   sepidarSaleTypeId?: number;
+  recipientFirstName?: string;
+  recipientLastName?: string;
+  recipientNationalId?: string;
+  recipientMobile?: string;
+  najaOrderNumber?: string;
   notes?: string;
   items: Array<{
     productObjectId?: string;
@@ -129,6 +137,14 @@ export interface CreateOrderPayload {
 }
 
 export type UpdatePendingOrderPayload = Partial<CreateOrderPayload>;
+
+export interface OrderEditData {
+  order: Order;
+  canEdit: boolean;
+  editBlockedReason: string | null;
+  products: Product[];
+  customers: Customer[];
+}
 
 export interface LockShipmentPayload {
   reasonCode: string;

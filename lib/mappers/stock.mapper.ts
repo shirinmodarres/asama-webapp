@@ -37,6 +37,9 @@ export function mapSepidarStockDto(dto: unknown): SepidarStock {
     realInventoryCount: toNumberValue(record.realInventoryCount),
     salesInventoryCount: toNumberValue(record.salesInventoryCount),
     reservedInventoryCount: toNumberValue(record.reservedInventoryCount),
+    availableSalesInventoryCount: toNumberValue(
+      record.availableSalesInventoryCount,
+    ),
     lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
     createdAt: toNullableString(record.createdAt),
     updatedAt: toNullableString(record.updatedAt),

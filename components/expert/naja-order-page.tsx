@@ -25,6 +25,10 @@ import { createNajaOrder } from "@/lib/services/naja.service";
 import { listOrderProductsBySaleType } from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
 import { formatFaDigits, normalizeDigits, normalizePhone, toNumber } from "@/lib/utils/number-format";
+import {
+  formatOrderAvailableQuantity,
+  logOrderDropdownProductSource,
+} from "@/lib/utils/order-product-availability";
 import { POSITIVE_NUMBER_MESSAGE } from "@/lib/utils/form-validation";
 
 interface NajaOrderPageProps {
@@ -195,10 +199,13 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
   const productOptions = useMemo(
     () =>
-      products.map((product) => ({
-        value: product.objectId,
-        label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatFaDigits(product.availableSalesQuantity)} ${product.unit}`,
-      })),
+      products.map((product) => {
+        logOrderDropdownProductSource(product);
+        return {
+          value: product.objectId,
+          label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(product, formatFaDigits)} ${product.unit}`,
+        };
+      }),
     [products],
   );
 
@@ -235,6 +242,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     const requestedQuantity = toNumber(quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
       nextErrors.quantity = POSITIVE_NUMBER_MESSAGE;
+    } else if (
+      selectedProduct?.hasAvailableSalesQuantity &&
+      requestedQuantity > selectedProduct.availableSalesQuantity
+    ) {
+      nextErrors.quantity = "موجودی قابل فروش کافی نیست";
     }
     if (selectedProduct && selectedProduct.unitPrice <= 0) {
       nextErrors.productId = "قیمت کالا برای این نوع فروش ثبت نشده است.";
@@ -400,6 +412,12 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               <span>تعداد</span>
               <Input
                 inputMode="numeric"
+                min={1}
+                max={
+                  selectedProduct?.hasAvailableSalesQuantity
+                    ? selectedProduct.availableSalesQuantity
+                    : undefined
+                }
                 value={quantity}
                 onChange={(event) => {
                   setQuantity(toNumber(event.target.value));
@@ -523,7 +541,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               قیمت واحد: {formatCurrency(selectedProduct.unitPrice)}
               {" • "}
               موجودی قابل فروش:{" "}
-              {formatFaDigits(selectedProduct.availableSalesQuantity)}{" "}
+              {formatOrderAvailableQuantity(
+                selectedProduct,
+                formatFaDigits,
+              )}{" "}
               {selectedProduct.unit}
             </div>
           ) : null}

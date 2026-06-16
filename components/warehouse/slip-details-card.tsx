@@ -1,6 +1,7 @@
 import { Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatDateTime } from "@/lib/expert/utils";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface SlipDetailsCardProps {
   slipNumber: string;
@@ -37,8 +38,8 @@ export function SlipDetailsCard({
         </span>
       </div>
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-        <Item label="شماره حواله" value={slipNumber} />
-        <Item label="سفارش مرتبط" value={orderCode} />
+        <Item label="شماره حواله" value={formatFaDigits(slipNumber)} />
+        <Item label="سفارش مرتبط" value={formatFaDigits(orderCode)} />
         <Item label="تاریخ خروج" value={formatDate(exitDate)} />
         <Item label="مسئول ثبت" value={createdBy} />
         <Item label="زمان ثبت" value={formatDateTime(createdAt)} />

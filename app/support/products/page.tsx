@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import { listProducts } from "@/lib/services/product.service";
 import { Search, Tags, X } from "lucide-react";
@@ -121,16 +120,6 @@ export default function SupportProductsPage() {
     },
     { key: "brand", header: "برند", render: (row) => row.brand },
     { key: "category", header: "دسته بندی", render: (row) => row.category },
-    {
-      key: "total",
-      header: "موجودی فروش",
-      render: (row) => formatNumber(row.salesStock),
-    },
-    {
-      key: "warehouseStock",
-      header: "موجودی کل انبارها",
-      render: (row) => formatNumber(row.warehouseStock),
-    },
     { key: "unit", header: "واحد", render: (row) => row.unit },
     {
       key: "status",

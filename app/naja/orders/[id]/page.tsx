@@ -149,7 +149,7 @@ export default function NajaOrderDetailsPage() {
   return (
     <DashboardLayout role="naja" title="جزئیات سفارش">
       <SectionHeader
-        title={`سفارش ${order.code}`}
+        title={`سفارش ${formatFaDigits(order.code)}`}
         description="مشاهده اطلاعات مشتری/مرکز ناجا از سپیدار، وضعیت انبار و فاکتور سفارش"
         actions={
           <Link
@@ -166,7 +166,10 @@ export default function NajaOrderDetailsPage() {
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <h3 className="text-base font-semibold text-[#1F3A5F]">اطلاعات سفارش ناجا</h3>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <InfoItem label="کد سفارش" value={order.code} />
+              <InfoItem
+                label="کد سفارش"
+                value={formatFaDigits(order.code)}
+              />
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="نام مشتری" value={order.customerName ?? "-"} />
               <InfoItem
@@ -182,7 +185,11 @@ export default function NajaOrderDetailsPage() {
                 value={order.saleTypeTitle || order.saleType?.title || "-"}
               />
               <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />
-              <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+              <InfoItem label="موبایل مشتری" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+              <InfoItem
+                label="آدرس مشتری"
+                value={order.deliveryFullAddress || "-"}
+              />
               <InfoItem
                 label="نام و نام خانوادگی تحویل‌گیرنده"
                 value={
@@ -236,6 +243,11 @@ export default function NajaOrderDetailsPage() {
               ) : null}
               {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
+            {!order.customerPhone || !order.deliveryFullAddress ? (
+              <div className="mt-4 rounded-xl border border-[#F3D08B] bg-[#FFF8E8] px-4 py-3 text-sm text-[#8A6116]">
+                اطلاعات تماس یا آدرس مشتری از سپیدار پیدا نشد.
+              </div>
+            ) : null}
           </div>
 
           <DataTable columns={columns} rows={detailRows} rowKey={(row) => row.id} />

@@ -23,6 +23,7 @@ import {
 import { formatDate } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 type TrackingFilter =
   | "all"
@@ -107,7 +108,9 @@ export default function ManagerOrderTrackingPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
       ),
     },
     {

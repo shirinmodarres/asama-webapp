@@ -1,4 +1,5 @@
 import { httpClient } from "@/lib/api/http-client";
+import { getOrder } from "@/lib/services/order.service";
 import { mapOrderListDto } from "@/lib/mappers/order.mapper";
 import { mapProductListDto } from "@/lib/mappers/product.mapper";
 import { mapProductStockInventoryListDto } from "@/lib/mappers/stock.mapper";
@@ -132,21 +133,51 @@ export async function listExitSlips(): Promise<ExitSlip[]> {
 
 export async function getExitSlip(objectId: string): Promise<ExitSlip> {
   const data = await httpClient.get<unknown>(`/api/exit-slips/${objectId}`);
-  return mapExitSlipDto(data);
+  const slip = mapExitSlipDto(data);
+  return hydrateExitSlipOrder(slip);
 }
 
 export async function getExitSlipPdfData(
   objectId: string,
 ): Promise<ExitSlipPdfData> {
-  const data = await httpClient.get<unknown>(
-    `/api/exit-slips/${objectId}/pdf-data`,
-  );
-  return mapExitSlipPdfDataDto(data);
+  const [data, slip] = await Promise.all([
+    httpClient.get<unknown>(`/api/exit-slips/${objectId}/pdf-data`),
+    getExitSlip(objectId),
+  ]);
+  const pdfData = mapExitSlipPdfDataDto(data);
+
+  return {
+    ...pdfData,
+    customer: {
+      name: pdfData.customer.name || slip.customerName,
+      sepidarCustomerCode:
+        pdfData.customer.sepidarCustomerCode || slip.sepidarCustomerCode,
+      mobile: pdfData.customer.mobile || slip.customerMobile,
+      phone: pdfData.customer.phone || slip.customerPhone,
+      address:
+        pdfData.customer.address ||
+        slip.customerAddress ||
+        slip.deliveryAddress ||
+        slip.deliveryFullAddress,
+    },
+    recipient: {
+      firstName:
+        pdfData.recipient.firstName || slip.recipientFirstName,
+      lastName: pdfData.recipient.lastName || slip.recipientLastName,
+      nationalId:
+        pdfData.recipient.nationalId || slip.recipientNationalId,
+      mobile: pdfData.recipient.mobile || slip.recipientMobile,
+      najaOrderNumber:
+        pdfData.recipient.najaOrderNumber || slip.najaOrderNumber,
+    },
+    order: pdfData.order || slip.order,
+  };
 }
 
 export async function getDeliveryByToken(token: string): Promise<ExitSlip> {
   const data = await httpClient.get<unknown>(`/api/delivery/${token}`);
-  return mapExitSlipDto(data);
+  const delivery = mapExitSlipDto(data);
+  return hydrateExitSlipOrder(delivery);
 }
 
 export async function confirmDelivery(
@@ -160,7 +191,8 @@ export async function confirmDelivery(
       deliveryCode: normalizeDigits(payload.deliveryCode.trim()),
     },
   );
-  return mapExitSlipDto(data);
+  const delivery = mapExitSlipDto(data);
+  return hydrateExitSlipOrder(delivery);
 }
 
 export async function confirmExitSlipDelivery(
@@ -177,9 +209,6 @@ function normalizeInboundPayload(
 ): CreateInboundReceiptPayload {
   return {
     ...payload,
-    warehouseId: payload.warehouseId
-      ? normalizeDigits(payload.warehouseId)
-      : payload.warehouseId,
     units: payload.units.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
@@ -226,4 +255,22 @@ function buildWarehouseInventoryPath(
   });
   const query = params.toString();
   return query ? `/api/warehouse/inventory?${query}` : "/api/warehouse/inventory";
+}
+
+async function hydrateExitSlipOrder(slip: ExitSlip): Promise<ExitSlip> {
+  if (slip.order || !slip.orderId) return slip;
+
+  try {
+    const order = await getOrder(slip.orderId);
+    return { ...slip, order };
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[EXIT_SLIP_ORDER_LOAD_FAILED]", {
+        exitSlipObjectId: slip.objectId,
+        orderId: slip.orderId,
+        error,
+      });
+    }
+    return slip;
+  }
 }

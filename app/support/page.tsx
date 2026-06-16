@@ -41,10 +41,8 @@ export default function SupportPage() {
     };
   }, []);
 
-  const lowStockCount = products.filter(
-    (product) =>
-      product.availableStock <=
-      Math.max(5, Math.floor(product.salesStock * 0.2)),
+  const syncedProductCount = products.filter(
+    (product) => product.isSyncedFromSepidar,
   ).length;
   const orderNeedsEditCount = orders.filter(
     (order) =>
@@ -65,9 +63,9 @@ export default function SupportPage() {
           hint="اقلام تعریف شده در سیستم"
         />
         <ManagerSummaryCard
-          title="کالاهای کم موجودی"
-          value={lowStockCount}
-          hint="نیازمند توجه برای به روزرسانی"
+          title="کالاهای سپیدار"
+          value={syncedProductCount}
+          hint="کالاهای دریافت‌شده از سپیدار"
         />
         <ManagerSummaryCard
           title="سفارش های نیازمند اصلاح"
@@ -88,9 +86,9 @@ export default function SupportPage() {
           href="/support/products"
         />
         <SupportActionCard
-          title="ثبت موجودی"
-          description="افزایش یا کاهش کنترل شده موجودی فروش"
-          href="/support/inventory"
+          title="موجودی فروش"
+          description="مدیریت موجودی فروش هر کالا در انبار سپیدار"
+          href="/support/product-stock-inventory"
         />
         <SupportActionCard
           title="ویرایش سفارش"

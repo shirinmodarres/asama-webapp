@@ -39,7 +39,16 @@ import {
   formatDeliveryAddress,
   getReceiverName,
 } from "@/lib/utils/address-format";
-import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
+import {
+  formatFaDigits,
+  normalizeDigits,
+  normalizePhone,
+  toNumber,
+} from "@/lib/utils/number-format";
+import {
+  formatOrderAvailableQuantity,
+  logOrderDropdownProductSource,
+} from "@/lib/utils/order-product-availability";
 import {
   POSITIVE_NUMBER_MESSAGE,
   SELECT_REQUIRED_MESSAGE,
@@ -51,10 +60,18 @@ interface DraftItem {
   quantity: number;
 }
 
+const EMPTY_PRODUCTS: Product[] = [];
+const EMPTY_CUSTOMERS: Customer[] = [];
+
 export interface OrderFormSubmitPayload {
   customerName?: string;
   customerObjectId?: string;
   customerAddressObjectId?: string;
+  recipientFirstName?: string;
+  recipientLastName?: string;
+  recipientNationalId?: string;
+  recipientMobile?: string;
+  najaOrderNumber?: string;
   items: Array<{
     productObjectId: string;
     quantity: number;
@@ -72,6 +89,9 @@ interface OrderFormProps {
   isSubmitting?: boolean;
   assignedCustomersOnly?: boolean;
   sepidarProductsOnly?: boolean;
+  initialProducts?: Product[];
+  initialCustomers?: Customer[];
+  lockCustomer?: boolean;
   onSubmit: (payload: OrderFormSubmitPayload) => Promise<void>;
 }
 
@@ -82,10 +102,18 @@ export function OrderForm({
   isSubmitting = false,
   assignedCustomersOnly = false,
   sepidarProductsOnly = false,
+  initialProducts,
+  initialCustomers,
+  lockCustomer = false,
   onSubmit,
 }: OrderFormProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const providedProducts = initialProducts ?? EMPTY_PRODUCTS;
+  const providedCustomers = useMemo(
+    () => mergeCustomers(initialCustomers ?? EMPTY_CUSTOMERS, initialOrder),
+    [initialCustomers, initialOrder],
+  );
+  const [products, setProducts] = useState<Product[]>(providedProducts);
+  const [customers, setCustomers] = useState<Customer[]>(providedCustomers);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Customer | null>(null);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
@@ -101,6 +129,21 @@ export function OrderForm({
   );
   const [customerName, setCustomerName] = useState(
     initialOrder?.customerName ?? "",
+  );
+  const [recipientFirstName, setRecipientFirstName] = useState(
+    initialOrder?.recipientFirstName ?? "",
+  );
+  const [recipientLastName, setRecipientLastName] = useState(
+    initialOrder?.recipientLastName ?? "",
+  );
+  const [recipientNationalId, setRecipientNationalId] = useState(
+    initialOrder?.recipientNationalId ?? "",
+  );
+  const [recipientMobile, setRecipientMobile] = useState(
+    initialOrder?.recipientMobile ?? "",
+  );
+  const [najaOrderNumber, setNajaOrderNumber] = useState(
+    initialOrder?.najaOrderNumber ?? initialOrder?.externalOrderNumber ?? "",
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     initialOrder?.customerObjectId ?? "",
@@ -125,17 +168,24 @@ export function OrderForm({
       setCustomersError("");
 
       const [productsResult, customersResult] = await Promise.allSettled([
-        sepidarProductsOnly
+        providedProducts.length > 0 || sepidarProductsOnly
           ? Promise.resolve<Product[]>([])
           : listProducts("expert"),
-        assignedCustomersOnly
-          ? listAssignedCustomersForExpert(getStoredCurrentUser()?.objectId)
-          : listCustomers(),
+        providedCustomers.length > 0
+          ? Promise.resolve<Customer[]>(providedCustomers)
+          : assignedCustomersOnly
+            ? listAssignedCustomersForExpert(getStoredCurrentUser()?.objectId)
+            : listCustomers(),
       ]);
 
       if (!isMounted) return;
 
-      if (productsResult.status === "fulfilled") {
+      if (providedProducts.length > 0) {
+        setProducts(mergeProducts(providedProducts, initialOrder));
+        if (initialOrder) {
+          setItems(mapOrderItems(initialOrder.items, providedProducts));
+        }
+      } else if (productsResult.status === "fulfilled") {
         setProducts(productsResult.value);
         if (initialOrder && !sepidarProductsOnly) {
           setItems(mapOrderItems(initialOrder.items, productsResult.value));
@@ -169,7 +219,13 @@ export function OrderForm({
     return () => {
       isMounted = false;
     };
-  }, [assignedCustomersOnly, initialOrder, sepidarProductsOnly]);
+  }, [
+    assignedCustomersOnly,
+    initialOrder,
+    providedCustomers,
+    providedProducts,
+    sepidarProductsOnly,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -218,6 +274,14 @@ export function OrderForm({
 
     async function loadProductsBySaleType() {
       if (!sepidarProductsOnly) return;
+      if (providedProducts.length > 0) {
+        setProducts(mergeProducts(providedProducts, initialOrder));
+        if (initialOrder) {
+          setItems(mapOrderItems(initialOrder.items, providedProducts));
+        }
+        setIsLoadingProducts(false);
+        return;
+      }
 
       const customer = assignedCustomersOnly
         ? selectedAssignment
@@ -245,7 +309,8 @@ export function OrderForm({
           expertUserId: getStoredCurrentUser()?.objectId,
         });
         if (!isMounted) return;
-        setProducts(data);
+        const mergedProducts = mergeProducts(data, initialOrder);
+        setProducts(mergedProducts);
         if (process.env.NODE_ENV === "development") {
           console.debug(
             "[OrderForm] assignment product availability",
@@ -258,7 +323,7 @@ export function OrderForm({
           );
         }
         if (initialOrder) {
-          setItems(mapOrderItems(initialOrder.items, data));
+          setItems(mapOrderItems(initialOrder.items, mergedProducts));
         }
       } catch {
         if (!isMounted) return;
@@ -278,6 +343,7 @@ export function OrderForm({
     assignedCustomersOnly,
     customers,
     initialOrder,
+    providedProducts,
     selectedAssignment,
     selectedCustomerId,
     sepidarProductsOnly,
@@ -359,6 +425,14 @@ export function OrderForm({
   const selectedAddress = addresses.find(
     (address) => address.objectId === selectedAddressId,
   );
+  const isNajaOrder = initialOrder?.orderType === "naja";
+  const currentSaleTypeTitle =
+    selectedCustomer?.saleType?.title ?? initialOrder?.saleTypeTitle;
+  const currentStockTitles = selectedCustomer
+    ? getAllowedStockTitles(selectedCustomer)
+    : initialOrder?.stockTitle
+      ? [initialOrder.stockTitle]
+      : [];
 
   const addRow = () => {
     setItems((current) => [
@@ -455,6 +529,29 @@ export function OrderForm({
       return;
     }
 
+    if (initialOrder?.orderType === "naja") {
+      const nextNajaErrors: Record<string, string> = {};
+      if (!recipientFirstName.trim()) {
+        nextNajaErrors.recipientFirstName = "نام الزامی است.";
+      }
+      if (!recipientLastName.trim()) {
+        nextNajaErrors.recipientLastName = "نام خانوادگی الزامی است.";
+      }
+      if (!recipientNationalId.trim()) {
+        nextNajaErrors.recipientNationalId = "کد ملی الزامی است.";
+      }
+      if (!recipientMobile.trim()) {
+        nextNajaErrors.recipientMobile = "شماره موبایل الزامی است.";
+      }
+      if (!najaOrderNumber.trim()) {
+        nextNajaErrors.najaOrderNumber = "شماره سفارش الزامی است.";
+      }
+      if (Object.keys(nextNajaErrors).length > 0) {
+        setFieldErrors(nextNajaErrors);
+        return;
+      }
+    }
+
     if (normalizedItems.length === 0) {
       setError(
         assignedCustomersOnly
@@ -468,26 +565,51 @@ export function OrderForm({
       return;
     }
 
-    if (!sepidarProductsOnly) {
-      const requestedByProduct = new Map<string, number>();
-      normalizedItems.forEach((item) => {
-        requestedByProduct.set(
-          item.productId,
-          (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
-        );
-      });
-      const insufficientProduct = Array.from(requestedByProduct.entries()).find(
-        ([productId, quantity]) =>
-          quantity > (productsById[productId]?.availableStock ?? 0),
+    const requestedByProduct = new Map<string, number>();
+    normalizedItems.forEach((item) => {
+      requestedByProduct.set(
+        item.productId,
+        (requestedByProduct.get(item.productId) ?? 0) + item.quantity,
       );
-      if (insufficientProduct) {
-        const product = productsById[insufficientProduct[0]];
-        setError(`موجودی قابل فروش برای «${product?.name ?? "کالا"}» کافی نیست.`);
-        return;
-      }
+    });
+    const insufficientProduct = Array.from(requestedByProduct.entries()).find(
+      ([productId, quantity]) => {
+        const product = productsById[productId];
+        const availableQuantity = sepidarProductsOnly
+          ? product?.availableSalesQuantity
+          : product?.availableStock;
+        if (
+          sepidarProductsOnly &&
+          product &&
+          !product.hasAvailableSalesQuantity
+        ) {
+          return false;
+        }
+        return quantity > (availableQuantity ?? 0);
+      },
+    );
+    if (insufficientProduct) {
+      const product = productsById[insufficientProduct[0]];
+      const affectedRows = items.filter(
+        (item) => item.productId === insufficientProduct[0],
+      );
+      setRowErrors(
+        affectedRows.reduce<
+          Record<string, { productId?: string; quantity?: string }>
+        >((result, item) => {
+          result[item.rowId] = {
+            quantity: "موجودی قابل فروش کافی نیست",
+          };
+          return result;
+        }, {}),
+      );
+      setError(
+        `موجودی قابل فروش برای «${product?.name ?? "کالا"}» کافی نیست.`,
+      );
+      return;
     }
 
-    if (selectedCustomerId && !selectedAddressId) {
+    if (selectedCustomerId && addresses.length > 0 && !selectedAddressId) {
       setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
       return;
     }
@@ -497,6 +619,17 @@ export function OrderForm({
         customerName: selectedCustomerId ? undefined : customerName.trim(),
         customerObjectId: selectedCustomerId || undefined,
         customerAddressObjectId: selectedAddressId || undefined,
+        ...(initialOrder?.orderType === "naja"
+          ? {
+              recipientFirstName: recipientFirstName.trim(),
+              recipientLastName: recipientLastName.trim(),
+              recipientNationalId: normalizeDigits(
+                recipientNationalId.trim(),
+              ),
+              recipientMobile: normalizePhone(recipientMobile.trim()),
+              najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
+            }
+          : {}),
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
         sepidarSaleTypeId:
           selectedCustomer?.saleType?.sepidarSaleTypeId ?? undefined,
@@ -556,7 +689,11 @@ export function OrderForm({
                   ? "هنوز مشتری‌ای به شما اختصاص داده نشده است."
                   : "مشتری پیدا نشد"
               }
-              disabled={isLoadingCustomers || Boolean(customersError)}
+              disabled={
+                lockCustomer ||
+                isLoadingCustomers ||
+                Boolean(customersError)
+              }
               invalid={Boolean(fieldErrors.selectedCustomerId)}
             />
             <FieldError message={fieldErrors.selectedCustomerId} />
@@ -681,6 +818,134 @@ export function OrderForm({
           </label>
         ) : null}
 
+        {initialOrder ? (
+          <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-4 text-sm leading-7 text-[#334155]">
+            <p className="mb-2 font-semibold text-[#102034]">
+              اطلاعات فعلی سفارش
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <span>نوع فروش: {currentSaleTypeTitle || "-"}</span>
+              <span>انبار خروج: {initialOrder.stockTitle || "-"}</span>
+              <span>وضعیت سفارش: {initialOrder.orderStatusLabel || "-"}</span>
+              <span>
+                وضعیت انبار: {initialOrder.warehouseStatusLabel || "-"}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {isNajaOrder ? (
+          <div className="mt-5 rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
+            <div>
+              <h3 className="text-base font-semibold text-[#102034]">
+                اطلاعات تحویل‌گیرنده ناجا
+              </h3>
+              <p className="mt-1 text-sm leading-7 text-[#6B7280]">
+                این اطلاعات برای اسناد، فاکتور داخلی و پیگیری تحویل استفاده می‌شود.
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>نام</span>
+                <Input
+                  value={recipientFirstName}
+                  onChange={(event) => {
+                    setRecipientFirstName(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      recipientFirstName: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.recipientFirstName)}
+                />
+                <FieldError message={fieldErrors.recipientFirstName} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>نام خانوادگی</span>
+                <Input
+                  value={recipientLastName}
+                  onChange={(event) => {
+                    setRecipientLastName(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      recipientLastName: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.recipientLastName)}
+                />
+                <FieldError message={fieldErrors.recipientLastName} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>کد ملی</span>
+                <Input
+                  inputMode="numeric"
+                  value={recipientNationalId}
+                  onChange={(event) => {
+                    setRecipientNationalId(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      recipientNationalId: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.recipientNationalId)}
+                />
+                <FieldError message={fieldErrors.recipientNationalId} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>شماره موبایل</span>
+                <Input
+                  inputMode="tel"
+                  value={recipientMobile}
+                  onChange={(event) => {
+                    setRecipientMobile(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      recipientMobile: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.recipientMobile)}
+                />
+                <FieldError message={fieldErrors.recipientMobile} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                <span>شماره سفارش ناجا</span>
+                <Input
+                  inputMode="numeric"
+                  value={najaOrderNumber}
+                  onChange={(event) => {
+                    setNajaOrderNumber(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      najaOrderNumber: "",
+                    }));
+                  }}
+                  aria-invalid={Boolean(fieldErrors.najaOrderNumber)}
+                />
+                <FieldError message={fieldErrors.najaOrderNumber} />
+              </label>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-3 text-xs leading-6 text-[#64748B]">
+              <p>
+                موبایل/تلفن مشتری سپیدار:{" "}
+                {initialOrder?.customerMobile || initialOrder?.customerPhone
+                  ? formatFaDigits(
+                      initialOrder.customerMobile ||
+                        initialOrder.customerPhone ||
+                        "",
+                    )
+                  : "-"}
+              </p>
+              <p>آدرس مشتری سپیدار: {initialOrder?.customerAddress || "-"}</p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-6 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-[#102034]">
@@ -757,12 +1022,17 @@ export function OrderForm({
                           option.availableStock > 0 ||
                           option.objectId === item.productId,
                       )
-                      .map((option) => ({
-                        value: option.objectId,
-                        label: sepidarProductsOnly
-                          ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatNumber(option.availableSalesQuantity)} ${option.unit}`
-                          : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
-                      }))}
+                      .map((option) => {
+                        if (sepidarProductsOnly) {
+                          logOrderDropdownProductSource(option);
+                        }
+                        return {
+                          value: option.objectId,
+                          label: sepidarProductsOnly
+                            ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
+                            : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
+                        };
+                      })}
                     placeholder={
                       sepidarProductsOnly && !selectedCustomerId
                         ? "ابتدا مشتری را انتخاب کنید."
@@ -793,6 +1063,16 @@ export function OrderForm({
                 <div>
                   <Input
                     inputMode="numeric"
+                    min={1}
+                    max={
+                      product
+                        ? sepidarProductsOnly
+                          ? product.hasAvailableSalesQuantity
+                            ? product.availableSalesQuantity
+                            : undefined
+                          : product.availableStock
+                        : undefined
+                    }
                     value={item.quantity}
                     onChange={(event) =>
                       updateRow(item.rowId, {
@@ -839,7 +1119,7 @@ export function OrderForm({
 
                 <p className="text-xs text-[#6B7280] xl:col-span-5">
                   {product
-                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatNumber(product.availableSalesQuantity)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
+                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatOrderAvailableQuantity(product, formatNumber)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
                     : `آیتم ${formatNumber(index + 1)}`}
                 </p>
               </div>
@@ -896,10 +1176,8 @@ export function OrderForm({
         totalAmount={totalAmount}
         status={initialOrder?.orderStatus ?? "pending_approval"}
         warehouseStatus={initialOrder?.warehouseStatus ?? "reserved"}
-        saleTypeTitle={selectedCustomer?.saleType?.title}
-        stockTitles={
-          selectedCustomer ? getAllowedStockTitles(selectedCustomer) : []
-        }
+        saleTypeTitle={currentSaleTypeTitle}
+        stockTitles={currentStockTitles}
       />
     </section>
   );
@@ -927,6 +1205,93 @@ function getAllowedStockTitles(customer: Customer): string[] {
 
 function createEmptyRow(index: number): DraftItem {
   return { rowId: `empty-${index}`, productId: "", quantity: 1 };
+}
+
+function mergeProducts(products: Product[], order?: Order | null): Product[] {
+  if (!order) return products;
+  const productMap = new Map(products.map((product) => [product.objectId, product]));
+  order.items.forEach((item) => {
+    if (!item.productId || productMap.has(item.productId)) return;
+    productMap.set(item.productId, createProductFromOrderItem(item));
+  });
+  return Array.from(productMap.values());
+}
+
+function createProductFromOrderItem(item: OrderItem): Product {
+  return {
+    objectId: item.productId,
+    id: item.productSku,
+    sku: item.productSku,
+    barcode: null,
+    sepidarItemId: null,
+    sepidarCode: item.productSku,
+    name: item.productName,
+    brand: item.brand,
+    model: null,
+    category: "",
+    unit: "عدد",
+    unitPrice: item.unitPrice,
+    priceNoteItemId: null,
+    description: null,
+    isSyncedFromSepidar: true,
+    isActive: true,
+    isSellable: true,
+    status: "active",
+    statusLabel: "فعال",
+    totalStock: item.quantity,
+    salesStock: item.quantity,
+    warehouseStock: 0,
+    reservedStock: 0,
+    availableStock: item.quantity,
+    availableSalesQuantity: item.quantity,
+    hasAvailableSalesQuantity: false,
+    availableStocks: [],
+    warehouseAvailableStock: 0,
+    najaInventoryQty: 0,
+    inventories: [],
+    createdAt: "",
+    updatedAt: "",
+  };
+}
+
+function mergeCustomers(customers: Customer[], order?: Order | null): Customer[] {
+  if (!order?.customerObjectId) return customers;
+  if (customers.some((customer) => customer.objectId === order.customerObjectId)) {
+    return customers;
+  }
+  const fallbackCustomer = order.customer ?? createCustomerFromOrder(order);
+  return fallbackCustomer ? [fallbackCustomer, ...customers] : customers;
+}
+
+function createCustomerFromOrder(order: Order): Customer | null {
+  if (!order.customerObjectId) return null;
+  return {
+    objectId: order.customerObjectId,
+    id: order.sepidarCustomerCode ?? order.customerObjectId,
+    sepidarCustomerId:
+      order.sepidarCustomerId === null ? null : String(order.sepidarCustomerId),
+    sepidarCustomerCode: order.sepidarCustomerCode,
+    saleType: order.saleType,
+    allowedStockObjectIds: order.stockObjectId ? [order.stockObjectId] : [],
+    allowedSepidarStockIds:
+      order.sepidarStockId === null ? [] : [order.sepidarStockId],
+    allowedStocks: [],
+    allowedStockTitles: order.stockTitle ? [order.stockTitle] : [],
+    isSyncedFromSepidar: true,
+    fullName: order.customerName ?? "",
+    phone: order.customerPhone ?? order.customerMobile ?? "",
+    mobile: order.customerMobile,
+    address: order.customerAddress,
+    postalCode: null,
+    nationalId: order.customerNationalId,
+    assignedExpertName: order.createdByName ?? null,
+    status: "active",
+    statusLabel: "فعال",
+    defaultAddress: null,
+    addresses: [],
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+  };
 }
 
 function mapOrderItems(items: OrderItem[], products: Product[]): DraftItem[] {

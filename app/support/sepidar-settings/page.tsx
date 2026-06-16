@@ -32,6 +32,7 @@ import {
   type SepidarSyncOperationSummary,
   type UpdateSepidarSettingsPayload,
 } from "@/lib/services/sepidar.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks";
 
@@ -493,7 +494,7 @@ function StepRow({ step }: { step: SepidarDiagnosticStep }) {
       <div>
         <p className="font-medium text-[#102034]">{step.title}</p>
         <p className="mt-1 text-xs leading-6 text-[#6B7280]">
-          {step.userMessage || step.message || "-"}
+          {formatFaDigits(step.userMessage || step.message || "-")}
         </p>
       </div>
       <StepStatusBadge status={step.status} />
@@ -566,7 +567,7 @@ function InfoGrid({
         >
           <dt className="text-xs font-medium text-[#6B7280]">{label}</dt>
           <dd className="wrap-break-words text-sm font-semibold text-[#102034]">
-            {value || "-"}
+            {formatFaDigits(value || "-")}
           </dd>
         </div>
       ))}

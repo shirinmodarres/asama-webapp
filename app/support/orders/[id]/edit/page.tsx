@@ -13,13 +13,17 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
-import type { Order } from "@/lib/models/order.model";
-import { getOrder, updatePendingOrder } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
+import type { OrderEditData } from "@/lib/models/order.model";
+import {
+  getOrderEditData,
+  updatePendingOrder,
+} from "@/lib/services/order.service";
 
 export default function SupportOrderEditPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [editData, setEditData] = useState<OrderEditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -31,8 +35,8 @@ export default function SupportOrderEditPage() {
       setIsLoading(true);
       setError("");
       try {
-        const orderData = await getOrder(params.id);
-        if (isMounted) setOrder(orderData);
+        const orderData = await getOrderEditData(params.id);
+        if (isMounted) setEditData(orderData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -48,11 +52,11 @@ export default function SupportOrderEditPage() {
   }, [params.id]);
 
   const handleSubmit = async (payload: OrderFormSubmitPayload) => {
-    if (!order) return;
+    if (!editData?.order) return;
 
     setIsSubmitting(true);
     try {
-      await updatePendingOrder(order.objectId, payload);
+      await updatePendingOrder(editData.order.objectId, payload);
       router.push("/support/orders");
     } finally {
       setIsSubmitting(false);
@@ -66,18 +70,21 @@ export default function SupportOrderEditPage() {
           title="در حال دریافت سفارش"
           description="اطلاعات سفارش از سرور دریافت می شود."
         />
-      ) : error && !order ? (
+      ) : error && !editData?.order ? (
         <PageErrorMessage title="دریافت سفارش انجام نشد" message={error} />
-      ) : !order ? (
+      ) : !editData?.order ? (
         <EmptyState
           title="سفارش یافت نشد"
           description="شناسه سفارش معتبر نیست یا رکوردی برای آن وجود ندارد."
         />
-      ) : !isEditableOrderStatus(order.orderStatus) ? (
+      ) : !canSupportEdit(editData) ? (
         <div className="space-y-4">
           <EmptyState
             title="این سفارش دیگر قابل ویرایش نیست."
-            description="برای مشاهده فهرست سفارش‌ها به صفحه قبل برگردید."
+            description={
+              editData.editBlockedReason ||
+              "بعد از صدور حواله خروج امکان ویرایش سفارش وجود ندارد."
+            }
           />
           <div className="flex justify-center">
             <Link
@@ -92,7 +99,7 @@ export default function SupportOrderEditPage() {
         <>
           <SectionHeader
             title="ویرایش اطلاعات سفارش"
-            description={`اصلاح سفارش ${order.code} با همان فیلدهای ثبت سفارش`}
+            description={`اصلاح سفارش ${formatFaDigits(editData.order.code)} با همان فیلدهای ثبت سفارش`}
             actions={
               <Link
                 href="/support/orders"
@@ -105,9 +112,13 @@ export default function SupportOrderEditPage() {
 
           <OrderForm
             mode="edit"
-            initialOrder={order}
+            initialOrder={editData.order}
             submitLabel="ذخیره تغییرات"
             isSubmitting={isSubmitting}
+            sepidarProductsOnly
+            initialProducts={editData.products}
+            initialCustomers={editData.customers}
+            lockCustomer
             onSubmit={handleSubmit}
           />
         </>
@@ -116,6 +127,9 @@ export default function SupportOrderEditPage() {
   );
 }
 
-function isEditableOrderStatus(status: string): boolean {
-  return status === "pending_approval" || status === "needs_review";
+function canSupportEdit(editData: OrderEditData): boolean {
+  if (!editData.canEdit) return false;
+  return !["dispatchIssued", "delivered"].includes(
+    editData.order.warehouseStatus,
+  );
 }

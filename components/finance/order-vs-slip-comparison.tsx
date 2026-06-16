@@ -11,6 +11,7 @@ import {
   getOrderItemCount,
   getOrderTotalQuantity,
 } from "@/lib/expert/utils";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface OrderVsSlipComparisonProps {
   order: ExpertOrder;
@@ -30,7 +31,7 @@ export function OrderVsSlipComparison({
         subtitle="جزئیات ثبت و تایید سفارش"
       >
         <dl className="grid gap-3 sm:grid-cols-2">
-          <InfoItem label="کد سفارش" value={order.code} />
+          <InfoItem label="کد سفارش" value={formatFaDigits(order.code)} />
           <InfoItem label="مشتری" value={order.customerName} />
           <InfoItem label="ثبت کننده" value={order.createdBy} />
           <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />

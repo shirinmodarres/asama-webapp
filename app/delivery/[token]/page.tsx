@@ -18,6 +18,11 @@ import {
   getDeliveryByToken,
 } from "@/lib/services/warehouse.service";
 import {
+  isNajaExitSlip,
+  resolveExitSlipCustomer,
+  resolveExitSlipRecipient,
+} from "@/lib/utils/exit-slip-customer";
+import {
   formatFaDigits,
   normalizeDigits,
   normalizePhone,
@@ -39,6 +44,16 @@ export default function DeliveryConfirmationPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const resolvedCustomer = delivery
+    ? resolveExitSlipCustomer(delivery)
+    : null;
+  const resolvedRecipient = delivery
+    ? resolveExitSlipRecipient(delivery)
+    : null;
+  const isNajaOrder =
+    delivery && resolvedRecipient
+      ? isNajaExitSlip(delivery.order?.orderType, resolvedRecipient)
+      : false;
 
   useEffect(() => {
     let isMounted = true;
@@ -130,25 +145,112 @@ export default function DeliveryConfirmationPage() {
                   label="شماره حواله"
                   value={formatFaDigits(delivery.slipCode)}
                 />
-                <InfoItem
-                  label="گیرنده"
-                  value={delivery.receiverFullName || "-"}
-                />
                 <StatusInfoItem
                   label="وضعیت تحویل"
                   confirmed={delivery.deliveryConfirmed}
                 />
+              </dl>
+            </Card>
+
+            <Card className="p-5">
+              <h2 className="text-base font-semibold text-[#1F3A5F]">
+                اطلاعات مرکز / مشتری سپیدار
+              </h2>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                 <InfoItem
-                  label="آدرس تحویل"
+                  label="نام مشتری/مرکز"
+                  value={resolvedCustomer?.name || "-"}
+                />
+                <InfoItem
+                  label="کد مشتری سپیدار"
                   value={
-                    delivery.deliveryAddress ||
-                    delivery.deliveryFullAddress ||
-                    "-"
+                    resolvedCustomer?.sepidarCustomerCode
+                      ? formatFaDigits(resolvedCustomer.sepidarCustomerCode)
+                      : "-"
                   }
+                />
+                <InfoItem
+                  label="موبایل/تلفن"
+                  value={
+                    resolvedCustomer?.phone
+                      ? formatFaDigits(resolvedCustomer.phone)
+                      : "-"
+                  }
+                />
+                <InfoItem
+                  label="آدرس"
+                  value={resolvedCustomer?.address || "-"}
                   className="sm:col-span-2"
                 />
               </dl>
             </Card>
+
+            {isNajaOrder ? (
+              <Card className="p-5">
+                <h2 className="text-base font-semibold text-[#1F3A5F]">
+                  اطلاعات تحویل‌گیرنده ناجا
+                </h2>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <InfoItem
+                    label="نام و نام خانوادگی"
+                    value={resolvedRecipient?.fullName || "-"}
+                  />
+                  <InfoItem
+                    label="کد ملی"
+                    value={
+                      resolvedRecipient?.nationalId
+                        ? formatFaDigits(resolvedRecipient.nationalId)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="موبایل"
+                    value={
+                      resolvedRecipient?.mobile
+                        ? formatFaDigits(resolvedRecipient.mobile)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="شماره سفارش ناجا"
+                    value={
+                      resolvedRecipient?.najaOrderNumber
+                        ? formatFaDigits(resolvedRecipient.najaOrderNumber)
+                        : "-"
+                    }
+                  />
+                </dl>
+              </Card>
+            ) : (
+              <Card className="p-5">
+                <h2 className="text-base font-semibold text-[#1F3A5F]">
+                  اطلاعات تحویل
+                </h2>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <InfoItem
+                    label="گیرنده بار"
+                    value={delivery.receiverFullName || "-"}
+                  />
+                  <InfoItem
+                    label="موبایل گیرنده"
+                    value={
+                      delivery.receiverPhone
+                        ? formatFaDigits(delivery.receiverPhone)
+                        : "-"
+                    }
+                  />
+                  <InfoItem
+                    label="آدرس تحویل"
+                    value={
+                      delivery.deliveryAddress ||
+                      delivery.deliveryFullAddress ||
+                      "-"
+                    }
+                    className="sm:col-span-2"
+                  />
+                </dl>
+              </Card>
+            )}
 
             {delivery.items.length > 0 ? (
               <Card className="p-5">

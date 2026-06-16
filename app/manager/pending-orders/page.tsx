@@ -20,6 +20,7 @@ import { listOrders } from "@/lib/services/order.service";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ManagerPendingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -100,7 +101,9 @@ export default function ManagerPendingOrdersPage() {
       key: "code",
       header: "کد سفارش",
       render: (row) => (
-        <span className="font-semibold text-[#1F3A5F]">{row.code}</span>
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
       ),
     },
     { key: "creator", header: "ثبت کننده", render: (row) => row.createdByName },

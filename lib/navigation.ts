@@ -10,12 +10,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت سفارش‌های روز",
     },
     {
-      label: "موجودی",
-      href: "/expert/inventory",
-      icon: "boxes",
-      description: "موجودی قابل رزرو",
-    },
-    {
       label: "سفارش ها",
       href: "/expert/orders",
       icon: "shopping-cart",
@@ -93,12 +87,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "file-check",
       description: "رسیدهای ثبت‌شده",
     },
-    {
-      label: "موجودی واقعی انبار",
-      href: "/warehouse/inventory",
-      icon: "boxes",
-      description: "موجودی انبارهای سپیدار",
-    },
+    // {
+    //   label: "موجودی واقعی انبار",
+    //   href: "/warehouse/inventory",
+    //   icon: "boxes",
+    //   description: "موجودی انبارهای سپیدار",
+    // },
     {
       label: "انتقال‌ها",
       href: "/warehouse/stock-transfers",
@@ -176,12 +170,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "اتصال و همگام‌سازی",
     },
     {
-      label: "موجودی",
-      href: "/support/inventory",
-      icon: "package",
-      description: "افزایش و کاهش موجودی",
-    },
-    {
       label: "موجودی فروش",
       href: "/support/product-stock-inventory",
       icon: "boxes",
@@ -191,7 +179,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       label: "انتقال موجودی",
       href: "/support/stock-transfers",
       icon: "truck",
-      description: "درخواست انتقال از زاگرس",
+      description: "درخواست انتقال بین انبارها",
     },
     {
       label: "انبارهای سپیدار",

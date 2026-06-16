@@ -123,7 +123,7 @@ export default function WarehouseNajaDetailsPage() {
   return (
     <DashboardLayout role="warehouse" title="اطلاعات ناجا">
       <SectionHeader
-        title={`تکمیل اطلاعات ${order.code}`}
+        title={`تکمیل اطلاعات ${formatFaDigits(order.code)}`}
         description="برای سفارش های ناجا، شناسه کالا و کد رهگیری باید قبل از ارسال به مالی ثبت شوند."
         actions={<Badge variant="warning">سفارش ناجا</Badge>}
       />

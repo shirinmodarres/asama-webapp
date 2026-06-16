@@ -20,6 +20,7 @@ import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { getOrder, resolveOrderReview } from "@/lib/services/order.service";
+import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ExpertOrderDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -100,7 +101,11 @@ export default function ExpertOrderDetailsPage() {
       ),
     },
     { key: "brand", header: "برند", render: (row) => row.brand },
-    { key: "sku", header: "شناسه کالا", render: (row) => row.productSku },
+    {
+      key: "sku",
+      header: "شناسه کالا",
+      render: (row) => formatFaDigits(row.productSku),
+    },
     {
       key: "unitPrice",
       header: "قیمت واحد",
@@ -138,15 +143,17 @@ export default function ExpertOrderDetailsPage() {
       ) : (
         <>
           <SectionHeader
-            title={`سفارش ${order.code}`}
+            title={`سفارش ${formatFaDigits(order.code)}`}
             description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
             actions={
-              <Link
-                href={`/expert/orders/${order.objectId}/edit`}
-                className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
-              >
-                ویرایش سفارش
-              </Link>
+              isEditableOrderStatus(order.orderStatus) ? (
+                <Link
+                  href={`/expert/orders/${order.objectId}/edit`}
+                  className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
+                >
+                  ویرایش سفارش
+                </Link>
+              ) : null
             }
           />
 
@@ -170,7 +177,10 @@ export default function ExpertOrderDetailsPage() {
                   اطلاعات سفارش
                 </h3>
                 <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <InfoItem label="کد سفارش" value={order.code} />
+                  <InfoItem
+                    label="کد سفارش"
+                    value={formatFaDigits(order.code)}
+                  />
                   <InfoItem label="مشتری" value={order.customerName || "-"} />
                   <InfoItem label="ثبت کننده" value={order.createdByName} />
                   <InfoItem
@@ -276,4 +286,8 @@ function formatReviewRemaining(remainingMs: number): string {
   const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
 
   return `مهلت باقی‌مانده: ${formatNumber(hours)} ساعت و ${formatNumber(minutes)} دقیقه`;
+}
+
+function isEditableOrderStatus(status: string): boolean {
+  return ["pending_approval", "needs_review", "review_resolved"].includes(status);
 }

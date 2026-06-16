@@ -1,4 +1,7 @@
+import type { Order } from "@/lib/models/order.model";
+
 export type WarehouseUnitStatus =
+  | "available"
   | "in_stock"
   | "reserved_for_order"
   | "dispatched"
@@ -86,7 +89,15 @@ export interface ExitSlip {
   deliveryConfirmedAt: string | null;
   deliveryConfirmedByPhone: string | null;
   customerName: string | null;
+  sepidarCustomerCode: string | null;
+  customerMobile: string | null;
   customerPhone: string | null;
+  customerAddress: string | null;
+  recipientFirstName: string | null;
+  recipientLastName: string | null;
+  recipientNationalId: string | null;
+  recipientMobile: string | null;
+  najaOrderNumber: string | null;
   receiverFullName: string | null;
   receiverPhone: string | null;
   deliveryFullAddress: string | null;
@@ -97,6 +108,7 @@ export interface ExitSlip {
   notes: string | null;
   internalInvoiceObjectId: string | null;
   internalInvoiceNumber: string | null;
+  order: Order | null;
   items: ExitSlipItemGroup[];
   units: WarehouseItemUnit[];
   createdAt: string;
@@ -110,7 +122,17 @@ export interface ExitSlipPdfData {
   issueDate: string | null;
   customer: {
     name: string | null;
+    sepidarCustomerCode: string | null;
+    mobile: string | null;
     phone: string | null;
+    address: string | null;
+  };
+  recipient: {
+    firstName: string | null;
+    lastName: string | null;
+    nationalId: string | null;
+    mobile: string | null;
+    najaOrderNumber: string | null;
   };
   receiver: {
     fullName: string | null;
@@ -127,11 +149,11 @@ export interface ExitSlipPdfData {
   units: WarehouseItemUnit[];
   deliveryCode: string | null;
   notes: string | null;
+  order: Order | null;
 }
 
 export interface CreateInboundReceiptPayload {
   productObjectId: string;
-  warehouseId?: string;
   units: Array<{
     productIdentifier: string;
     serialNumber: string;
