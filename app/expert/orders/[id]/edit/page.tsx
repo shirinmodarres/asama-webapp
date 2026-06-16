@@ -13,14 +13,17 @@ import {
   type OrderFormSubmitPayload,
 } from "@/components/orders/order-form";
 import { getErrorMessage } from "@/lib/api/api-error";
-import type { Order } from "@/lib/models/order.model";
-import { getOrder, updatePendingOrder } from "@/lib/services/order.service";
+import type { OrderEditData } from "@/lib/models/order.model";
+import {
+  getOrderEditData,
+  updatePendingOrder,
+} from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function EditExpertOrderPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
+  const [editData, setEditData] = useState<OrderEditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -32,8 +35,8 @@ export default function EditExpertOrderPage() {
       setIsLoading(true);
       setError("");
       try {
-        const orderData = await getOrder(params.id);
-        if (isMounted) setOrder(orderData);
+        const orderData = await getOrderEditData(params.id);
+        if (isMounted) setEditData(orderData);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -49,11 +52,14 @@ export default function EditExpertOrderPage() {
   }, [params.id]);
 
   const handleSubmit = async (payload: OrderFormSubmitPayload) => {
-    if (!order) return;
+    if (!editData?.order) return;
 
     setIsSubmitting(true);
     try {
-      const updatedOrder = await updatePendingOrder(order.objectId, payload);
+      const updatedOrder = await updatePendingOrder(
+        editData.order.objectId,
+        payload,
+      );
       router.push(`/expert/orders/${updatedOrder.objectId}`);
     } finally {
       setIsSubmitting(false);
@@ -67,22 +73,25 @@ export default function EditExpertOrderPage() {
           title="در حال دریافت سفارش"
           description="اطلاعات سفارش از سرور دریافت می شود."
         />
-      ) : error && !order ? (
+      ) : error && !editData?.order ? (
         <PageErrorMessage title="دریافت سفارش انجام نشد" message={error} />
-      ) : !order ? (
+      ) : !editData?.order ? (
         <EmptyState
           title="سفارش یافت نشد"
           description="شناسه سفارش معتبر نیست یا رکوردی برای آن وجود ندارد."
         />
-      ) : !isEditableOrderStatus(order.orderStatus) ? (
+      ) : !canExpertEdit(editData) ? (
         <div className="space-y-4">
           <EmptyState
             title="این سفارش دیگر قابل ویرایش نیست."
-            description="برای مشاهده وضعیت فعلی سفارش به صفحه جزئیات برگردید."
+            description={
+              editData.editBlockedReason ||
+              "بعد از تأیید مدیر امکان ویرایش سفارش برای کارشناس وجود ندارد."
+            }
           />
           <div className="flex justify-center">
             <Link
-              href={`/expert/orders/${order.objectId}`}
+              href={`/expert/orders/${editData.order.objectId}`}
               className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white"
             >
               بازگشت به جزئیات سفارش
@@ -92,11 +101,11 @@ export default function EditExpertOrderPage() {
       ) : (
         <>
           <SectionHeader
-            title={`ویرایش ${formatFaDigits(order.code)}`}
+            title={`ویرایش ${formatFaDigits(editData.order.code)}`}
             description="فیلدهای این فرم با ثبت سفارش جدید یکسان است."
             actions={
               <Link
-                href={`/expert/orders/${order.objectId}`}
+                href={`/expert/orders/${editData.order.objectId}`}
                 className="rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm text-[#334155] hover:border-[#CBD5E1]"
               >
                 بازگشت به جزئیات
@@ -106,10 +115,14 @@ export default function EditExpertOrderPage() {
 
           <OrderForm
             mode="edit"
-            initialOrder={order}
+            initialOrder={editData.order}
             submitLabel="ذخیره تغییرات"
             isSubmitting={isSubmitting}
             assignedCustomersOnly
+            sepidarProductsOnly
+            initialProducts={editData.products}
+            initialCustomers={editData.customers}
+            lockCustomer
             onSubmit={handleSubmit}
           />
         </>
@@ -118,6 +131,11 @@ export default function EditExpertOrderPage() {
   );
 }
 
-function isEditableOrderStatus(status: string): boolean {
-  return status === "pending_approval" || status === "needs_review";
+function canExpertEdit(editData: OrderEditData): boolean {
+  return (
+    editData.canEdit &&
+    ["pending_approval", "needs_review", "review_resolved"].includes(
+      editData.order.orderStatus,
+    )
+  );
 }

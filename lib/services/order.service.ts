@@ -2,6 +2,12 @@ import { httpClient } from "@/lib/api/http-client";
 import { ApiError } from "@/lib/api/api-error";
 import { getShipmentStopReasonLabel } from "@/lib/domain/order-action-reasons";
 import { mapOrderDto, mapOrderListDto } from "@/lib/mappers/order.mapper";
+import {
+  mapProductOrderOptionListDto,
+  mapProductOrderOptionDto,
+} from "@/lib/mappers/product.mapper";
+import { mapCustomerListDto } from "@/lib/mappers/customer.mapper";
+import { toArray, toRecord } from "@/lib/mappers/mapper-utils";
 import type {
   CancelOrderPayload,
   CreateOrderPayload,
@@ -9,6 +15,7 @@ import type {
   MarkOrderNeedsReviewPayload,
   Order,
   OrderApprovalResult,
+  OrderEditData,
   OrderFilters,
   QuotationStatus,
   ReleaseShipmentPayload,
@@ -17,7 +24,11 @@ import type {
   UpdatePendingOrderPayload,
   UnlockShipmentPayload,
 } from "@/lib/models/order.model";
-import { toNumber } from "@/lib/utils/number-format";
+import {
+  normalizeDigits,
+  normalizePhone,
+  toNumber,
+} from "@/lib/utils/number-format";
 
 export async function listOrders(filters?: OrderFilters): Promise<Order[]> {
   const data = await httpClient.get<unknown>(buildOrdersPath(filters));
@@ -27,6 +38,42 @@ export async function listOrders(filters?: OrderFilters): Promise<Order[]> {
 export async function getOrder(objectId: string): Promise<Order> {
   const data = await httpClient.get<unknown>(`/api/orders/${objectId}`);
   return mapOrderDto(data);
+}
+
+export async function getOrderEditData(objectId: string): Promise<OrderEditData> {
+  const data = await httpClient.get<unknown>(`/api/orders/${objectId}/edit-data`);
+  const record = toRecord(data);
+  const orderSource = record.order ?? record.data ?? data;
+  const productSource =
+    record.products ??
+    record.orderProducts ??
+    record.productOptions ??
+    record.availableProducts ??
+    [];
+  const customerSource =
+    record.customers ??
+    record.assignedCustomers ??
+    record.customerOptions ??
+    [];
+
+  return {
+    order: mapOrderDto(orderSource),
+    canEdit:
+      record.canEdit === undefined || record.canEdit === null
+        ? true
+        : Boolean(record.canEdit),
+    editBlockedReason:
+      typeof record.editBlockedReason === "string"
+        ? record.editBlockedReason
+        : typeof record.reason === "string"
+          ? record.reason
+          : null,
+    products: mergeOrderProducts(
+      mapProductOrderOptionListDto(toArray(productSource)),
+      mapOrderDto(orderSource),
+    ),
+    customers: mapCustomerListDto(toArray(customerSource)),
+  };
 }
 
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
@@ -117,6 +164,15 @@ function normalizeOrderPayload(
 ): Record<string, unknown> {
   return {
     ...payload,
+    recipientNationalId: payload.recipientNationalId
+      ? normalizeDigits(payload.recipientNationalId)
+      : payload.recipientNationalId,
+    recipientMobile: payload.recipientMobile
+      ? normalizePhone(payload.recipientMobile)
+      : payload.recipientMobile,
+    najaOrderNumber: payload.najaOrderNumber
+      ? normalizeDigits(payload.najaOrderNumber)
+      : payload.najaOrderNumber,
     items: payload.items?.map((item) => ({
       ...item,
       quantity: toNumber(item.quantity),
@@ -128,6 +184,28 @@ function normalizeOrderPayload(
           : item.priceNoteItemId,
     })),
   };
+}
+
+function mergeOrderProducts(products: ReturnType<typeof mapProductOrderOptionListDto>, order: Order) {
+  const productMap = new Map(products.map((product) => [product.objectId, product]));
+  order.items.forEach((item) => {
+    if (!item.productId || productMap.has(item.productId)) return;
+    productMap.set(
+      item.productId,
+      mapProductOrderOptionDto({
+        objectId: item.productId,
+        id: item.productSku,
+        sku: item.productSku,
+        sepidarCode: item.productSku,
+        name: item.productName,
+        brand: item.brand,
+        unit: "عدد",
+        unitPrice: item.unitPrice,
+        availableSalesQuantity: item.quantity,
+      }),
+    );
+  });
+  return Array.from(productMap.values());
 }
 
 export interface ApproveOrderPayload {
