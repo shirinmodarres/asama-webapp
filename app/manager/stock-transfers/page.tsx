@@ -10,7 +10,7 @@ import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { StockTransferRequest } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -19,6 +19,61 @@ import {
   listManagerStockTransfers,
   rejectStockTransfer,
 } from "@/lib/services/stock.service";
+
+type TransferApprovalErrorDetails = {
+  transferId?: string | null;
+  productObjectId?: string | null;
+  sourceStockObjectId?: string | null;
+  destinationStockObjectId?: string | null;
+  quantity?: number | string | null;
+  candidateUnitsCount?: number | string | null;
+  sourceInventory?: {
+    objectId?: string | null;
+    realQuantity?: number | string | null;
+    salesQuantity?: number | string | null;
+    reservedQuantity?: number | string | null;
+  } | null;
+  destinationInventory?: {
+    objectId?: string | null;
+    realQuantity?: number | string | null;
+    salesQuantity?: number | string | null;
+    reservedQuantity?: number | string | null;
+  } | null;
+};
+
+function isTransferApprovalErrorDetails(
+  value: unknown,
+): value is TransferApprovalErrorDetails {
+  return Boolean(value && typeof value === "object");
+}
+
+function formatTransferActionError(error: unknown): string {
+  const baseMessage = getErrorMessage(error);
+  if (!(error instanceof ApiError) || !isTransferApprovalErrorDetails(error.details)) {
+    return baseMessage;
+  }
+
+  const details = error.details;
+  const detailRows = [
+    ["شناسه انتقال", details.transferId],
+    ["کالا", details.productObjectId],
+    ["انبار مبدأ", details.sourceStockObjectId],
+    ["انبار مقصد", details.destinationStockObjectId],
+    ["تعداد انتقال", details.quantity],
+    ["واحدهای قابل انتقال", details.candidateUnitsCount],
+    ["موجودی واقعی مبدأ", details.sourceInventory?.realQuantity],
+    ["موجودی فروش مبدأ", details.sourceInventory?.salesQuantity],
+    ["رزروشده مبدأ", details.sourceInventory?.reservedQuantity],
+    ["موجودی واقعی مقصد", details.destinationInventory?.realQuantity],
+    ["موجودی فروش مقصد", details.destinationInventory?.salesQuantity],
+  ]
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([label, value]) => `${label}: ${typeof value === "number" ? formatNumber(value) : value}`);
+
+  return detailRows.length
+    ? `${baseMessage}\n${detailRows.join("\n")}`
+    : baseMessage;
+}
 
 export default function ManagerStockTransfersPage() {
   const [transfers, setTransfers] = useState<StockTransferRequest[]>([]);
@@ -77,7 +132,7 @@ export default function ManagerStockTransfersPage() {
       }
       await loadTransfers();
     } catch (actionError) {
-      setError(getErrorMessage(actionError));
+      setError(formatTransferActionError(actionError));
     } finally {
       setSubmittingId("");
     }
