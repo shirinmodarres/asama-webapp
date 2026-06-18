@@ -23,6 +23,9 @@ export interface WarehouseItemUnit {
   objectId: string;
   id: string;
   productObjectId: string;
+  stockObjectId: string | null;
+  sepidarStockId: number | null;
+  stockTitle: string | null;
   productSku: string;
   productName: string;
   productBrand: string;
@@ -45,10 +48,15 @@ export interface WarehouseInboundReceipt {
   id: string;
   receiptCode: string;
   productObjectId: string;
+  stockObjectId: string | null;
+  sepidarStockId: number | null;
+  stockTitle: string | null;
   productSku: string;
   productName: string;
   quantity: number;
   createdByName: string | null;
+  supplierName: string | null;
+  receiptDate: string | null;
   notes: string | null;
   units: WarehouseItemUnit[];
   createdAt: string;
@@ -164,12 +172,15 @@ export interface CreateInboundReceiptPayload {
 }
 
 export interface UpdateInboundReceiptPayload {
+  supplierName?: string | null;
+  receiptDate?: string | null;
   notes?: string | null;
   units: Array<{
     objectId?: string;
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;
+    quantity: number;
   }>;
 }
 

@@ -17,14 +17,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
-import { formatNumber } from "@/lib/expert/utils";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import type { WarehouseInboundReceipt } from "@/lib/models/warehouse.model";
 import {
-  getInboundReceipt,
+  getInboundReceiptEditData,
   updateInboundReceipt,
 } from "@/lib/services/warehouse.service";
-import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
+import {
+  formatFaDigits,
+  formatFaNumber,
+  normalizeDigits,
+  toNumber,
+} from "@/lib/utils/number-format";
 
 interface EditableUnit {
   rowId: string;
@@ -32,6 +36,7 @@ interface EditableUnit {
   productIdentifier: string;
   serialNumber: string;
   trackingCode: string;
+  quantity: string;
 }
 
 export default function WarehouseInboundReceiptEditPage() {
@@ -40,9 +45,12 @@ export default function WarehouseInboundReceiptEditPage() {
   const [receipt, setReceipt] = useState<WarehouseInboundReceipt | null>(null);
   const [units, setUnits] = useState<EditableUnit[]>([]);
   const [notes, setNotes] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [receiptDate, setReceiptDate] = useState("");
   const [newProductIdentifier, setNewProductIdentifier] = useState("");
   const [newSerialNumber, setNewSerialNumber] = useState("");
   const [newTrackingCode, setNewTrackingCode] = useState("");
+  const [newQuantity, setNewQuantity] = useState("1");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -56,10 +64,12 @@ export default function WarehouseInboundReceiptEditPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await getInboundReceipt(params.id);
+        const data = await getInboundReceiptEditData(params.id);
         if (!isMounted) return;
         setReceipt(data);
         setNotes(data.notes || "");
+        setSupplierName(data.supplierName || "");
+        setReceiptDate(toDateInputValue(data.receiptDate));
         setUnits(
           data.units.map((unit, index) => ({
             rowId: `${unit.objectId || "unit"}-${index}`,
@@ -67,6 +77,7 @@ export default function WarehouseInboundReceiptEditPage() {
             productIdentifier: unit.productIdentifier,
             serialNumber: unit.serialNumber,
             trackingCode: unit.trackingCode,
+            quantity: String(unit.quantity || 1),
           })),
         );
       } catch (loadError) {
@@ -83,8 +94,22 @@ export default function WarehouseInboundReceiptEditPage() {
   }, [params.id]);
 
   const isEditable = useMemo(
-    () => Boolean(receipt?.units.every((unit) => unit.status === "in_stock")),
+    () =>
+      Boolean(
+        receipt?.units.every((unit) =>
+          ["available", "in_stock"].includes(String(unit.status)),
+        ),
+      ),
     [receipt],
+  );
+
+  const totalQuantity = useMemo(
+    () =>
+      units.reduce((sum, unit) => {
+        const quantity = toNumber(unit.quantity);
+        return sum + (quantity > 0 ? quantity : 0);
+      }, 0),
+    [units],
   );
 
   const columns: DataTableColumn<EditableUnit>[] = [
@@ -120,6 +145,19 @@ export default function WarehouseInboundReceiptEditPage() {
           value={row.trackingCode}
           onChange={(event) =>
             updateUnit(row.rowId, { trackingCode: event.target.value })
+          }
+        />
+      ),
+    },
+    {
+      key: "quantity",
+      header: "تعداد",
+      render: (row) => (
+        <Input
+          inputMode="numeric"
+          value={row.quantity}
+          onChange={(event) =>
+            updateUnit(row.rowId, { quantity: event.target.value })
           }
         />
       ),
@@ -161,33 +199,35 @@ export default function WarehouseInboundReceiptEditPage() {
       productIdentifier: normalizeDigits(newProductIdentifier.trim()),
       serialNumber: normalizeDigits(newSerialNumber.trim()),
       trackingCode: normalizeDigits(newTrackingCode.trim()),
+      quantity: normalizeDigits(newQuantity.trim()),
     };
-    if (!unit.productIdentifier || !unit.serialNumber || !unit.trackingCode) {
+    const quantity = toNumber(unit.quantity);
+    if (
+      !unit.productIdentifier ||
+      !unit.serialNumber ||
+      !unit.trackingCode ||
+      quantity <= 0
+    ) {
       setFieldErrors({
         newProductIdentifier: unit.productIdentifier
           ? ""
           : "این فیلد الزامی است.",
         newSerialNumber: unit.serialNumber ? "" : "این فیلد الزامی است.",
         newTrackingCode: unit.trackingCode ? "" : "این فیلد الزامی است.",
+        newQuantity: quantity > 0 ? "" : "تعداد باید بیشتر از صفر باشد.",
       });
       return;
     }
-    if (
-      units.some(
-        (entry) =>
-          normalizeDigits(entry.serialNumber.trim()) === unit.serialNumber ||
-          normalizeDigits(entry.trackingCode.trim()) === unit.trackingCode,
-      )
-    ) {
-      setFieldErrors({
-        newTrackingCode: "سریال یا کد رهگیری تکراری در فرم وجود دارد.",
-      });
+    const duplicateField = findDuplicateUnitField(units, unit);
+    if (duplicateField) {
+      setFieldErrors({ [duplicateField]: duplicateMessage(duplicateField) });
       return;
     }
     setUnits((current) => [...current, unit]);
     setNewProductIdentifier("");
     setNewSerialNumber("");
     setNewTrackingCode("");
+    setNewQuantity("1");
   };
 
   const handleSubmit = async () => {
@@ -200,25 +240,42 @@ export default function WarehouseInboundReceiptEditPage() {
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
+      quantity: toNumber(unit.quantity),
     }));
 
     if (
       normalizedUnits.length === 0 ||
       normalizedUnits.some(
-        (unit) => !unit.productIdentifier || !unit.serialNumber || !unit.trackingCode,
+        (unit) =>
+          !unit.productIdentifier ||
+          !unit.serialNumber ||
+          !unit.trackingCode ||
+          unit.quantity <= 0,
       )
     ) {
-      setError("همه ردیف‌ها باید شناسه محصول، سریال محصول و کد رهگیری داشته باشند.");
+      setError(
+        "همه ردیف‌ها باید شناسه محصول، سریال محصول، کد رهگیری و تعداد معتبر داشته باشند.",
+      );
       return;
     }
 
+    const identifiers = new Set<string>();
     const serials = new Set<string>();
     const trackingCodes = new Set<string>();
     for (const unit of normalizedUnits) {
-      if (serials.has(unit.serialNumber) || trackingCodes.has(unit.trackingCode)) {
-        setError("سریال یا کد رهگیری تکراری در فرم وجود دارد.");
+      if (identifiers.has(unit.productIdentifier)) {
+        setError("شناسه کالا قبلاً ثبت شده است.");
         return;
       }
+      if (serials.has(unit.serialNumber)) {
+        setError("سریال کالا قبلاً ثبت شده است.");
+        return;
+      }
+      if (trackingCodes.has(unit.trackingCode)) {
+        setError("کد رهگیری قبلاً ثبت شده است.");
+        return;
+      }
+      identifiers.add(unit.productIdentifier);
       serials.add(unit.serialNumber);
       trackingCodes.add(unit.trackingCode);
     }
@@ -226,13 +283,15 @@ export default function WarehouseInboundReceiptEditPage() {
     setIsSubmitting(true);
     try {
       const updated = await updateInboundReceipt(receipt.objectId, {
+        supplierName: supplierName.trim() || null,
+        receiptDate: receiptDate || null,
         notes: notes.trim() || null,
         units: normalizedUnits,
       });
       setMessage("رسید ورود با موفقیت ویرایش شد.");
       router.push(`/warehouse/inbound/receipts/${updated.objectId || updated.id}`);
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      setError(formatInboundSubmitError(submitError));
     } finally {
       setIsSubmitting(false);
     }
@@ -271,22 +330,44 @@ export default function WarehouseInboundReceiptEditPage() {
           {error ? <InlineErrorMessage message={error} /> : null}
 
           <Card className="p-5">
-            <dl className="grid gap-3 sm:grid-cols-3">
+            <dl className="grid gap-3 sm:grid-cols-4">
               <InfoItem label="کالا" value={receipt.productName || "-"} />
               <InfoItem label="شناسه کالا" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
-              <InfoItem label="تعداد فعلی" value={formatNumber(units.length)} />
+              <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
+              <InfoItem label="تعداد فعلی" value={formatFaNumber(totalQuantity)} />
             </dl>
-            <label className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
-              <span>توضیحات</span>
-              <Textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-              />
-            </label>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>تأمین‌کننده</span>
+                <Input
+                  value={supplierName}
+                  onChange={(event) => setSupplierName(event.target.value)}
+                  placeholder="نام تأمین‌کننده"
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>تاریخ رسید</span>
+                <Input
+                  type="date"
+                  value={receiptDate}
+                  onChange={(event) => setReceiptDate(event.target.value)}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                <span>توضیحات</span>
+                <Textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </label>
+            </div>
           </Card>
 
           <Card className="p-5">
-            <div className="grid gap-3 md:grid-cols-3">
+            <p className="mb-4 text-sm text-[#64748B]">
+              شناسه کالا، سریال کالا و کد رهگیری نباید در رسید تکراری باشند.
+            </p>
+            <div className="grid gap-3 md:grid-cols-4">
               <div>
                 <Input
                   value={newProductIdentifier}
@@ -335,6 +416,25 @@ export default function WarehouseInboundReceiptEditPage() {
                 />
                 <FieldError message={fieldErrors.newTrackingCode} />
               </div>
+              <div>
+                <Input
+                  inputMode="numeric"
+                  value={newQuantity}
+                  onChange={(event) => {
+                    setNewQuantity(event.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      newQuantity: "",
+                    }));
+                  }}
+                  placeholder="تعداد"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") addUnit();
+                  }}
+                  aria-invalid={Boolean(fieldErrors.newQuantity)}
+                />
+                <FieldError message={fieldErrors.newQuantity} />
+              </div>
             </div>
             <Button type="button" className="mt-4" onClick={addUnit}>
               افزودن ردیف
@@ -359,4 +459,81 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-sm font-semibold text-[#1F3A5F]">{value}</dd>
     </div>
   );
+}
+
+function toDateInputValue(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function findDuplicateUnitField(
+  units: EditableUnit[],
+  candidate: Pick<
+    EditableUnit,
+    "productIdentifier" | "serialNumber" | "trackingCode"
+  >,
+): "newProductIdentifier" | "newSerialNumber" | "newTrackingCode" | null {
+  const productIdentifier = normalizeDigits(candidate.productIdentifier.trim());
+  const serialNumber = normalizeDigits(candidate.serialNumber.trim());
+  const trackingCode = normalizeDigits(candidate.trackingCode.trim());
+
+  if (
+    productIdentifier &&
+    units.some(
+      (entry) =>
+        normalizeDigits(entry.productIdentifier.trim()) === productIdentifier,
+    )
+  ) {
+    return "newProductIdentifier";
+  }
+
+  if (
+    serialNumber &&
+    units.some(
+      (entry) => normalizeDigits(entry.serialNumber.trim()) === serialNumber,
+    )
+  ) {
+    return "newSerialNumber";
+  }
+
+  if (
+    trackingCode &&
+    units.some(
+      (entry) => normalizeDigits(entry.trackingCode.trim()) === trackingCode,
+    )
+  ) {
+    return "newTrackingCode";
+  }
+
+  return null;
+}
+
+function duplicateMessage(
+  field: "newProductIdentifier" | "newSerialNumber" | "newTrackingCode",
+): string {
+  if (field === "newProductIdentifier") return "شناسه کالا قبلاً ثبت شده است.";
+  if (field === "newSerialNumber") return "سریال کالا قبلاً ثبت شده است.";
+  return "کد رهگیری قبلاً ثبت شده است.";
+}
+
+function formatInboundSubmitError(error: unknown): string {
+  const baseMessage = getErrorMessage(error);
+  if (!(error instanceof ApiError) || !error.details) return baseMessage;
+
+  const details = error.details as Record<string, unknown>;
+  const detailRows = [
+    details.productIdentifier
+      ? `شناسه کالا: ${formatFaDigits(String(details.productIdentifier))}`
+      : "",
+    details.serialNumber
+      ? `سریال: ${formatFaDigits(String(details.serialNumber))}`
+      : "",
+    details.trackingCode
+      ? `کد رهگیری: ${formatFaDigits(String(details.trackingCode))}`
+      : "",
+  ].filter(Boolean);
+
+  return detailRows.length ? `${baseMessage}\n${detailRows.join("\n")}` : baseMessage;
 }

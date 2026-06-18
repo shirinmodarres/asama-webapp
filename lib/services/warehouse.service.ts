@@ -68,12 +68,21 @@ export async function getInboundReceipt(
   return mapWarehouseInboundReceiptDto(data);
 }
 
+export async function getInboundReceiptEditData(
+  objectId: string,
+): Promise<WarehouseInboundReceipt> {
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/inbound-receipts/${objectId}/edit`,
+  );
+  return mapWarehouseInboundReceiptDto(data);
+}
+
 export async function updateInboundReceipt(
   objectId: string,
   payload: UpdateInboundReceiptPayload,
 ): Promise<WarehouseInboundReceipt> {
-  const data = await httpClient.put<unknown>(
-    `/api/warehouse/inbound/${objectId}`,
+  const data = await httpClient.patch<unknown>(
+    `/api/warehouse/inbound-receipts/${objectId}`,
     normalizeUpdateInboundPayload(payload),
   );
   return mapWarehouseInboundReceiptDto(data);
@@ -227,6 +236,7 @@ function normalizeUpdateInboundPayload(
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
+      quantity: Number(unit.quantity) || 0,
     })),
   };
 }
