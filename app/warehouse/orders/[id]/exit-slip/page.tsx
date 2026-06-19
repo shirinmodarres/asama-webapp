@@ -208,37 +208,29 @@ export default function ExitSlipCreatePage() {
       return;
     }
     if (field === "serialNumber") {
-      if (!normalizeDigits(scanValues.serialNumber.trim())) {
-        setFieldErrors({ serialNumber: "این فیلد الزامی است." });
-        focusScanField("serialNumber");
-        return;
-      }
-      focusScanField("trackingCode");
+      void handleAddScannedUnit("serialNumber");
       return;
     }
-    void handleAddScannedUnit();
+    void handleAddScannedUnit("trackingCode");
   };
 
-  const handleAddScannedUnit = async () => {
+  const handleAddScannedUnit = async (
+    sourceField: "serialNumber" | "trackingCode",
+  ) => {
     if (!order) return;
-    const productIdentifier = normalizeDigits(
-      scanValues.productIdentifier.trim(),
-    );
     const serialNumber = normalizeDigits(scanValues.serialNumber.trim());
     const trackingCode = normalizeDigits(scanValues.trackingCode.trim());
+    const scannedCode =
+      sourceField === "serialNumber" ? serialNumber : trackingCode;
 
     setFieldErrors({});
-    if (!serialNumber) {
-      setFieldErrors({ serialNumber: "این فیلد الزامی است." });
-      focusScanField("serialNumber");
-      return;
-    }
-    if (!trackingCode) {
-      setFieldErrors({ trackingCode: "این فیلد الزامی است." });
-      focusScanField("trackingCode");
+    if (!scannedCode) {
+      setFieldErrors({ [sourceField]: "این فیلد الزامی است." });
+      focusScanField(sourceField);
       return;
     }
     if (
+      serialNumber &&
       scannedUnits.some((unit) =>
         normalizeDigits(unit.serialNumber).trim() === serialNumber,
       )
@@ -248,6 +240,7 @@ export default function ExitSlipCreatePage() {
       return;
     }
     if (
+      trackingCode &&
       scannedUnits.some((unit) =>
         normalizeDigits(unit.trackingCode).trim() === trackingCode,
       )
@@ -262,7 +255,7 @@ export default function ExitSlipCreatePage() {
     setMessage("");
     try {
       const unit = await validateExitSlipScan(order.objectId, {
-        scannedCode: trackingCode,
+        scannedCode,
         currentScannedUnitIds: scannedUnits
           .map((entry) => entry.objectId)
           .filter(Boolean),
@@ -273,6 +266,7 @@ export default function ExitSlipCreatePage() {
         return;
       }
       if (
+        sourceField === "serialNumber" &&
         unit.serialNumber &&
         normalizeDigits(unit.serialNumber).trim() !== serialNumber
       ) {
@@ -283,6 +277,7 @@ export default function ExitSlipCreatePage() {
         return;
       }
       if (
+        sourceField === "trackingCode" &&
         unit.trackingCode &&
         normalizeDigits(unit.trackingCode).trim() !== trackingCode
       ) {
@@ -293,14 +288,27 @@ export default function ExitSlipCreatePage() {
         return;
       }
       if (
-        productIdentifier &&
-        unit.productIdentifier &&
-        normalizeDigits(unit.productIdentifier).trim() !== productIdentifier
+        scannedUnits.some((entry) => entry.objectId === unit.objectId) ||
+        (unit.serialNumber &&
+          scannedUnits.some(
+            (entry) =>
+              normalizeDigits(entry.serialNumber).trim() ===
+              normalizeDigits(unit.serialNumber).trim(),
+          )) ||
+        (unit.trackingCode &&
+          scannedUnits.some(
+            (entry) =>
+              normalizeDigits(entry.trackingCode).trim() ===
+              normalizeDigits(unit.trackingCode).trim(),
+          ))
       ) {
         setFieldErrors({
-          productIdentifier: "شناسه محصول با کالای اسکن‌شده تطابق ندارد.",
+          [sourceField]:
+            sourceField === "serialNumber"
+              ? "سریال کالا قبلاً ثبت شده است."
+              : "کد رهگیری قبلاً ثبت شده است.",
         });
-        focusScanField("productIdentifier");
+        focusScanField(sourceField);
         return;
       }
       const expectedRow = expectedRows.find((row) =>
@@ -325,14 +333,14 @@ export default function ExitSlipCreatePage() {
       );
       setScanValues((current) => ({
         productIdentifier:
-          current.productIdentifier || unit.productIdentifier || "",
+          unit.productIdentifier || current.productIdentifier || "",
         serialNumber: "",
         trackingCode: "",
       }));
       focusScanField("serialNumber");
     } catch (scanError) {
-      setError(getErrorMessage(scanError));
-      focusScanField("trackingCode");
+      setFieldErrors({ [sourceField]: getErrorMessage(scanError) });
+      focusScanField(sourceField);
     } finally {
       setIsValidating(false);
     }
@@ -481,9 +489,9 @@ export default function ExitSlipCreatePage() {
               />
             </div>
             <p className="mt-3 text-xs leading-6 text-[#6B7280]">
-              شناسه محصول برای کالای انتخاب‌شده ثابت می‌ماند. با Enter از سریال
-              به کد رهگیری بروید؛ Enter روی کد رهگیری ردیف را ثبت می‌کند و
-              اسکن بعدی آماده می‌شود.
+              شناسه محصول می‌تواند تکراری باشد. Enter روی شناسه محصول فقط به
+              سریال می‌رود؛ Enter روی سریال یا کد رهگیری کالا را پیدا و ثبت
+              می‌کند.
             </p>
           </Card>
 
