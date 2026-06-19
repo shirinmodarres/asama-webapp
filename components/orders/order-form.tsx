@@ -146,7 +146,7 @@ export function OrderForm({
     initialOrder?.najaOrderNumber ?? initialOrder?.externalOrderNumber ?? "",
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState(
-    initialOrder?.customerObjectId ?? "",
+    initialOrder?.customerObjectId ?? initialOrder?.customer?.objectId ?? "",
   );
   const [selectedAddressId, setSelectedAddressId] = useState(
     initialOrder?.customerAddressObjectId ?? "",
@@ -274,6 +274,16 @@ export function OrderForm({
 
     async function loadProductsBySaleType() {
       if (!sepidarProductsOnly) return;
+      const fallbackProducts = mergeProducts(providedProducts, initialOrder);
+      const keepOrderSnapshotProducts = () => {
+        if (mode !== "edit" || !initialOrder) {
+          setProducts([]);
+          return;
+        }
+        setProducts(fallbackProducts);
+        setItems(mapOrderItems(initialOrder.items, fallbackProducts));
+      };
+
       if (providedProducts.length > 0 && mode !== "edit") {
         setProducts(mergeProducts(providedProducts, initialOrder));
         if (initialOrder) {
@@ -289,9 +299,9 @@ export function OrderForm({
       const saleTypeId =
         customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
 
-      setProducts([]);
       setProductsError("");
       if (!selectedCustomerId) {
+        keepOrderSnapshotProducts();
         setIsLoadingProducts(false);
         return;
       }
@@ -299,6 +309,7 @@ export function OrderForm({
         !saleTypeId ||
         (assignedCustomersOnly && !hasAssignmentInventory(customer))
       ) {
+        keepOrderSnapshotProducts();
         setIsLoadingProducts(false);
         return;
       }
@@ -329,7 +340,7 @@ export function OrderForm({
         }
       } catch {
         if (!isMounted) return;
-        setProducts([]);
+        keepOrderSnapshotProducts();
         setProductsError("دریافت کالاهای قیمت‌گذاری‌شده انجام نشد.");
       } finally {
         if (isMounted) setIsLoadingProducts(false);
