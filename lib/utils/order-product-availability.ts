@@ -1,13 +1,10 @@
 import type { Product } from "@/lib/models/product.model";
 
 export function logOrderDropdownProductSource(product: Product): void {
-  const source = product as Product & { stockQuantity?: number };
   console.log("[ORDER_DROPDOWN_PRODUCT_SOURCE]", {
     productCode: product.sepidarCode || product.sku,
     productName: product.name,
     availableSalesQuantity: product.availableSalesQuantity,
-    availableStock: product.availableStock,
-    stockQuantity: source.stockQuantity,
     rawProduct: product,
   });
 }

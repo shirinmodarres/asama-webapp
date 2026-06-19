@@ -42,6 +42,8 @@ interface ExpectedRow {
 export default function ExitSlipCreatePage() {
   const params = useParams<{ id: string }>();
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
+  const serialNumberRef = useRef<HTMLInputElement | null>(null);
+  const trackingCodeRef = useRef<HTMLInputElement | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [scanValues, setScanValues] = useState({
     productIdentifier: "",
@@ -81,8 +83,8 @@ export default function ExitSlipCreatePage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!isLoading) productIdentifierRef.current?.focus();
-  }, [isLoading, scannedUnits.length]);
+    if (!isLoading) serialNumberRef.current?.focus();
+  }, [isLoading]);
 
   const expectedRows = useMemo<ExpectedRow[]>(() => {
     if (!order) return [];
@@ -191,25 +193,67 @@ export default function ExitSlipCreatePage() {
     },
   ];
 
-  const handleScan = async (
-    field: keyof typeof scanValues,
-    rawValue = scanValues[field],
-  ) => {
+  const focusScanField = (field: keyof typeof scanValues) => {
+    const refs = {
+      productIdentifier: productIdentifierRef,
+      serialNumber: serialNumberRef,
+      trackingCode: trackingCodeRef,
+    };
+    window.setTimeout(() => refs[field].current?.focus(), 0);
+  };
+
+  const handleScanFieldEnter = (field: keyof typeof scanValues) => {
+    if (field === "productIdentifier") {
+      focusScanField("serialNumber");
+      return;
+    }
+    if (field === "serialNumber") {
+      if (!normalizeDigits(scanValues.serialNumber.trim())) {
+        setFieldErrors({ serialNumber: "این فیلد الزامی است." });
+        focusScanField("serialNumber");
+        return;
+      }
+      focusScanField("trackingCode");
+      return;
+    }
+    void handleAddScannedUnit();
+  };
+
+  const handleAddScannedUnit = async () => {
     if (!order) return;
-    const normalizedCode = normalizeDigits(rawValue.trim());
+    const productIdentifier = normalizeDigits(
+      scanValues.productIdentifier.trim(),
+    );
+    const serialNumber = normalizeDigits(scanValues.serialNumber.trim());
+    const trackingCode = normalizeDigits(scanValues.trackingCode.trim());
+
     setFieldErrors({});
-    if (!normalizedCode) {
-      setFieldErrors({ [field]: "این فیلد الزامی است." });
+    if (!serialNumber) {
+      setFieldErrors({ serialNumber: "این فیلد الزامی است." });
+      focusScanField("serialNumber");
+      return;
+    }
+    if (!trackingCode) {
+      setFieldErrors({ trackingCode: "این فیلد الزامی است." });
+      focusScanField("trackingCode");
       return;
     }
     if (
       scannedUnits.some((unit) =>
-        [unit.productIdentifier, unit.serialNumber, unit.trackingCode].includes(
-          normalizedCode,
-        ),
+        normalizeDigits(unit.serialNumber).trim() === serialNumber,
       )
     ) {
-      setFieldErrors({ [field]: "این شناسه قبلاً ثبت شده است." });
+      setFieldErrors({ serialNumber: "سریال کالا قبلاً ثبت شده است." });
+      focusScanField("serialNumber");
+      return;
+    }
+    if (
+      scannedUnits.some((unit) =>
+        normalizeDigits(unit.trackingCode).trim() === trackingCode,
+      )
+    ) {
+      setFieldErrors({ trackingCode: "کد رهگیری قبلاً ثبت شده است." });
+      focusScanField("trackingCode");
       return;
     }
 
@@ -218,13 +262,45 @@ export default function ExitSlipCreatePage() {
     setMessage("");
     try {
       const unit = await validateExitSlipScan(order.objectId, {
-        scannedCode: normalizedCode,
+        scannedCode: trackingCode,
         currentScannedUnitIds: scannedUnits
           .map((entry) => entry.objectId)
           .filter(Boolean),
       });
       if (!unit.objectId) {
         setError("اطلاعات کالای اسکن‌شده کامل نیست.");
+        focusScanField("trackingCode");
+        return;
+      }
+      if (
+        unit.serialNumber &&
+        normalizeDigits(unit.serialNumber).trim() !== serialNumber
+      ) {
+        setFieldErrors({
+          serialNumber: "سریال واردشده با کالای اسکن‌شده تطابق ندارد.",
+        });
+        focusScanField("serialNumber");
+        return;
+      }
+      if (
+        unit.trackingCode &&
+        normalizeDigits(unit.trackingCode).trim() !== trackingCode
+      ) {
+        setFieldErrors({
+          trackingCode: "کد رهگیری واردشده با کالای اسکن‌شده تطابق ندارد.",
+        });
+        focusScanField("trackingCode");
+        return;
+      }
+      if (
+        productIdentifier &&
+        unit.productIdentifier &&
+        normalizeDigits(unit.productIdentifier).trim() !== productIdentifier
+      ) {
+        setFieldErrors({
+          productIdentifier: "شناسه محصول با کالای اسکن‌شده تطابق ندارد.",
+        });
+        focusScanField("productIdentifier");
         return;
       }
       const expectedRow = expectedRows.find((row) =>
@@ -232,12 +308,14 @@ export default function ExitSlipCreatePage() {
       );
       if (!expectedRow) {
         setError("کالای اسکن‌شده در این سفارش وجود ندارد.");
+        focusScanField("trackingCode");
         return;
       }
       if (expectedRow.scannedQuantity >= expectedRow.item.quantity) {
         setFieldErrors({
-          [field]: "تعداد کالاهای ثبت‌شده بیشتر از تعداد سفارش است.",
+          trackingCode: "تعداد کالاهای ثبت‌شده بیشتر از تعداد سفارش است.",
         });
+        focusScanField("trackingCode");
         return;
       }
       setScannedUnits((current) =>
@@ -245,12 +323,18 @@ export default function ExitSlipCreatePage() {
           ? current
           : [...current, unit],
       );
-      setScanValues((current) => ({ ...current, [field]: "" }));
+      setScanValues((current) => ({
+        productIdentifier:
+          current.productIdentifier || unit.productIdentifier || "",
+        serialNumber: "",
+        trackingCode: "",
+      }));
+      focusScanField("serialNumber");
     } catch (scanError) {
       setError(getErrorMessage(scanError));
+      focusScanField("trackingCode");
     } finally {
       setIsValidating(false);
-      window.setTimeout(() => productIdentifierRef.current?.focus(), 0);
     }
   };
 
@@ -343,7 +427,7 @@ export default function ExitSlipCreatePage() {
             <div className="grid gap-4 md:grid-cols-3">
               <ScanField
                 ref={productIdentifierRef}
-                label="شناسه محصول"
+                label="شناسه محصول ثابت"
                 value={scanValues.productIdentifier}
                 error={fieldErrors.productIdentifier}
                 disabled={isValidating}
@@ -357,9 +441,10 @@ export default function ExitSlipCreatePage() {
                     productIdentifier: "",
                   }));
                 }}
-                onCommit={() => handleScan("productIdentifier")}
+                onCommit={() => handleScanFieldEnter("productIdentifier")}
               />
               <ScanField
+                ref={serialNumberRef}
                 label="سریال محصول"
                 value={scanValues.serialNumber}
                 error={fieldErrors.serialNumber}
@@ -374,9 +459,10 @@ export default function ExitSlipCreatePage() {
                     serialNumber: "",
                   }));
                 }}
-                onCommit={() => handleScan("serialNumber")}
+                onCommit={() => handleScanFieldEnter("serialNumber")}
               />
               <ScanField
+                ref={trackingCodeRef}
                 label="کد رهگیری"
                 value={scanValues.trackingCode}
                 error={fieldErrors.trackingCode}
@@ -391,12 +477,13 @@ export default function ExitSlipCreatePage() {
                     trackingCode: "",
                   }));
                 }}
-                onCommit={() => handleScan("trackingCode")}
+                onCommit={() => handleScanFieldEnter("trackingCode")}
               />
             </div>
             <p className="mt-3 text-xs leading-6 text-[#6B7280]">
-              بارکدخوان را روی هر کدام از فیلدها قرار دهید؛ Enter همان مقدار را
-              ثبت می‌کند.
+              شناسه محصول برای کالای انتخاب‌شده ثابت می‌ماند. با Enter از سریال
+              به کد رهگیری بروید؛ Enter روی کد رهگیری ردیف را ثبت می‌کند و
+              اسکن بعدی آماده می‌شود.
             </p>
           </Card>
 

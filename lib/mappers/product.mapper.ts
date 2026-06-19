@@ -140,6 +140,29 @@ export function mapProductDto(dto: unknown): Product {
   };
 }
 
+export function createDeprecatedProductInventoryFields(): Pick<
+  Product,
+  | "totalStock"
+  | "salesStock"
+  | "warehouseStock"
+  | "reservedStock"
+  | "availableStock"
+  | "warehouseAvailableStock"
+  | "najaInventoryQty"
+  | "inventories"
+> {
+  return {
+    totalStock: 0,
+    salesStock: 0,
+    warehouseStock: 0,
+    reservedStock: 0,
+    availableStock: 0,
+    warehouseAvailableStock: 0,
+    najaInventoryQty: 0,
+    inventories: [],
+  };
+}
+
 export function mapProductListDto(dto: unknown): Product[] {
   return Array.isArray(dto) ? dto.map(mapProductDto) : [];
 }

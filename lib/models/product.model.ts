@@ -22,10 +22,28 @@ export interface Product {
   isSellable: boolean | null;
   status: ProductStatus;
   statusLabel: string;
+  /**
+   * @deprecated Product must not own inventory. Keep only for legacy pages.
+   * Use ProductStockInventory for stock pages and availableSalesQuantity from
+   * /api/products/order-options for order create/edit.
+   */
   totalStock: number;
+  /**
+   * @deprecated Product must not own inventory. Use ProductStockInventory.
+   */
   salesStock: number;
+  /**
+   * @deprecated Product must not own inventory. Use ProductStockInventory.
+   */
   warehouseStock: number;
+  /**
+   * @deprecated Product must not own inventory. Use ProductStockInventory.
+   */
   reservedStock: number;
+  /**
+   * @deprecated Product must not own inventory. Do not use in Sepidar order
+   * forms. Use availableSalesQuantity from order-options instead.
+   */
   availableStock: number;
   availableSalesQuantity: number;
   hasAvailableSalesQuantity: boolean;
@@ -40,8 +58,19 @@ export interface Product {
     useFullRealQuantityForSales: boolean;
     availableSalesQuantity: number;
   }>;
+  /**
+   * @deprecated Product must not own inventory. Use ProductStockInventory.
+   */
   warehouseAvailableStock: number;
+  /**
+   * @deprecated Separate NAJA inventory is removed. Use assignment stock
+   * inventory via ProductStockInventory.
+   */
   najaInventoryQty: number;
+  /**
+   * @deprecated Inventory should be read from ProductStockInventory endpoints.
+   * Kept for legacy inventory summary displays only.
+   */
   inventories: ProductWarehouseInventory[];
   createdAt: string;
   updatedAt: string;

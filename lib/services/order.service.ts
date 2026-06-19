@@ -201,7 +201,6 @@ function mergeOrderProducts(products: ReturnType<typeof mapProductOrderOptionLis
         brand: item.brand,
         unit: "عدد",
         unitPrice: item.unitPrice,
-        availableSalesQuantity: item.quantity,
       }),
     );
   });
