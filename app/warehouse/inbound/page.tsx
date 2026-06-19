@@ -255,12 +255,12 @@ export default function WarehouseInboundPage() {
     } catch (submitError) {
       if (
         submitError instanceof ApiError &&
-        submitError.code === "DUPLICATE_SERIAL_NUMBER"
+        ["DUPLICATE_SERIAL_NUMBER", "SERIAL_DUPLICATE"].includes(submitError.code)
       ) {
         setError("سریال کالا قبلاً ثبت شده است.");
       } else if (
         submitError instanceof ApiError &&
-        submitError.code === "DUPLICATE_TRACKING_CODE"
+        ["DUPLICATE_TRACKING_CODE", "TRACKING_CODE_DUPLICATE"].includes(submitError.code)
       ) {
         setError("کد رهگیری قبلاً ثبت شده است.");
       } else if (

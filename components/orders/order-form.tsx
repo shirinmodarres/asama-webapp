@@ -35,6 +35,7 @@ import {
   listOrderProductsBySaleType,
   listProducts,
 } from "@/lib/services/product.service";
+import { createDeprecatedProductInventoryFields } from "@/lib/mappers/product.mapper";
 import {
   formatDeliveryAddress,
   getReceiverName,
@@ -593,16 +594,13 @@ export function OrderForm({
     const insufficientProduct = Array.from(requestedByProduct.entries()).find(
       ([productId, quantity]) => {
         const product = productsById[productId];
-        const availableQuantity = sepidarProductsOnly
-          ? product
-            ? getEditableAvailableQuantity({
-                product,
-                mode,
-                sepidarProductsOnly,
-                oldQuantityByProductId,
-              })
-            : undefined
-          : product?.availableStock;
+        const availableQuantity = product
+          ? getEditableAvailableQuantity({
+              product,
+              mode,
+              oldQuantityByProductId,
+            })
+          : undefined;
         if (
           sepidarProductsOnly &&
           product &&
@@ -1047,7 +1045,6 @@ export function OrderForm({
                       getEditableAvailableQuantity({
                         product,
                         mode,
-                        sepidarProductsOnly,
                         oldQuantityByProductId,
                       }),
                     )} ${product.unit}`,
@@ -1059,7 +1056,13 @@ export function OrderForm({
                     productCode
                       ? `کد کالا: ${formatFaDigits(productCode)}`
                       : "",
-                    `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit}`,
+                    `موجودی قابل فروش: ${formatNumber(
+                      getEditableAvailableQuantity({
+                        product,
+                        mode,
+                        oldQuantityByProductId,
+                      }),
+                    )} ${product.unit}`,
                     `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
                   ]
                     .filter(Boolean)
@@ -1080,12 +1083,18 @@ export function OrderForm({
                         updateRow(item.rowId, { productId: value })
                       }
                       options={products
-                        .filter(
-                          (option) =>
-                            sepidarProductsOnly ||
-                            option.availableStock > 0 ||
-                            option.objectId === item.productId,
-                        )
+                        .filter((option) => {
+                          const availableQuantity =
+                            getEditableAvailableQuantity({
+                              product: option,
+                              mode,
+                              oldQuantityByProductId,
+                            });
+                          return (
+                            availableQuantity > 0 ||
+                            option.objectId === item.productId
+                          );
+                        })
                         .map((option) => {
                           if (sepidarProductsOnly) {
                             logOrderDropdownProductSource(option);
@@ -1094,7 +1103,13 @@ export function OrderForm({
                             value: option.objectId,
                             label: sepidarProductsOnly
                               ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
-                              : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
+                              : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(
+                                  getEditableAvailableQuantity({
+                                    product: option,
+                                    mode,
+                                    oldQuantityByProductId,
+                                  }),
+                                )} ${option.unit}`,
                           };
                         })}
                       placeholder={
@@ -1143,11 +1158,14 @@ export function OrderForm({
                               ? getEditableAvailableQuantity({
                                   product,
                                   mode,
-                                  sepidarProductsOnly,
                                   oldQuantityByProductId,
                                 })
                               : undefined
-                            : product.availableStock
+                            : getEditableAvailableQuantity({
+                                product,
+                                mode,
+                                oldQuantityByProductId,
+                              })
                           : undefined
                       }
                       value={item.quantity}
@@ -1299,16 +1317,12 @@ function getOldOrderQuantities(
 function getEditableAvailableQuantity({
   product,
   mode,
-  sepidarProductsOnly,
   oldQuantityByProductId,
 }: {
   product: Product;
   mode: "create" | "edit";
-  sepidarProductsOnly: boolean;
   oldQuantityByProductId: Map<string, number>;
 }): number {
-  if (!sepidarProductsOnly) return product.availableStock;
-
   const backendAvailableSalesQuantity = product.availableSalesQuantity;
   const oldOrderQuantity =
     mode === "edit" ? oldQuantityByProductId.get(product.objectId) ?? 0 : 0;
@@ -1368,18 +1382,11 @@ function createProductFromOrderItem(item: OrderItem): Product {
     isSellable: true,
     status: "active",
     statusLabel: "فعال",
-    totalStock: 0,
-    salesStock: 0,
-    warehouseStock: 0,
-    reservedStock: 0,
-    availableStock: 0,
     availableSalesQuantity: 0,
     hasAvailableSalesQuantity: false,
     inventorySource: "order_snapshot",
     availableStocks: [],
-    warehouseAvailableStock: 0,
-    najaInventoryQty: 0,
-    inventories: [],
+    ...createDeprecatedProductInventoryFields(),
     createdAt: "",
     updatedAt: "",
   };

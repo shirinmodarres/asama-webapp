@@ -259,14 +259,9 @@ export default function WarehouseInboundReceiptEditPage() {
       return;
     }
 
-    const identifiers = new Set<string>();
     const serials = new Set<string>();
     const trackingCodes = new Set<string>();
     for (const unit of normalizedUnits) {
-      if (identifiers.has(unit.productIdentifier)) {
-        setError("شناسه کالا قبلاً ثبت شده است.");
-        return;
-      }
       if (serials.has(unit.serialNumber)) {
         setError("سریال کالا قبلاً ثبت شده است.");
         return;
@@ -275,7 +270,6 @@ export default function WarehouseInboundReceiptEditPage() {
         setError("کد رهگیری قبلاً ثبت شده است.");
         return;
       }
-      identifiers.add(unit.productIdentifier);
       serials.add(unit.serialNumber);
       trackingCodes.add(unit.trackingCode);
     }
@@ -474,20 +468,9 @@ function findDuplicateUnitField(
     EditableUnit,
     "productIdentifier" | "serialNumber" | "trackingCode"
   >,
-): "newProductIdentifier" | "newSerialNumber" | "newTrackingCode" | null {
-  const productIdentifier = normalizeDigits(candidate.productIdentifier.trim());
+): "newSerialNumber" | "newTrackingCode" | null {
   const serialNumber = normalizeDigits(candidate.serialNumber.trim());
   const trackingCode = normalizeDigits(candidate.trackingCode.trim());
-
-  if (
-    productIdentifier &&
-    units.some(
-      (entry) =>
-        normalizeDigits(entry.productIdentifier.trim()) === productIdentifier,
-    )
-  ) {
-    return "newProductIdentifier";
-  }
 
   if (
     serialNumber &&
@@ -511,9 +494,8 @@ function findDuplicateUnitField(
 }
 
 function duplicateMessage(
-  field: "newProductIdentifier" | "newSerialNumber" | "newTrackingCode",
+  field: "newSerialNumber" | "newTrackingCode",
 ): string {
-  if (field === "newProductIdentifier") return "شناسه کالا قبلاً ثبت شده است.";
   if (field === "newSerialNumber") return "سریال کالا قبلاً ثبت شده است.";
   return "کد رهگیری قبلاً ثبت شده است.";
 }

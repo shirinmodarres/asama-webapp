@@ -38,6 +38,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   DUPLICATE_PRODUCT_IDENTIFIER: "شناسه کالا قبلاً ثبت شده است.",
   DUPLICATE_SERIAL_NUMBER: "سریال کالا قبلاً ثبت شده است.",
   DUPLICATE_TRACKING_CODE: "کد رهگیری قبلاً ثبت شده است.",
+  SERIAL_DUPLICATE: "سریال کالا قبلاً ثبت شده است.",
+  TRACKING_CODE_DUPLICATE: "کد رهگیری قبلاً ثبت شده است.",
   INBOUND_RECEIPT_NOT_EDITABLE:
     "این رسید به دلیل خروج کالا قابل ویرایش نیست.",
   INSUFFICIENT_SALES_STOCK: "موجودی فروش کافی نیست.",
