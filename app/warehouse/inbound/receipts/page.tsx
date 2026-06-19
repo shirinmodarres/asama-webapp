@@ -175,7 +175,7 @@ export default function WarehouseInboundReceiptsPage() {
   );
 }
 
-export function isWithinDateRange(
+function isWithinDateRange(
   value: string,
   dateFrom: string,
   dateTo: string,
