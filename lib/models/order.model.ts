@@ -9,6 +9,7 @@ export type QuotationStatus = "success" | "failed" | "pending";
 export interface OrderItem {
   objectId: string;
   productId: string;
+  sepidarItemId: number | null;
   productSku: string;
   productName: string;
   brand: string;
@@ -24,6 +25,7 @@ export interface Order {
   code: string;
   orderType: OrderType;
   createdByName?: string | null;
+  expertUserId?: string | null;
   customerName: string | null;
   customer: Customer | null;
   customerObjectId: string | null;

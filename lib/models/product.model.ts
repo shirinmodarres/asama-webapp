@@ -29,6 +29,7 @@ export interface Product {
   availableStock: number;
   availableSalesQuantity: number;
   hasAvailableSalesQuantity: boolean;
+  inventorySource?: "order_options" | "order_snapshot" | string;
   availableStocks: Array<{
     stockObjectId: string;
     sepidarStockId: number | null;

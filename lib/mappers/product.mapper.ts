@@ -130,6 +130,7 @@ export function mapProductDto(dto: unknown): Product {
     availableStock,
     availableSalesQuantity: availableStock,
     hasAvailableSalesQuantity: false,
+    inventorySource: toStringValue(record.inventorySource),
     availableStocks: [],
     warehouseAvailableStock,
     najaInventoryQty,
@@ -163,6 +164,7 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
     ...product,
     availableSalesQuantity,
     hasAvailableSalesQuantity,
+    inventorySource: "order_options",
     availableStocks: Array.isArray(record.availableStocks)
       ? record.availableStocks.map((value) => {
           const stock = toRecord(value);

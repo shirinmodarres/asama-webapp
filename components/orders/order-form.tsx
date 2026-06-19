@@ -274,7 +274,7 @@ export function OrderForm({
 
     async function loadProductsBySaleType() {
       if (!sepidarProductsOnly) return;
-      if (providedProducts.length > 0) {
+      if (providedProducts.length > 0 && mode !== "edit") {
         setProducts(mergeProducts(providedProducts, initialOrder));
         if (initialOrder) {
           setItems(mapOrderItems(initialOrder.items, providedProducts));
@@ -286,7 +286,8 @@ export function OrderForm({
       const customer = assignedCustomersOnly
         ? selectedAssignment
         : customers.find((entry) => entry.objectId === selectedCustomerId);
-      const saleTypeId = customer?.saleType?.sepidarSaleTypeId;
+      const saleTypeId =
+        customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
 
       setProducts([]);
       setProductsError("");
@@ -305,8 +306,9 @@ export function OrderForm({
       setIsLoadingProducts(true);
       try {
         const data = await listOrderProductsBySaleType(saleTypeId, {
-          customerObjectId: customer.objectId,
-          expertUserId: getStoredCurrentUser()?.objectId,
+          customerObjectId: selectedCustomerId || customer?.objectId,
+          expertUserId:
+            initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         });
         if (!isMounted) return;
         const mergedProducts = mergeProducts(data, initialOrder);
@@ -343,6 +345,7 @@ export function OrderForm({
     assignedCustomersOnly,
     customers,
     initialOrder,
+    mode,
     providedProducts,
     selectedAssignment,
     selectedCustomerId,
@@ -414,6 +417,10 @@ export function OrderForm({
         return accumulator;
       }, {}),
     [products],
+  );
+  const oldQuantityByProductId = useMemo(
+    () => getOldOrderQuantities(initialOrder, products),
+    [initialOrder, products],
   );
   const totalAmount = normalizedItems.reduce((sum, item) => {
     const product = productsById[item.productId];
@@ -576,7 +583,14 @@ export function OrderForm({
       ([productId, quantity]) => {
         const product = productsById[productId];
         const availableQuantity = sepidarProductsOnly
-          ? product?.availableSalesQuantity
+          ? product
+            ? getEditableAvailableQuantity({
+                product,
+                mode,
+                sepidarProductsOnly,
+                oldQuantityByProductId,
+              })
+            : undefined
           : product?.availableStock;
         if (
           sepidarProductsOnly &&
@@ -1002,126 +1016,174 @@ export function OrderForm({
         <div className="mt-5 space-y-3">
           {items.map((item, index) => {
             const product = productsById[item.productId];
+            const productCode = product
+              ? product.sepidarCode || product.sku || product.objectId
+              : "";
+            const helperText = product
+              ? sepidarProductsOnly
+                ? [
+                    productCode
+                      ? `کد کالا: ${formatFaDigits(productCode)}`
+                      : "",
+                    product.barcode
+                      ? `بارکد: ${formatFaDigits(product.barcode)}`
+                      : "",
+                    `${
+                      mode === "edit"
+                        ? "موجودی قابل ویرایش"
+                        : "موجودی قابل فروش"
+                    }: ${formatNumber(
+                      getEditableAvailableQuantity({
+                        product,
+                        mode,
+                        sepidarProductsOnly,
+                        oldQuantityByProductId,
+                      }),
+                    )} ${product.unit}`,
+                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
+                : [
+                    productCode
+                      ? `کد کالا: ${formatFaDigits(productCode)}`
+                      : "",
+                    `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit}`,
+                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
+              : `آیتم ${formatNumber(index + 1)}`;
 
             return (
               <div
                 key={item.rowId}
-                className="grid gap-3 border-b border-[#E7EDF3] py-4 last:border-b-0 xl:grid-cols-[auto_190px_170px_88px_minmax(280px,1fr)] xl:items-center"
+                className="rounded-2xl border border-[#E7EDF3] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
               >
-                <div className="relative min-w-0">
-                  <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-                  <SearchableSelect
-                    value={item.productId || undefined}
-                    onValueChange={(value) =>
-                      updateRow(item.rowId, { productId: value })
-                    }
-                    options={products
-                      .filter(
-                        (option) =>
-                          sepidarProductsOnly ||
-                          option.availableStock > 0 ||
-                          option.objectId === item.productId,
-                      )
-                      .map((option) => {
-                        if (sepidarProductsOnly) {
-                          logOrderDropdownProductSource(option);
-                        }
-                        return {
-                          value: option.objectId,
-                          label: sepidarProductsOnly
-                            ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
-                            : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
-                        };
-                      })}
-                    placeholder={
-                      sepidarProductsOnly && !selectedCustomerId
-                        ? "ابتدا مشتری را انتخاب کنید."
-                        : "انتخاب کالا"
-                    }
-                    searchPlaceholder="جستجو در کالاها"
-                    emptyMessage={
-                      sepidarProductsOnly &&
-                      selectedCustomer?.saleType?.sepidarSaleTypeId &&
-                      products.length === 0
-                        ? "کالایی با موجودی قابل فروش پیدا نشد."
-                        : "کالایی پیدا نشد"
-                    }
-                    triggerClassName="pr-10"
-                    disabled={
-                      sepidarProductsOnly &&
-                      (!selectedCustomerId ||
-                        !hasAssignmentInventory(selectedCustomer) ||
-                        isLoadingAssignment ||
-                        isLoadingProducts ||
-                        Boolean(productsError))
-                    }
-                    invalid={Boolean(rowErrors[item.rowId]?.productId)}
-                  />
-                  <FieldError message={rowErrors[item.rowId]?.productId} />
-                </div>
-
-                <div>
-                  <Input
-                    inputMode="numeric"
-                    min={1}
-                    max={
-                      product
-                        ? sepidarProductsOnly
-                          ? product.hasAvailableSalesQuantity
-                            ? product.availableSalesQuantity
-                            : undefined
-                          : product.availableStock
-                        : undefined
-                    }
-                    value={item.quantity}
-                    onChange={(event) =>
-                      updateRow(item.rowId, {
-                        quantity: toNumber(event.target.value),
-                      })
-                    }
-                    className="px-2.5 text-center"
-                    aria-invalid={Boolean(rowErrors[item.rowId]?.quantity)}
-                  />
-                  <FieldError message={rowErrors[item.rowId]?.quantity} />
-                </div>
-
-                <div className="flex h-11 items-center justify-between gap-3 rounded-[14px] border border-[#E7EDF3] bg-[#FBFCFD] px-3.5 text-sm">
-                  <span className="text-xs font-medium text-[#6B7280]">
-                    قیمت واحد
-                  </span>
-                  <span className="text-sm font-semibold text-[#102034]">
-                    {product ? formatCurrency(product.unitPrice) : "-"}
-                  </span>
-                </div>
-
-                <div className="flex h-11 items-center justify-between gap-3 rounded-[14px] border border-[#E7EDF3] bg-[#FBFCFD] px-3.5 text-sm">
-                  <span className="text-xs font-medium text-[#6B7280]">
-                    مبلغ ردیف
-                  </span>
-                  <span className="text-sm font-semibold text-[#102034]">
-                    {product
-                      ? formatCurrency(
-                          getOrderLineTotal(item.quantity, product.unitPrice),
+                <div className="grid gap-2">
+                  <div className="relative min-w-0">
+                    <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                    <SearchableSelect
+                      value={item.productId || undefined}
+                      onValueChange={(value) =>
+                        updateRow(item.rowId, { productId: value })
+                      }
+                      options={products
+                        .filter(
+                          (option) =>
+                            sepidarProductsOnly ||
+                            option.availableStock > 0 ||
+                            option.objectId === item.productId,
                         )
-                      : "-"}
-                  </span>
+                        .map((option) => {
+                          if (sepidarProductsOnly) {
+                            logOrderDropdownProductSource(option);
+                          }
+                          return {
+                            value: option.objectId,
+                            label: sepidarProductsOnly
+                              ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
+                              : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(option.availableStock)} ${option.unit}`,
+                          };
+                        })}
+                      placeholder={
+                        sepidarProductsOnly && !selectedCustomerId
+                          ? "ابتدا مشتری را انتخاب کنید."
+                          : "انتخاب کالا"
+                      }
+                      searchPlaceholder="جستجو در کالاها"
+                      emptyMessage={
+                        sepidarProductsOnly &&
+                        selectedCustomer?.saleType?.sepidarSaleTypeId &&
+                        products.length === 0
+                          ? "کالایی با موجودی قابل فروش پیدا نشد."
+                          : "کالایی پیدا نشد"
+                      }
+                      triggerClassName="h-11 pr-10 text-sm"
+                      disabled={
+                        sepidarProductsOnly &&
+                        (!selectedCustomerId ||
+                          !hasAssignmentInventory(selectedCustomer) ||
+                          isLoadingAssignment ||
+                          isLoadingProducts ||
+                          Boolean(productsError))
+                      }
+                      invalid={Boolean(rowErrors[item.rowId]?.productId)}
+                    />
+                  </div>
+                  <p className="text-[11px] leading-5 text-[#64748B]">
+                    {helperText}
+                  </p>
+                  <FieldError
+                    message={rowErrors[item.rowId]?.productId}
+                    className="mt-0 leading-5"
+                  />
                 </div>
 
-                <Button
-                  type="button"
-                  onClick={() => removeRow(item.rowId)}
-                  variant="outline"
-                  size="icon"
-                  aria-label="حذف آیتم"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[96px_minmax(150px,1fr)_minmax(150px,1fr)_40px] sm:items-start">
+                  <div className="w-24">
+                    <Input
+                      inputMode="numeric"
+                      min={1}
+                      max={
+                        product
+                          ? sepidarProductsOnly
+                            ? product.hasAvailableSalesQuantity
+                              ? getEditableAvailableQuantity({
+                                  product,
+                                  mode,
+                                  sepidarProductsOnly,
+                                  oldQuantityByProductId,
+                                })
+                              : undefined
+                            : product.availableStock
+                          : undefined
+                      }
+                      value={item.quantity}
+                      onChange={(event) =>
+                        updateRow(item.rowId, {
+                          quantity: toNumber(event.target.value),
+                        })
+                      }
+                      className="h-10 w-24 px-2 text-center text-sm font-semibold"
+                      aria-invalid={Boolean(rowErrors[item.rowId]?.quantity)}
+                    />
+                    <FieldError
+                      message={rowErrors[item.rowId]?.quantity}
+                      className="mt-1 leading-5"
+                    />
+                  </div>
 
-                <p className="text-xs text-[#6B7280] xl:col-span-5">
-                  {product
-                    ? `${sepidarProductsOnly ? `کد کالا / بارکد: ${formatFaDigits(product.sepidarCode || product.sku)}${product.barcode ? ` / ${formatFaDigits(product.barcode)}` : ""} • موجودی قابل فروش: ${formatOrderAvailableQuantity(product, formatNumber)} ${product.unit} • ` : `موجودی قابل فروش: ${formatNumber(product.availableStock)} ${product.unit} • `}قیمت واحد: ${formatCurrency(product.unitPrice)}`
-                    : `آیتم ${formatNumber(index + 1)}`}
-                </p>
+                  <ReadonlyAmountPill
+                    label="قیمت واحد"
+                    value={product ? formatCurrency(product.unitPrice) : "-"}
+                  />
+
+                  <ReadonlyAmountPill
+                    label="مبلغ ردیف"
+                    value={
+                      product
+                        ? formatCurrency(
+                            getOrderLineTotal(
+                              item.quantity,
+                              product.unitPrice,
+                            ),
+                          )
+                        : "-"
+                    }
+                  />
+
+                  <Button
+                    type="button"
+                    onClick={() => removeRow(item.rowId)}
+                    variant="outline"
+                    size="icon"
+                    aria-label="حذف آیتم"
+                    className="size-10 self-start justify-self-start rounded-xl sm:justify-self-center"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
@@ -1207,11 +1269,68 @@ function createEmptyRow(index: number): DraftItem {
   return { rowId: `empty-${index}`, productId: "", quantity: 1 };
 }
 
+function getOldOrderQuantities(
+  order: Order | null | undefined,
+  products: Product[],
+): Map<string, number> {
+  const result = new Map<string, number>();
+  if (!order) return result;
+
+  for (const item of order.items) {
+    const productId = resolveProductObjectId(item, products);
+    if (!productId) continue;
+    result.set(productId, (result.get(productId) ?? 0) + item.quantity);
+  }
+
+  return result;
+}
+
+function getEditableAvailableQuantity({
+  product,
+  mode,
+  sepidarProductsOnly,
+  oldQuantityByProductId,
+}: {
+  product: Product;
+  mode: "create" | "edit";
+  sepidarProductsOnly: boolean;
+  oldQuantityByProductId: Map<string, number>;
+}): number {
+  if (!sepidarProductsOnly) return product.availableStock;
+
+  const backendAvailableSalesQuantity = product.availableSalesQuantity;
+  const oldOrderQuantity =
+    mode === "edit" ? oldQuantityByProductId.get(product.objectId) ?? 0 : 0;
+  const editableAvailable = backendAvailableSalesQuantity + oldOrderQuantity;
+
+  if (process.env.NODE_ENV === "development") {
+    console.debug("[ORDER_EDIT_PRODUCT_AVAILABILITY]", {
+      productObjectId: product.objectId,
+      source: product.inventorySource || "order_options",
+      backendAvailableSalesQuantity,
+      oldOrderQuantity,
+      editableAvailable,
+    });
+  }
+
+  return editableAvailable;
+}
+
 function mergeProducts(products: Product[], order?: Order | null): Product[] {
   if (!order) return products;
   const productMap = new Map(products.map((product) => [product.objectId, product]));
   order.items.forEach((item) => {
-    if (!item.productId || productMap.has(item.productId)) return;
+    if (!item.productId) return;
+    const realProductExists =
+      productMap.has(item.productId) ||
+      Array.from(productMap.values()).some(
+        (product) =>
+          product.sku === item.productSku ||
+          product.sepidarCode === item.productSku ||
+          (item.sepidarItemId !== null &&
+            product.sepidarItemId === item.sepidarItemId),
+      );
+    if (realProductExists) return;
     productMap.set(item.productId, createProductFromOrderItem(item));
   });
   return Array.from(productMap.values());
@@ -1223,7 +1342,7 @@ function createProductFromOrderItem(item: OrderItem): Product {
     id: item.productSku,
     sku: item.productSku,
     barcode: null,
-    sepidarItemId: null,
+    sepidarItemId: item.sepidarItemId,
     sepidarCode: item.productSku,
     name: item.productName,
     brand: item.brand,
@@ -1238,13 +1357,14 @@ function createProductFromOrderItem(item: OrderItem): Product {
     isSellable: true,
     status: "active",
     statusLabel: "فعال",
-    totalStock: item.quantity,
-    salesStock: item.quantity,
+    totalStock: 0,
+    salesStock: 0,
     warehouseStock: 0,
     reservedStock: 0,
-    availableStock: item.quantity,
-    availableSalesQuantity: item.quantity,
+    availableStock: 0,
+    availableSalesQuantity: 0,
     hasAvailableSalesQuantity: false,
+    inventorySource: "order_snapshot",
     availableStocks: [],
     warehouseAvailableStock: 0,
     najaInventoryQty: 0,
@@ -1252,6 +1372,25 @@ function createProductFromOrderItem(item: OrderItem): Product {
     createdAt: "",
     updatedAt: "",
   };
+}
+
+function ReadonlyAmountPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex h-10 min-w-0 items-center justify-between gap-2 rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] px-3">
+      <span className="shrink-0 text-[10px] font-medium text-[#6B7280]">
+        {label}
+      </span>
+      <span className="min-w-0 truncate text-[11px] font-semibold text-[#102034]">
+        {value}
+      </span>
+    </div>
+  );
 }
 
 function mergeCustomers(customers: Customer[], order?: Order | null): Customer[] {
