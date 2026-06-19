@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { PackageSearch, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -42,6 +48,10 @@ export default function WarehouseInboundPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
+  const productIdentifierRef = useRef<HTMLInputElement | null>(null);
+  const serialNumberRef = useRef<HTMLInputElement | null>(null);
+  const trackingCodeRef = useRef<HTMLInputElement | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -69,6 +79,11 @@ export default function WarehouseInboundPage() {
   const selectedProduct = products.find(
     (product) => product.objectId === selectedProductId,
   );
+
+  useEffect(() => {
+    if (!selectedProductId) return;
+    productIdentifierRef.current?.focus();
+  }, [selectedProductId]);
   const columns: DataTableColumn<DraftUnit>[] = [
     {
       key: "row",
@@ -111,6 +126,18 @@ export default function WarehouseInboundPage() {
     },
   ];
 
+  const focusField = (
+    field: "productIdentifier" | "serialNumber" | "trackingCode" | "notes",
+  ) => {
+    const refs = {
+      productIdentifier: productIdentifierRef,
+      serialNumber: serialNumberRef,
+      trackingCode: trackingCodeRef,
+      notes: notesRef,
+    };
+    window.setTimeout(() => refs[field].current?.focus(), 0);
+  };
+
   const addUnit = () => {
     setError("");
     setMessage("");
@@ -118,6 +145,7 @@ export default function WarehouseInboundPage() {
 
     if (!selectedProductId) {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
+      focusField("productIdentifier");
       return;
     }
 
@@ -140,6 +168,9 @@ export default function WarehouseInboundPage() {
         serialNumber: nextUnit.serialNumber ? "" : "این فیلد الزامی است.",
         trackingCode: nextUnit.trackingCode ? "" : "این فیلد الزامی است.",
       });
+      if (!nextUnit.productIdentifier) focusField("productIdentifier");
+      else if (!nextUnit.serialNumber) focusField("serialNumber");
+      else focusField("trackingCode");
       return;
     }
 
@@ -149,6 +180,7 @@ export default function WarehouseInboundPage() {
       setFieldErrors({
         serialNumber: "سریال کالا قبلاً ثبت شده است.",
       });
+      focusField("serialNumber");
       return;
     }
 
@@ -158,6 +190,7 @@ export default function WarehouseInboundPage() {
       setFieldErrors({
         trackingCode: "کد رهگیری قبلاً ثبت شده است.",
       });
+      focusField("trackingCode");
       return;
     }
 
@@ -165,6 +198,25 @@ export default function WarehouseInboundPage() {
     setProductIdentifier("");
     setSerialNumber("");
     setTrackingCode("");
+    focusField("productIdentifier");
+  };
+
+  const handleScanFieldEnter = (
+    event: KeyboardEvent<HTMLInputElement>,
+    nextField: "serialNumber" | "trackingCode" | "add",
+  ) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+
+    if (nextField === "serialNumber") {
+      focusField("serialNumber");
+      return;
+    }
+    if (nextField === "trackingCode") {
+      focusField("trackingCode");
+      return;
+    }
+    addUnit();
   };
 
   const submitReceipt = async () => {
@@ -203,12 +255,12 @@ export default function WarehouseInboundPage() {
     } catch (submitError) {
       if (
         submitError instanceof ApiError &&
-        submitError.code === "DUPLICATE_SERIAL_NUMBER"
+        ["DUPLICATE_SERIAL_NUMBER", "SERIAL_DUPLICATE"].includes(submitError.code)
       ) {
         setError("سریال کالا قبلاً ثبت شده است.");
       } else if (
         submitError instanceof ApiError &&
-        submitError.code === "DUPLICATE_TRACKING_CODE"
+        ["DUPLICATE_TRACKING_CODE", "TRACKING_CODE_DUPLICATE"].includes(submitError.code)
       ) {
         setError("کد رهگیری قبلاً ثبت شده است.");
       } else if (
@@ -228,7 +280,24 @@ export default function WarehouseInboundPage() {
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: `${formatFaDigits(product.name)} - ${formatFaDigits(product.brand)}`,
+        label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
+        description: [
+          product.brand,
+          product.model ? `مدل ${formatFaDigits(product.model)}` : "",
+          product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
+        ]
+          .filter(Boolean)
+          .join(" • "),
+        searchText: [
+          product.name,
+          product.sku,
+          product.sepidarCode,
+          product.model,
+          product.barcode,
+          product.brand,
+        ]
+          .filter(Boolean)
+          .join(" "),
       })),
     [products],
   );
@@ -270,6 +339,8 @@ export default function WarehouseInboundPage() {
                     emptyMessage="کالایی پیدا نشد"
                     triggerClassName="pr-10"
                     invalid={Boolean(fieldErrors.selectedProductId)}
+                    normalizeSearch
+                    highlightMatches
                   />
                   <FieldError message={fieldErrors.selectedProductId} />
                 </div>
@@ -298,6 +369,7 @@ export default function WarehouseInboundPage() {
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>شناسه محصول</span>
                 <Input
+                  ref={productIdentifierRef}
                   value={productIdentifier}
                   onChange={(event) => {
                     setProductIdentifier(event.target.value);
@@ -306,6 +378,9 @@ export default function WarehouseInboundPage() {
                       productIdentifier: "",
                     }));
                   }}
+                  onKeyDown={(event) =>
+                    handleScanFieldEnter(event, "serialNumber")
+                  }
                   aria-invalid={Boolean(fieldErrors.productIdentifier)}
                 />
                 <FieldError message={fieldErrors.productIdentifier} />
@@ -313,6 +388,7 @@ export default function WarehouseInboundPage() {
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>سریال محصول</span>
                 <Input
+                  ref={serialNumberRef}
                   value={serialNumber}
                   onChange={(event) => {
                     setSerialNumber(event.target.value);
@@ -321,6 +397,9 @@ export default function WarehouseInboundPage() {
                       serialNumber: "",
                     }));
                   }}
+                  onKeyDown={(event) =>
+                    handleScanFieldEnter(event, "trackingCode")
+                  }
                   aria-invalid={Boolean(fieldErrors.serialNumber)}
                 />
                 <FieldError message={fieldErrors.serialNumber} />
@@ -328,6 +407,7 @@ export default function WarehouseInboundPage() {
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کد رهگیری</span>
                 <Input
+                  ref={trackingCodeRef}
                   value={trackingCode}
                   onChange={(event) => {
                     setTrackingCode(event.target.value);
@@ -337,7 +417,7 @@ export default function WarehouseInboundPage() {
                     }));
                   }}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter") addUnit();
+                    handleScanFieldEnter(event, "add");
                   }}
                   aria-invalid={Boolean(fieldErrors.trackingCode)}
                 />
@@ -365,6 +445,7 @@ export default function WarehouseInboundPage() {
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>توضیحات</span>
               <Textarea
+                ref={notesRef}
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
               />

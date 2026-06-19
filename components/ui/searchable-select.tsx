@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { cn } from "@/lib/utils";
 export interface SearchableSelectOption {
   value: string;
   label: string;
+  description?: string;
+  searchText?: string;
 }
 
 interface SearchableSelectProps {
@@ -22,6 +25,8 @@ interface SearchableSelectProps {
   className?: string;
   triggerClassName?: string;
   invalid?: boolean;
+  normalizeSearch?: boolean;
+  highlightMatches?: boolean;
 }
 
 export function SearchableSelect({
@@ -35,6 +40,8 @@ export function SearchableSelect({
   className,
   triggerClassName,
   invalid = false,
+  normalizeSearch = false,
+  highlightMatches = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -45,13 +52,26 @@ export function SearchableSelect({
   const selectedOption = options.find((option) => option.value === value);
 
   const filteredOptions = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = normalizeSearch
+      ? normalizeSearchValue(query)
+      : query.trim().toLowerCase();
     if (!normalizedQuery) return options;
 
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(normalizedQuery),
-    );
-  }, [options, query]);
+    return options.filter((option) => {
+      const searchable = [
+        option.label,
+        option.description,
+        option.searchText,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const normalizedSearchable = normalizeSearch
+        ? normalizeSearchValue(searchable)
+        : searchable.toLowerCase();
+
+      return normalizedSearchable.includes(normalizedQuery);
+    });
+  }, [normalizeSearch, options, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -152,6 +172,15 @@ export function SearchableSelect({
                 <Input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    const firstOption = filteredOptions[0];
+                    if (!firstOption) return;
+                    event.preventDefault();
+                    onValueChange(firstOption.value);
+                    setOpen(false);
+                    setQuery("");
+                  }}
                   placeholder={searchPlaceholder}
                   className="pr-10 text-xs"
                   autoFocus
@@ -180,7 +209,28 @@ export function SearchableSelect({
                               : "text-[#334155] hover:bg-[#EFF4F8]",
                           )}
                         >
-                          <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">
+                              {highlightMatches
+                                ? renderHighlightedText(
+                                    option.label,
+                                    query,
+                                    normalizeSearch,
+                                  )
+                                : option.label}
+                            </span>
+                            {option.description ? (
+                              <span className="mt-1 block truncate text-[11px] text-[#64748B]">
+                                {highlightMatches
+                                  ? renderHighlightedText(
+                                      option.description,
+                                      query,
+                                      normalizeSearch,
+                                    )
+                                  : option.description}
+                              </span>
+                            ) : null}
+                          </span>
                           {isSelected ? (
                             <Check className="size-4 shrink-0 text-[#1F3A5F]" />
                           ) : null}
@@ -199,5 +249,84 @@ export function SearchableSelect({
           )
         : null}
     </div>
+  );
+}
+
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+
+function normalizeSearchValue(value: string): string {
+  return value
+    .replace(/[۰-۹٠-٩]/g, (digit) => {
+      const persianIndex = PERSIAN_DIGITS.indexOf(digit);
+      if (persianIndex >= 0) return String(persianIndex);
+
+      const arabicIndex = ARABIC_DIGITS.indexOf(digit);
+      return arabicIndex >= 0 ? String(arabicIndex) : digit;
+    })
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/ة/g, "ه")
+    .toLowerCase()
+    .replace(/[\s\-_–—]+/g, "");
+}
+
+function renderHighlightedText(
+  text: string,
+  query: string,
+  shouldNormalize: boolean,
+): ReactNode {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) return text;
+
+  if (!shouldNormalize) {
+    const index = text.toLowerCase().indexOf(trimmedQuery.toLowerCase());
+    if (index < 0) return text;
+    return renderHighlightedRange(text, index, index + trimmedQuery.length);
+  }
+
+  const normalizedQuery = normalizeSearchValue(trimmedQuery);
+  if (!normalizedQuery) return text;
+
+  const { normalized, rawIndices } = buildNormalizedIndex(text);
+  const normalizedIndex = normalized.indexOf(normalizedQuery);
+  if (normalizedIndex < 0) return text;
+
+  const start = rawIndices[normalizedIndex];
+  const end =
+    rawIndices[normalizedIndex + normalizedQuery.length - 1] + 1;
+  return renderHighlightedRange(text, start, end);
+}
+
+function buildNormalizedIndex(text: string): {
+  normalized: string;
+  rawIndices: number[];
+} {
+  let normalized = "";
+  const rawIndices: number[] = [];
+
+  Array.from(text).forEach((char, index) => {
+    const normalizedChar = normalizeSearchValue(char);
+    if (!normalizedChar) return;
+    normalized += normalizedChar;
+    rawIndices.push(index);
+  });
+
+  return { normalized, rawIndices };
+}
+
+function renderHighlightedRange(
+  text: string,
+  start: number,
+  end: number,
+): ReactNode {
+  return (
+    <>
+      {text.slice(0, start)}
+      <mark className="rounded bg-[#FEF3C7] px-0.5 text-inherit">
+        {text.slice(start, end)}
+      </mark>
+      {text.slice(end)}
+    </>
   );
 }

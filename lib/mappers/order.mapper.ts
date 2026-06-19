@@ -60,6 +60,7 @@ export function mapOrderDto(dto: unknown): Order {
     code: toStringValue(record.code),
     orderType: mapOrderType(record.orderType),
     createdByName: toNullableString(record.createdByName),
+    expertUserId: toNullableString(record.expertUserId),
     customerName: toNullableString(
       record.customerName ?? customerRecord.fullName,
     ),
@@ -289,6 +290,10 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     productId: toStringValue(
       record.productObjectId ?? record.productId ?? productRecord.objectId,
     ),
+    sepidarItemId:
+      record.sepidarItemId === undefined || record.sepidarItemId === null
+        ? null
+        : toNumberValue(record.sepidarItemId),
     productSku: toStringValue(record.productSku ?? productRecord.sku),
     productName: toStringValue(record.productName ?? productRecord.name),
     brand: toStringValue(record.brand ?? productRecord.brand),

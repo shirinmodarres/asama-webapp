@@ -130,12 +130,36 @@ export function mapProductDto(dto: unknown): Product {
     availableStock,
     availableSalesQuantity: availableStock,
     hasAvailableSalesQuantity: false,
+    inventorySource: toStringValue(record.inventorySource),
     availableStocks: [],
     warehouseAvailableStock,
     najaInventoryQty,
     inventories,
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+export function createDeprecatedProductInventoryFields(): Pick<
+  Product,
+  | "totalStock"
+  | "salesStock"
+  | "warehouseStock"
+  | "reservedStock"
+  | "availableStock"
+  | "warehouseAvailableStock"
+  | "najaInventoryQty"
+  | "inventories"
+> {
+  return {
+    totalStock: 0,
+    salesStock: 0,
+    warehouseStock: 0,
+    reservedStock: 0,
+    availableStock: 0,
+    warehouseAvailableStock: 0,
+    najaInventoryQty: 0,
+    inventories: [],
   };
 }
 
@@ -163,6 +187,7 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
     ...product,
     availableSalesQuantity,
     hasAvailableSalesQuantity,
+    inventorySource: "order_options",
     availableStocks: Array.isArray(record.availableStocks)
       ? record.availableStocks.map((value) => {
           const stock = toRecord(value);

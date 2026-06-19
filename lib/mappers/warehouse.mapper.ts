@@ -71,6 +71,12 @@ export function mapWarehouseItemUnitDto(dto: unknown): WarehouseItemUnit {
     productObjectId: toStringValue(
       record.productObjectId ?? productRecord.objectId ?? wrapper.productObjectId,
     ),
+    stockObjectId: toNullableString(record.stockObjectId ?? wrapper.stockObjectId),
+    sepidarStockId:
+      record.sepidarStockId === undefined && wrapper.sepidarStockId === undefined
+        ? null
+        : toNumberValue(record.sepidarStockId ?? wrapper.sepidarStockId),
+    stockTitle: toNullableString(record.stockTitle ?? wrapper.stockTitle),
     productSku: normalizeDigits(
       toStringValue(record.productSku ?? productRecord.sku ?? wrapper.productSku),
     ),
@@ -199,10 +205,16 @@ export function mapWarehouseInboundReceiptDto(
     id: toStringValue(record.id) || toStringValue(record.objectId),
     receiptCode: normalizeDigits(toStringValue(record.receiptCode)),
     productObjectId: toStringValue(record.productObjectId),
+    stockObjectId: toNullableString(record.stockObjectId),
+    sepidarStockId:
+      record.sepidarStockId === undefined ? null : toNumberValue(record.sepidarStockId),
+    stockTitle: toNullableString(record.stockTitle),
     productSku: normalizeDigits(toStringValue(record.productSku)),
     productName: toStringValue(record.productName),
     quantity: toNumberValue(record.quantity),
     createdByName: toNullableString(record.createdByName),
+    supplierName: toNullableString(record.supplierName),
+    receiptDate: toNullableString(record.receiptDate),
     notes: toNullableString(record.notes),
     units: mapWarehouseItemUnitListDto(record.units),
     createdAt: toStringValue(record.createdAt),
