@@ -6,8 +6,12 @@ import type {
   CompleteNajaWarehouseInfoPayload,
   CreateNajaInvoicePayload,
   CreateNajaOrderPayload,
+  NajaRialReport,
+  NajaRialReportFilters,
+  NajaRialReportRow,
 } from "@/lib/models/naja.model";
 import type { Order } from "@/lib/models/order.model";
+import { toArray, toNumberValue, toRecord, toStringValue } from "@/lib/mappers/mapper-utils";
 import { normalizeDigits, normalizePhone, toNumber } from "@/lib/utils/number-format";
 
 export async function createNajaOrder(
@@ -92,4 +96,74 @@ export async function returnNajaOrder(
     { reason },
   );
   return mapOrderDto(data);
+}
+
+export async function getNajaRialReport(
+  filters: NajaRialReportFilters = {},
+): Promise<NajaRialReport> {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "" && value !== "all") {
+      query.set(key, String(value));
+    }
+  });
+  const path = `/api/naja/reports/rial${query.toString() ? `?${query.toString()}` : ""}`;
+  const data = await httpClient.get<unknown>(path);
+  const record = toRecord(data);
+  return {
+    rows: toArray(record.rows).map(mapNajaRialReportRow),
+    totals: {
+      totalOrders: toNumberValue(toRecord(record.totals).totalOrders),
+      totalQuantity: toNumberValue(toRecord(record.totals).totalQuantity),
+      totalRialAmount: toNumberValue(toRecord(record.totals).totalRialAmount),
+    },
+  };
+}
+
+function mapNajaRialReportRow(dto: unknown): NajaRialReportRow {
+  const record = toRecord(dto);
+  return {
+    id: toStringValue(record.id),
+    orderObjectId: toStringValue(record.orderObjectId),
+    orderCode: toStringValue(record.orderCode),
+    createdAt: nullableString(record.createdAt),
+    najaPurchaseDate: nullableString(record.najaPurchaseDate),
+    customerObjectId: nullableString(record.customerObjectId),
+    customerName: nullableString(record.customerName),
+    sepidarCustomerCode: nullableString(record.sepidarCustomerCode),
+    expertUserId: nullableString(record.expertUserId),
+    expertName: nullableString(record.expertName),
+    recipientFirstName: nullableString(record.recipientFirstName),
+    recipientLastName: nullableString(record.recipientLastName),
+    recipientFullName: nullableString(record.recipientFullName),
+    recipientNationalId: nullableString(record.recipientNationalId),
+    recipientMobile: nullableString(record.recipientMobile),
+    najaOrderNumber: nullableString(record.najaOrderNumber),
+    productObjectId: nullableString(record.productObjectId),
+    productSku: nullableString(record.productSku),
+    productName: toStringValue(record.productName),
+    quantity: toNumberValue(record.quantity),
+    unitPrice: toNumberValue(record.unitPrice),
+    lineTotal: toNumberValue(record.lineTotal),
+    orderTotal: toNumberValue(record.orderTotal),
+    orderStatus: toStringValue(record.orderStatus),
+    orderStatusLabel: toStringValue(record.orderStatusLabel),
+    stockObjectId: nullableString(record.stockObjectId),
+    sepidarStockId:
+      record.sepidarStockId === null || record.sepidarStockId === undefined
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    stockTitle: nullableString(record.stockTitle),
+    saleTypeObjectId: nullableString(record.saleTypeObjectId),
+    sepidarSaleTypeId:
+      record.sepidarSaleTypeId === null || record.sepidarSaleTypeId === undefined
+        ? null
+        : toNumberValue(record.sepidarSaleTypeId),
+    saleTypeTitle: nullableString(record.saleTypeTitle),
+  };
+}
+
+function nullableString(value: unknown): string | null {
+  const text = toStringValue(value);
+  return text ? text : null;
 }

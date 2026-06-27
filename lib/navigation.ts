@@ -35,6 +35,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "shopping-cart",
       description: "ثبت‌شده و برگشتی",
     },
+    {
+      label: "گزارش ریالی",
+      href: "/naja/reports/rial",
+      icon: "file-text",
+      description: "مبالغ سفارش‌های ناجا",
+    },
   ],
   manager: [
     {

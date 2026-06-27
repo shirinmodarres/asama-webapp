@@ -35,6 +35,22 @@ interface DraftUnit {
   trackingCode: string;
 }
 
+interface DuplicateWarehouseUnitDetail {
+  field: "serialNumber" | "trackingCode";
+  value: string;
+  inputRowIndex: number;
+  existingUnitId?: string | null;
+  existingProductName?: string | null;
+  existingStockTitle?: string | null;
+  existingReceiptCode?: string | null;
+  existingCreatedAt?: string | null;
+}
+
+type UnitRowErrors = Record<
+  string,
+  Partial<Record<"serialNumber" | "trackingCode", string>>
+>;
+
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -47,6 +63,7 @@ export default function WarehouseInboundPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [unitRowErrors, setUnitRowErrors] = useState<UnitRowErrors>({});
   const [message, setMessage] = useState("");
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const serialNumberRef = useRef<HTMLInputElement | null>(null);
@@ -98,12 +115,28 @@ export default function WarehouseInboundPage() {
     {
       key: "serialNumber",
       header: "سریال محصول",
-      render: (row) => formatFaDigits(row.serialNumber),
+      render: (row) => (
+        <div className="min-w-52">
+          <span>{formatFaDigits(row.serialNumber)}</span>
+          <FieldError
+            message={unitRowErrors[row.rowId]?.serialNumber}
+            className="mt-1 leading-5"
+          />
+        </div>
+      ),
     },
     {
       key: "trackingCode",
       header: "کد رهگیری",
-      render: (row) => formatFaDigits(row.trackingCode),
+      render: (row) => (
+        <div className="min-w-52">
+          <span>{formatFaDigits(row.trackingCode)}</span>
+          <FieldError
+            message={unitRowErrors[row.rowId]?.trackingCode}
+            className="mt-1 leading-5"
+          />
+        </div>
+      ),
     },
     {
       key: "actions",
@@ -115,9 +148,7 @@ export default function WarehouseInboundPage() {
           size="icon"
           aria-label="حذف"
           onClick={() =>
-            setUnits((current) =>
-              current.filter((unit) => unit.rowId !== row.rowId),
-            )
+            removeUnitRow(row.rowId)
           }
         >
           <Trash2 className="size-4" />
@@ -142,6 +173,7 @@ export default function WarehouseInboundPage() {
     setError("");
     setMessage("");
     setFieldErrors({});
+    setUnitRowErrors({});
 
     if (!selectedProductId) {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
@@ -223,6 +255,7 @@ export default function WarehouseInboundPage() {
     setError("");
     setMessage("");
     setFieldErrors({});
+    setUnitRowErrors({});
 
     if (!selectedProductId) {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
@@ -255,6 +288,17 @@ export default function WarehouseInboundPage() {
     } catch (submitError) {
       if (
         submitError instanceof ApiError &&
+        submitError.code === "DUPLICATE_WAREHOUSE_UNIT"
+      ) {
+        const duplicates = extractDuplicateDetails(submitError.details);
+        if (duplicates.length) {
+          setUnitRowErrors(buildDuplicateRowErrors(duplicates, units));
+          setError("سریال یا کد رهگیری تکراری است. ردیف‌های مشخص‌شده را اصلاح یا حذف کنید.");
+        } else {
+          setError("سریال یا کد رهگیری تکراری است.");
+        }
+      } else if (
+        submitError instanceof ApiError &&
         ["DUPLICATE_SERIAL_NUMBER", "SERIAL_DUPLICATE"].includes(submitError.code)
       ) {
         setError("سریال کالا قبلاً ثبت شده است.");
@@ -274,6 +318,15 @@ export default function WarehouseInboundPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const removeUnitRow = (rowId: string) => {
+    setUnits((current) => current.filter((unit) => unit.rowId !== rowId));
+    setUnitRowErrors((current) => {
+      const next = { ...current };
+      delete next[rowId];
+      return next;
+    });
   };
 
   const productOptions = useMemo(
@@ -475,4 +528,64 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-sm font-semibold text-[#1F3A5F]">{value}</dd>
     </div>
   );
+}
+
+function extractDuplicateDetails(details: unknown): DuplicateWarehouseUnitDetail[] {
+  if (!details || typeof details !== "object") return [];
+  const duplicates = (details as { duplicates?: unknown }).duplicates;
+  if (!Array.isArray(duplicates)) return [];
+  return duplicates.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const record = item as Record<string, unknown>;
+      const field: DuplicateWarehouseUnitDetail["field"] | null =
+        record.field === "serialNumber" || record.field === "trackingCode"
+          ? record.field
+          : null;
+      const inputRowIndex = Number(record.inputRowIndex);
+      if (!field || !Number.isInteger(inputRowIndex)) return [];
+      return [{
+        field,
+        value: String(record.value ?? ""),
+        inputRowIndex,
+        existingUnitId: toNullableString(record.existingUnitId),
+        existingProductName: toNullableString(record.existingProductName),
+        existingStockTitle: toNullableString(record.existingStockTitle),
+        existingReceiptCode: toNullableString(record.existingReceiptCode),
+        existingCreatedAt: toNullableString(record.existingCreatedAt),
+      }];
+    });
+}
+
+function buildDuplicateRowErrors(
+  duplicates: DuplicateWarehouseUnitDetail[],
+  units: DraftUnit[],
+): UnitRowErrors {
+  return duplicates.reduce<UnitRowErrors>((result, duplicate) => {
+    const row = units[duplicate.inputRowIndex];
+    if (!row) return result;
+    result[row.rowId] = {
+      ...result[row.rowId],
+      [duplicate.field]: duplicateMessage(duplicate),
+    };
+    return result;
+  }, {});
+}
+
+function duplicateMessage(duplicate: DuplicateWarehouseUnitDetail): string {
+  const fieldLabel =
+    duplicate.field === "serialNumber" ? "این سریال" : "این کد رهگیری";
+  const productName = duplicate.existingProductName || "کالا";
+  const receiptCode = duplicate.existingReceiptCode
+    ? formatFaDigits(duplicate.existingReceiptCode)
+    : "-";
+  const stockTitle = duplicate.existingStockTitle
+    ? ` در ${duplicate.existingStockTitle}`
+    : "";
+  return `${fieldLabel} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode} ثبت شده است.`;
+}
+
+function toNullableString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = String(value);
+  return text ? text : null;
 }

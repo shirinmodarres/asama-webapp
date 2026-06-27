@@ -53,6 +53,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const [recipientNationalId, setRecipientNationalId] = useState("");
   const [recipientMobile, setRecipientMobile] = useState("");
   const [najaOrderNumber, setNajaOrderNumber] = useState("");
+  const [najaPurchaseDate, setNajaPurchaseDate] = useState("");
   const [createdByName, setCreatedByName] = useState(
     getStoredCurrentUser()?.fullName ||
       getStoredCurrentUser()?.username ||
@@ -273,6 +274,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         recipientNationalId: normalizeDigits(recipientNationalId.trim()),
         recipientMobile: normalizePhone(recipientMobile.trim()),
         najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
+        najaPurchaseDate: najaPurchaseDate || undefined,
         items: [
           {
             productObjectId: productId,
@@ -512,6 +514,15 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 aria-invalid={Boolean(fieldErrors.najaOrderNumber)}
               />
               <FieldError message={fieldErrors.najaOrderNumber} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>تاریخ سفارش</span>
+              <Input
+                type="date"
+                value={najaPurchaseDate}
+                onChange={(event) => setNajaPurchaseDate(event.target.value)}
+              />
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">

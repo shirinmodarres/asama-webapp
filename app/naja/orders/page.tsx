@@ -168,12 +168,22 @@ export default function NajaOrdersPage() {
       headerClassName: "min-w-[150px]",
       cellClassName: "min-w-[150px]",
       render: (row) => (
-        <Link
-          href={`/naja/orders/${row.objectId}`}
-          className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
-        >
-          مشاهده جزئیات
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/naja/orders/${row.objectId}`}
+            className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
+          >
+            مشاهده جزئیات
+          </Link>
+          {canEditNajaOrder(row) ? (
+            <Link
+              href={`/naja/orders/${row.objectId}/edit`}
+              className="rounded-xl border border-[#1F3A5F] px-3 py-1.5 text-xs font-semibold text-[#1F3A5F]"
+            >
+              ویرایش
+            </Link>
+          ) : null}
+        </div>
       ),
     },
   ];
@@ -268,6 +278,12 @@ export default function NajaOrdersPage() {
         />
       )}
     </DashboardLayout>
+  );
+}
+
+function canEditNajaOrder(order: Order): boolean {
+  return ["pending_approval", "pending", "review_resolved"].includes(
+    order.orderStatus,
   );
 }
 
