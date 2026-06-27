@@ -73,6 +73,7 @@ export interface OrderFormSubmitPayload {
   recipientNationalId?: string;
   recipientMobile?: string;
   najaOrderNumber?: string;
+  najaPurchaseDate?: string | null;
   items: Array<{
     productObjectId: string;
     quantity: number;
@@ -145,6 +146,9 @@ export function OrderForm({
   );
   const [najaOrderNumber, setNajaOrderNumber] = useState(
     initialOrder?.najaOrderNumber ?? initialOrder?.externalOrderNumber ?? "",
+  );
+  const [najaPurchaseDate, setNajaPurchaseDate] = useState(
+    initialOrder?.najaPurchaseDate?.slice(0, 10) ?? "",
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     initialOrder?.customerObjectId ?? initialOrder?.customer?.objectId ?? "",
@@ -651,6 +655,7 @@ export function OrderForm({
               ),
               recipientMobile: normalizePhone(recipientMobile.trim()),
               najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
+              najaPurchaseDate: najaPurchaseDate || null,
             }
           : {}),
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
@@ -950,6 +955,15 @@ export function OrderForm({
                   aria-invalid={Boolean(fieldErrors.najaOrderNumber)}
                 />
                 <FieldError message={fieldErrors.najaOrderNumber} />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                <span>تاریخ سفارش</span>
+                <Input
+                  type="date"
+                  value={najaPurchaseDate}
+                  onChange={(event) => setNajaPurchaseDate(event.target.value)}
+                />
               </label>
             </div>
 

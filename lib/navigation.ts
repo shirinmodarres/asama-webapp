@@ -35,6 +35,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "shopping-cart",
       description: "ثبت‌شده و برگشتی",
     },
+    {
+      label: "گزارش ریالی",
+      href: "/naja/reports/rial",
+      icon: "file-text",
+      description: "مبالغ سفارش‌های ناجا",
+    },
   ],
   manager: [
     {
@@ -198,6 +204,36 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/orders",
       icon: "pencil",
       description: "اصلاح سفارش ‌ها",
+    },
+    {
+      label: "فروشگاه",
+      href: "/support/shop",
+      icon: "shopping-cart",
+      description: "مدیریت فروشگاه سایت",
+    },
+    {
+      label: "محصولات سایت",
+      href: "/support/shop/products",
+      icon: "package",
+      description: "مدیریت محصولات فروشگاه",
+    },
+    {
+      label: "سفارش‌های سایت",
+      href: "/support/shop/orders",
+      icon: "shopping-cart",
+      description: "پیگیری سفارش‌های فروشگاه",
+    },
+    {
+      label: "برندها",
+      href: "/support/shop/brands",
+      icon: "layers",
+      description: "مدیریت برندهای فروشگاه",
+    },
+    {
+      label: "دسته‌بندی‌ها",
+      href: "/support/shop/categories",
+      icon: "boxes",
+      description: "مدیریت دسته‌بندی‌های فروشگاه",
     },
   ],
 };

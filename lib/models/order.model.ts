@@ -52,6 +52,7 @@ export interface Order {
   recipientMobile: string | null;
   externalOrderNumber: string | null;
   najaOrderNumber: string | null;
+  najaPurchaseDate: string | null;
   customerNationalId: string | null;
   customerMobile: string | null;
   customerPhone: string | null;
@@ -128,6 +129,7 @@ export interface CreateOrderPayload {
   recipientNationalId?: string;
   recipientMobile?: string;
   najaOrderNumber?: string;
+  najaPurchaseDate?: string | null;
   notes?: string;
   items: Array<{
     productObjectId?: string;

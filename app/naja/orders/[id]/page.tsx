@@ -152,12 +152,22 @@ export default function NajaOrderDetailsPage() {
         title={`سفارش ${formatFaDigits(order.code)}`}
         description="مشاهده اطلاعات مشتری/مرکز ناجا از سپیدار، وضعیت انبار و فاکتور سفارش"
         actions={
-          <Link
-            href="/naja/orders"
-            className="rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm text-[#334155]"
-          >
-            بازگشت به لیست
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {canEditNajaOrder(order) ? (
+              <Link
+                href={`/naja/orders/${order.objectId}/edit`}
+                className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white"
+              >
+                ویرایش سفارش
+              </Link>
+            ) : null}
+            <Link
+              href="/naja/orders"
+              className="rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm text-[#334155]"
+            >
+              بازگشت به لیست
+            </Link>
+          </div>
         }
       />
 
@@ -223,7 +233,18 @@ export default function NajaOrderDetailsPage() {
                 }
               />
               <InfoItem label="انبار خروج" value={order.stockTitle || "-"} />
-              <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
+              <InfoItem
+                label="تاریخ سفارش"
+                value={
+                  order.najaPurchaseDate
+                    ? formatDate(order.najaPurchaseDate)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="تاریخ ثبت در سامانه"
+                value={formatDate(order.createdAt)}
+              />
               <InfoItem label="وضعیت سفارش" value={<StatusBadge type="order" status={order.orderStatus} />} />
               <InfoItem label="وضعیت انبار" value={<StatusBadge type="warehouse" status={order.warehouseStatus} />} />
               <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />
@@ -295,4 +316,10 @@ function getQuotationStatusLabel(order: Order): string {
   }
 
   return "ثبت نشده";
+}
+
+function canEditNajaOrder(order: Order): boolean {
+  return ["pending_approval", "pending", "review_resolved"].includes(
+    order.orderStatus,
+  );
 }

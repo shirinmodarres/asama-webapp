@@ -133,7 +133,11 @@ function createApiError(payload: unknown, status?: number): ApiError {
       code,
       message,
       status,
-      details: payload.error?.details,
+      details:
+        payload.error?.details ??
+        (payload.error && "duplicates" in payload.error
+          ? { duplicates: payload.error.duplicates }
+          : undefined),
     });
   }
 
