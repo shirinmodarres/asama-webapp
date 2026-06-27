@@ -22,6 +22,13 @@ export interface WebsiteProductDimensions {
   height: number | null;
 }
 
+export interface WebsiteProductSpecification {
+  title: string;
+  value: string;
+  unit: string | null;
+  sortOrder: number;
+}
+
 export interface WebsiteProduct {
   objectId: string;
   id: string;
@@ -41,8 +48,10 @@ export interface WebsiteProduct {
   category: string | null;
   brandId: string | null;
   brandTitle: string | null;
+  brandSlug: string | null;
   categoryId: string | null;
   categoryTitle: string | null;
+  categorySlug: string | null;
   isActive: boolean;
   isFeatured: boolean;
   websiteStock: number;
@@ -51,6 +60,9 @@ export interface WebsiteProduct {
   maxOrderQuantity: number | null;
   weight: number | null;
   dimensions: WebsiteProductDimensions;
+  specifications: WebsiteProductSpecification[];
+  keyFeaturesForSite: string[];
+  technicalSpecsNote: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -70,6 +82,9 @@ export interface WebsiteProductPayload {
   images?: string[];
   brandId: string;
   categoryId: string;
+  specifications?: WebsiteProductSpecification[];
+  keyFeaturesForSite?: string[];
+  technicalSpecsNote?: string | null;
   isActive: boolean;
   isFeatured: boolean;
   websiteStock: number;
@@ -157,6 +172,17 @@ export interface WebsiteOrderTimelineItem {
   createdByName: string | null;
 }
 
+export interface WebsitePaymentInfo {
+  gateway: string;
+  gatewayLabel: string;
+  paymentToken: string | null;
+  transactionId: string | null;
+  referenceId: string | null;
+  status: string;
+  paidAt: string | null;
+  failedReason: string | null;
+}
+
 export interface WebsiteOrder {
   objectId: string;
   id: string;
@@ -164,6 +190,9 @@ export interface WebsiteOrder {
   customerName: string;
   customerMobile: string;
   customerEmail: string | null;
+  recipientFirstName: string | null;
+  recipientLastName: string | null;
+  recipientMobile: string | null;
   province: string | null;
   city: string | null;
   shippingAddress: string | null;
@@ -175,8 +204,10 @@ export interface WebsiteOrder {
   finalAmount: number;
   paymentStatus: WebsitePaymentStatus;
   paymentStatusLabel: string;
+  payment: WebsitePaymentInfo | null;
   orderStatus: WebsiteOrderStatus;
   orderStatusLabel: string;
+  orderNote: string | null;
   supportNote: string | null;
   items: WebsiteOrderItem[];
   timeline: WebsiteOrderTimelineItem[];

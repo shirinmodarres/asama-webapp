@@ -41,6 +41,8 @@ type ProductFormState = {
   accountingItemCode: string;
   description: string;
   shortDescription: string;
+  keyFeaturesForSite: string;
+  technicalSpecsNote: string;
   price: string;
   salePrice: string;
   images: string;
@@ -57,6 +59,14 @@ type ProductFormState = {
   height: string;
 };
 
+type SpecificationDraft = {
+  rowId: string;
+  title: string;
+  value: string;
+  unit: string;
+  sortOrder: string;
+};
+
 export function WebsiteProductForm({
   product,
   isSubmitting = false,
@@ -67,6 +77,9 @@ export function WebsiteProductForm({
     createInitialState(product),
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [specifications, setSpecifications] = useState<SpecificationDraft[]>(
+    () => createInitialSpecifications(product),
+  );
   const [brands, setBrands] = useState<WebsiteBrand[]>([]);
   const [categories, setCategories] = useState<WebsiteCategory[]>([]);
   const [taxonomyError, setTaxonomyError] = useState("");
@@ -106,7 +119,7 @@ export function WebsiteProductForm({
   };
 
   const handleSubmit = async () => {
-    const nextErrors = validateForm(form);
+    const nextErrors = validateForm(form, specifications);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -118,6 +131,11 @@ export function WebsiteProductForm({
       accountingItemCode: form.accountingItemCode.trim(),
       description: form.description.trim() || null,
       shortDescription: form.shortDescription.trim() || null,
+      keyFeaturesForSite: form.keyFeaturesForSite
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      technicalSpecsNote: form.technicalSpecsNote.trim() || null,
       price: toNumber(form.price),
       salePrice: form.salePrice.trim() ? toNumber(form.salePrice) : null,
       images: imageLines,
@@ -136,7 +154,43 @@ export function WebsiteProductForm({
         width: form.width.trim() ? toNumber(form.width) : null,
         height: form.height.trim() ? toNumber(form.height) : null,
       },
+      specifications: specifications
+        .map((item, index) => ({
+          title: item.title.trim(),
+          value: item.value.trim(),
+          unit: item.unit.trim() || null,
+          sortOrder: item.sortOrder.trim()
+            ? toNumber(item.sortOrder)
+            : index + 1,
+        }))
+        .filter((item) => item.title && item.value),
     });
+  };
+
+  const updateSpecification = (
+    rowId: string,
+    key: keyof Omit<SpecificationDraft, "rowId">,
+    value: string,
+  ) => {
+    setSpecifications((current) =>
+      current.map((item) =>
+        item.rowId === rowId ? { ...item, [key]: value } : item,
+      ),
+    );
+    setErrors((current) => ({ ...current, specifications: "" }));
+  };
+
+  const addSpecification = () => {
+    setSpecifications((current) => [
+      ...current,
+      {
+        rowId: `new-${Date.now()}`,
+        title: "",
+        value: "",
+        unit: "",
+        sortOrder: String(current.length + 1),
+      },
+    ]);
   };
 
   return (
@@ -213,7 +267,7 @@ export function WebsiteProductForm({
           </Select>
         </Field>
 
-        <Field label="قیمت سایت" error={errors.price}>
+        <Field label="قیمت سایت (ریال)" error={errors.price}>
           <Input
             inputMode="numeric"
             value={form.price}
@@ -222,7 +276,7 @@ export function WebsiteProductForm({
           />
         </Field>
 
-        <Field label="قیمت فروش ویژه" error={errors.salePrice}>
+        <Field label="قیمت فروش ویژه (ریال)" error={errors.salePrice}>
           <Input
             inputMode="numeric"
             value={form.salePrice}
@@ -264,7 +318,7 @@ export function WebsiteProductForm({
           />
         </Field>
 
-        <Field label="وزن" error={errors.weight}>
+        <Field label="وزن (گرم)" error={errors.weight}>
           <Input
             inputMode="numeric"
             value={form.weight}
@@ -274,7 +328,7 @@ export function WebsiteProductForm({
         </Field>
 
         <div className="grid gap-4 md:col-span-2 md:grid-cols-3">
-          <Field label="طول" error={errors.length}>
+          <Field label="طول (سانتی‌متر)" error={errors.length}>
             <Input
               inputMode="numeric"
               value={form.length}
@@ -282,7 +336,7 @@ export function WebsiteProductForm({
               aria-invalid={Boolean(errors.length)}
             />
           </Field>
-          <Field label="عرض" error={errors.width}>
+          <Field label="عرض (سانتی‌متر)" error={errors.width}>
             <Input
               inputMode="numeric"
               value={form.width}
@@ -290,7 +344,7 @@ export function WebsiteProductForm({
               aria-invalid={Boolean(errors.width)}
             />
           </Field>
-          <Field label="ارتفاع" error={errors.height}>
+          <Field label="ارتفاع (سانتی‌متر)" error={errors.height}>
             <Input
               inputMode="numeric"
               value={form.height}
@@ -317,6 +371,27 @@ export function WebsiteProductForm({
               updateField("description", event.target.value)
             }
             aria-invalid={Boolean(errors.description)}
+          />
+        </Field>
+
+        <Field label="ویژگی‌های کلیدی سایت" error={errors.keyFeaturesForSite}>
+          <Textarea
+            value={form.keyFeaturesForSite}
+            onChange={(event) =>
+              updateField("keyFeaturesForSite", event.target.value)
+            }
+            placeholder="هر ویژگی در یک خط"
+            aria-invalid={Boolean(errors.keyFeaturesForSite)}
+          />
+        </Field>
+
+        <Field label="یادداشت مشخصات فنی" error={errors.technicalSpecsNote}>
+          <Textarea
+            value={form.technicalSpecsNote}
+            onChange={(event) =>
+              updateField("technicalSpecsNote", event.target.value)
+            }
+            aria-invalid={Boolean(errors.technicalSpecsNote)}
           />
         </Field>
 
@@ -354,6 +429,85 @@ export function WebsiteProductForm({
             محصول ویژه
           </label>
         </div>
+      </div>
+      <div className="mt-6 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-[#102034]">
+              جدول مشخصات محصول
+            </h3>
+            <p className="mt-1 text-xs leading-6 text-[#64748B]">
+              این ردیف‌ها در صفحه جزئیات محصول سایت نمایش داده می‌شوند.
+            </p>
+          </div>
+          <Button type="button" variant="outline" onClick={addSpecification}>
+            افزودن مشخصه
+          </Button>
+        </div>
+        <div className="mt-4 grid gap-3">
+          {specifications.map((item, index) => (
+            <div
+              key={item.rowId}
+              className="grid gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 md:grid-cols-[1fr_1fr_120px_100px_auto]"
+            >
+              <Input
+                value={item.title}
+                onChange={(event) =>
+                  updateSpecification(item.rowId, "title", event.target.value)
+                }
+                placeholder="عنوان مشخصه"
+                aria-label="عنوان مشخصه"
+              />
+              <Input
+                value={item.value}
+                onChange={(event) =>
+                  updateSpecification(item.rowId, "value", event.target.value)
+                }
+                placeholder="مقدار"
+                aria-label="مقدار مشخصه"
+              />
+              <Input
+                value={item.unit}
+                onChange={(event) =>
+                  updateSpecification(item.rowId, "unit", event.target.value)
+                }
+                placeholder="واحد"
+                aria-label="واحد مشخصه"
+              />
+              <Input
+                inputMode="numeric"
+                value={item.sortOrder}
+                onChange={(event) =>
+                  updateSpecification(
+                    item.rowId,
+                    "sortOrder",
+                    event.target.value,
+                  )
+                }
+                placeholder="ترتیب"
+                aria-label="ترتیب مشخصه"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setSpecifications((current) =>
+                    current.filter((entry) => entry.rowId !== item.rowId),
+                  )
+                }
+              >
+                حذف
+              </Button>
+              <span className="sr-only">ردیف {index + 1}</span>
+            </div>
+          ))}
+          {specifications.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-[#D7DEE6] bg-white p-4 text-sm text-[#64748B]">
+              هنوز مشخصه‌ای برای این محصول ثبت نشده است.
+            </p>
+          ) : null}
+        </div>
+        <FieldError message={errors.specifications} />
       </div>
       {taxonomyError ? <p className="mt-4 text-sm text-red-600">{taxonomyError}</p> : null}
 
@@ -393,6 +547,8 @@ function createInitialState(product?: WebsiteProduct | null): ProductFormState {
     accountingItemCode: product?.accountingItemCode ?? "",
     description: product?.description ?? "",
     shortDescription: product?.shortDescription ?? "",
+    keyFeaturesForSite: product?.keyFeaturesForSite.join("\n") ?? "",
+    technicalSpecsNote: product?.technicalSpecsNote ?? "",
     price: product?.price ? String(product.price) : "",
     salePrice: product?.salePrice ? String(product.salePrice) : "",
     images: product?.images.join("\n") ?? "",
@@ -431,7 +587,22 @@ function createInitialState(product?: WebsiteProduct | null): ProductFormState {
   };
 }
 
-function validateForm(form: ProductFormState): Record<string, string> {
+function createInitialSpecifications(
+  product?: WebsiteProduct | null,
+): SpecificationDraft[] {
+  return (product?.specifications ?? []).map((item, index) => ({
+    rowId: `existing-${index}`,
+    title: item.title,
+    value: item.value,
+    unit: item.unit ?? "",
+    sortOrder: String(item.sortOrder || index + 1),
+  }));
+}
+
+function validateForm(
+  form: ProductFormState,
+  specifications: SpecificationDraft[],
+): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!form.title.trim()) errors.title = "این فیلد الزامی است.";
   if (!form.sku.trim()) errors.sku = "این فیلد الزامی است.";
@@ -450,6 +621,14 @@ function validateForm(form: ProductFormState): Record<string, string> {
   validateNonNegativeNumber(form.length, "length", errors);
   validateNonNegativeNumber(form.width, "width", errors);
   validateNonNegativeNumber(form.height, "height", errors);
+  const hasIncompleteSpecification = specifications.some(
+    (item) =>
+      (item.title.trim() || item.value.trim() || item.unit.trim()) &&
+      (!item.title.trim() || !item.value.trim()),
+  );
+  if (hasIncompleteSpecification) {
+    errors.specifications = "عنوان و مقدار هر مشخصه باید کامل باشد.";
+  }
   return errors;
 }
 

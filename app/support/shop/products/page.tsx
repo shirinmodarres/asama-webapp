@@ -200,12 +200,12 @@ export default function SupportShopProductsPage() {
     { key: "category", header: "دسته‌بندی", render: (row) => row.categoryTitle || "-" },
     {
       key: "price",
-      header: "قیمت سایت",
+      header: "قیمت سایت (ریال)",
       render: (row) => formatFaCurrency(row.price),
     },
     {
       key: "salePrice",
-      header: "قیمت ویژه",
+      header: "قیمت ویژه (ریال)",
       render: (row) =>
         row.salePrice === null ? "-" : formatFaCurrency(row.salePrice),
     },
@@ -499,5 +499,8 @@ function toProductPayload(product: WebsiteProduct) {
     maxOrderQuantity: product.maxOrderQuantity,
     weight: product.weight,
     dimensions: product.dimensions,
+    specifications: product.specifications,
+    keyFeaturesForSite: product.keyFeaturesForSite,
+    technicalSpecsNote: product.technicalSpecsNote,
   };
 }

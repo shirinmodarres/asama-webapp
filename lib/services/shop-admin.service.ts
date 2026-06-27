@@ -142,6 +142,23 @@ function normalizeProductPayload(
     images: payload.images?.map((image) => image.trim()).filter(Boolean) ?? [],
     brandId: payload.brandId,
     categoryId: payload.categoryId,
+    specifications: payload.specifications
+      ? payload.specifications
+          .map((item, index) => ({
+            title: item.title.trim(),
+            value: item.value.trim(),
+            unit: item.unit?.trim() || null,
+            sortOrder: toNumber(item.sortOrder || index + 1),
+          }))
+          .filter((item) => item.title && item.value)
+      : undefined,
+    keyFeaturesForSite:
+      payload.keyFeaturesForSite?.map((feature) => feature.trim()).filter(Boolean) ??
+      undefined,
+    technicalSpecsNote:
+      payload.technicalSpecsNote === undefined
+        ? undefined
+        : payload.technicalSpecsNote?.trim() || null,
     isActive: payload.isActive,
     isFeatured: payload.isFeatured,
     websiteStock: toNumber(payload.websiteStock),

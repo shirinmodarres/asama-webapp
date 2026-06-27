@@ -14,6 +14,7 @@ import type {
   WebsitePaymentStatus,
   WebsiteProduct,
   WebsiteProductDimensions,
+  WebsiteProductSpecification,
   WebsiteBrand,
   WebsiteCategory,
 } from "@/lib/models/shop.model";
@@ -73,8 +74,10 @@ export function mapWebsiteProductDto(dto: unknown): WebsiteProduct {
     category: toNullableString(record.categoryTitle ?? record.category),
     brandId: toNullableString(record.brandId),
     brandTitle: toNullableString(record.brandTitle ?? record.brand),
+    brandSlug: toNullableString(record.brandSlug),
     categoryId: toNullableString(record.categoryId),
     categoryTitle: toNullableString(record.categoryTitle ?? record.category),
+    categorySlug: toNullableString(record.categorySlug),
     isActive: toBooleanValue(record.isActive ?? record.active),
     isFeatured: toBooleanValue(record.isFeatured ?? record.featured),
     websiteStock,
@@ -92,8 +95,23 @@ export function mapWebsiteProductDto(dto: unknown): WebsiteProduct {
         ? null
         : toNumberValue(record.weight),
     dimensions,
+    specifications: toArray(record.specifications).map(mapWebsiteProductSpecificationDto),
+    keyFeaturesForSite: toArray(record.keyFeaturesForSite)
+      .map((value) => toStringValue(value).trim())
+      .filter(Boolean),
+    technicalSpecsNote: toNullableString(record.technicalSpecsNote),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+function mapWebsiteProductSpecificationDto(dto: unknown): WebsiteProductSpecification {
+  const record = toRecord(dto);
+  return {
+    title: toStringValue(record.title),
+    value: toStringValue(record.value),
+    unit: toNullableString(record.unit),
+    sortOrder: toNumberValue(record.sortOrder),
   };
 }
 
@@ -152,6 +170,7 @@ export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
   const record = toRecord(dto);
   const customer = toRecord(record.customer);
   const shipping = toRecord(record.shippingAddress ?? record.address);
+  const payment = toRecord(record.payment);
   const paymentStatus = mapPaymentStatus(record.paymentStatus);
   const orderStatus = mapOrderStatus(record.orderStatus ?? record.status);
   return {
@@ -167,6 +186,9 @@ export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
       toStringValue(record.customerMobile ?? customer.mobile ?? customer.phone),
     ),
     customerEmail: toNullableString(record.customerEmail ?? customer.email),
+    recipientFirstName: toNullableString(shipping.firstName),
+    recipientLastName: toNullableString(shipping.lastName),
+    recipientMobile: toNullableString(shipping.mobile),
     province: toNullableString(record.province ?? shipping.province),
     city: toNullableString(record.city ?? shipping.city),
     shippingAddress: toNullableString(
@@ -187,10 +209,23 @@ export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
     paymentStatusLabel:
       toNullableString(record.paymentStatusLabel) ||
       getWebsitePaymentStatusLabel(paymentStatus),
+    payment: Object.keys(payment).length
+      ? {
+          gateway: toStringValue(payment.gateway),
+          gatewayLabel: toStringValue(payment.gatewayLabel),
+          paymentToken: toNullableString(payment.paymentToken),
+          transactionId: toNullableString(payment.transactionId),
+          referenceId: toNullableString(payment.referenceId),
+          status: toStringValue(payment.status),
+          paidAt: toNullableString(payment.paidAt),
+          failedReason: toNullableString(payment.failedReason),
+        }
+      : null,
     orderStatus,
     orderStatusLabel:
       toNullableString(record.orderStatusLabel) ||
       getWebsiteOrderStatusLabel(orderStatus),
+    orderNote: toNullableString(record.orderNote),
     supportNote: toNullableString(record.supportNote),
     items: toArray(record.items).map(mapWebsiteOrderItemDto),
     timeline: toArray(record.timeline ?? record.statusTimeline).map(

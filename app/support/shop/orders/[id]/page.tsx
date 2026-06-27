@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { FileText, Printer } from "lucide-react";
 import { useParams } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -193,9 +194,23 @@ export default function WebsiteOrderDetailPage() {
             title={`سفارش ${formatFaDigits(order.orderNumber)}`}
             description="جزئیات سفارش ثبت‌شده در فروشگاه عمومی"
             actions={
-              <Button asChild variant="outline">
-                <Link href="/support/shop/orders">بازگشت به سفارش‌ها</Link>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline">
+                  <Link href={`/support/shop/orders/${order.objectId}/invoice`}>
+                    <FileText />
+                    مشاهده فاکتور
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link href={`/support/shop/orders/${order.objectId}/invoice?print=1`}>
+                    <Printer />
+                    چاپ / ذخیره PDF
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/support/shop/orders">بازگشت به سفارش‌ها</Link>
+                </Button>
+              </div>
             }
           />
           {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
@@ -340,6 +355,33 @@ export default function WebsiteOrderDetailPage() {
                   <Summary label="تخفیف" value={formatCurrency(order.discountAmount)} />
                   <Summary label="مبلغ نهایی" value={formatCurrency(order.finalAmount)} strong />
                 </div>
+              </Card>
+
+              <Card className="p-5">
+                <h3 className="text-base font-semibold text-[#102034]">
+                  اطلاعات پرداخت
+                </h3>
+                <dl className="mt-4 grid gap-3">
+                  <Info label="درگاه" value={order.payment?.gatewayLabel || "SibPay SoftPOS"} />
+                  <Info label="وضعیت پرداخت" value={order.paymentStatusLabel} />
+                  <Info
+                    label="توکن پرداخت"
+                    value={<span dir="ltr" className="block break-all text-left">{order.payment?.paymentToken || "-"}</span>}
+                  />
+                  <Info
+                    label="شناسه تراکنش"
+                    value={<span dir="ltr">{order.payment?.transactionId || "-"}</span>}
+                  />
+                  <Info
+                    label="شماره مرجع / RNN"
+                    value={<span dir="ltr">{order.payment?.referenceId || "-"}</span>}
+                  />
+                  <Info
+                    label="زمان پرداخت"
+                    value={order.payment?.paidAt ? formatDateTime(order.payment.paidAt) : "-"}
+                  />
+                  <Info label="علت خطا" value={order.payment?.failedReason || "-"} />
+                </dl>
               </Card>
 
               <Card className="p-5">

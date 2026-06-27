@@ -84,9 +84,9 @@ export default function WebsiteProductDetailPage() {
                 <Info label="اسلاگ" value={product.slug || "-"} />
                 <Info label="دسته‌بندی" value={product.category || "-"} />
                 <Info label="برند" value={product.brand || "-"} />
-                <Info label="قیمت سایت" value={formatFaCurrency(product.price)} />
+                <Info label="قیمت سایت (ریال)" value={formatFaCurrency(product.price)} />
                 <Info
-                  label="قیمت ویژه"
+                  label="قیمت ویژه (ریال)"
                   value={
                     product.salePrice === null
                       ? "-"
@@ -113,6 +113,36 @@ export default function WebsiteProductDetailPage() {
                       : formatFaNumber(product.maxOrderQuantity)
                   }
                 />
+                <Info
+                  label="وزن (گرم)"
+                  value={
+                    product.weight === null ? "-" : formatFaNumber(product.weight)
+                  }
+                />
+                <Info
+                  label="طول (سانتی‌متر)"
+                  value={
+                    product.dimensions.length === null
+                      ? "-"
+                      : formatFaNumber(product.dimensions.length)
+                  }
+                />
+                <Info
+                  label="عرض (سانتی‌متر)"
+                  value={
+                    product.dimensions.width === null
+                      ? "-"
+                      : formatFaNumber(product.dimensions.width)
+                  }
+                />
+                <Info
+                  label="ارتفاع (سانتی‌متر)"
+                  value={
+                    product.dimensions.height === null
+                      ? "-"
+                      : formatFaNumber(product.dimensions.height)
+                  }
+                />
               </div>
               <div className="mt-5 space-y-3 text-sm leading-7 text-[#334155]">
                 <p>
@@ -123,6 +153,55 @@ export default function WebsiteProductDetailPage() {
                   <span className="font-semibold">توضیحات: </span>
                   {product.description || "-"}
                 </p>
+                {product.keyFeaturesForSite.length ? (
+                  <p>
+                    <span className="font-semibold">ویژگی‌های کلیدی: </span>
+                    {product.keyFeaturesForSite.join("، ")}
+                  </p>
+                ) : null}
+                {product.technicalSpecsNote ? (
+                  <p>
+                    <span className="font-semibold">یادداشت مشخصات فنی: </span>
+                    {product.technicalSpecsNote}
+                  </p>
+                ) : null}
+              </div>
+              <div className="mt-6">
+                <h3 className="text-base font-semibold text-[#102034]">
+                  جدول مشخصات محصول
+                </h3>
+                {product.specifications.length ? (
+                  <div className="mt-3 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                    <table className="min-w-full divide-y divide-[#E5E7EB] text-sm">
+                      <thead className="bg-[#F8FAFC] text-[#64748B]">
+                        <tr>
+                          <th className="px-3 py-2 text-right font-medium">عنوان</th>
+                          <th className="px-3 py-2 text-right font-medium">مقدار</th>
+                          <th className="px-3 py-2 text-right font-medium">واحد</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                        {product.specifications.map((item) => (
+                          <tr key={`${item.title}-${item.sortOrder}`}>
+                            <td className="px-3 py-2 font-medium text-[#102034]">
+                              {item.title}
+                            </td>
+                            <td className="px-3 py-2 text-[#334155]">
+                              {formatFaDigits(item.value)}
+                            </td>
+                            <td className="px-3 py-2 text-[#64748B]">
+                              {item.unit || "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="mt-2 rounded-xl border border-dashed border-[#D7DEE6] p-4 text-sm text-[#64748B]">
+                    مشخصات فنی برای این محصول ثبت نشده است.
+                  </p>
+                )}
               </div>
             </Card>
             <Card className="p-5">
