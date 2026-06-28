@@ -69,7 +69,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
     },
     {
       label: "ردیابی موجودی",
-      href: "/manager/warehouse/inventory-units",
+      href: "/manager/warehouse/stocks",
       icon: "warehouse",
       description: "کدهای رهگیری و سریال‌ها",
     },
@@ -101,7 +101,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
     },
     {
       label: "ردیابی موجودی",
-      href: "/warehouse/inventory-units",
+      href: "/warehouse/stocks",
       icon: "boxes",
       description: "کدهای رهگیری و سریال‌ها",
     },
@@ -189,7 +189,7 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
     },
     {
       label: "ردیابی موجودی",
-      href: "/support/warehouse/inventory-units",
+      href: "/support/warehouse/stocks",
       icon: "warehouse",
       description: "کدهای رهگیری و سریال‌ها",
     },

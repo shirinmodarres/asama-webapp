@@ -80,6 +80,52 @@ export interface WarehouseInventoryUnitRow {
   units: WarehouseItemUnit[];
 }
 
+export interface WarehouseStockUnitSummary {
+  objectId: string;
+  id: string;
+  sepidarStockId: number | null;
+  code: string | null;
+  title: string;
+  isActive: boolean;
+  totalProductCount: number;
+  totalUnitCount: number;
+  lastSepidarSyncAt: string | null;
+}
+
+export interface WarehouseStockProductUnit {
+  objectId: string;
+  id: string;
+  trackingCode: string;
+  serialNumber: string;
+  productIdentifier: string;
+  status: string;
+  statusLabel: string;
+  inboundReceiptId: string | null;
+  inboundReceiptCode: string | null;
+  createdAt: string | null;
+}
+
+export interface WarehouseStockProductGroup {
+  productObjectId: string;
+  sepidarItemId: number | null;
+  sepidarCode: string;
+  productName: string;
+  inStockUnitCount: number;
+  realQuantity: number;
+  units: WarehouseStockProductUnit[];
+}
+
+export interface WarehouseStockUnitDetail {
+  stock: {
+    objectId: string;
+    id: string;
+    sepidarStockId: number | null;
+    code: string | null;
+    title: string;
+  };
+  groups: WarehouseStockProductGroup[];
+}
+
 export interface ExitSlipItemUnit {
   unitObjectId: string;
   productIdentifier: string;

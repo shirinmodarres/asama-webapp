@@ -197,25 +197,20 @@ export default function WarehouseInboundPage() {
       trackingCode: normalizeDigits(trackingCode.trim()),
     };
 
-    if (
-      !nextUnit.productIdentifier ||
-      !nextUnit.serialNumber ||
-      !nextUnit.trackingCode
-    ) {
+    if (!nextUnit.productIdentifier || !nextUnit.trackingCode) {
       setFieldErrors({
         productIdentifier: nextUnit.productIdentifier
           ? ""
           : "این فیلد الزامی است.",
-        serialNumber: nextUnit.serialNumber ? "" : "این فیلد الزامی است.",
         trackingCode: nextUnit.trackingCode ? "" : "این فیلد الزامی است.",
       });
       if (!nextUnit.productIdentifier) focusField("productIdentifier");
-      else if (!nextUnit.serialNumber) focusField("serialNumber");
       else focusField("trackingCode");
       return;
     }
 
     if (
+      nextUnit.serialNumber &&
       units.some((unit) => unit.serialNumber === nextUnit.serialNumber)
     ) {
       setFieldErrors({
