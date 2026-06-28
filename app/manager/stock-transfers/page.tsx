@@ -83,8 +83,12 @@ export default function ManagerStockTransfersPage() {
   const [message, setMessage] = useState("");
 
   const loadTransfers = async () => {
-    const data = await listManagerStockTransfers({ status: "pending" });
-    setTransfers(data);
+    const data = await listManagerStockTransfers();
+    setTransfers(
+      data.filter((transfer) =>
+        ["pending", "pending_manager_approval"].includes(transfer.status),
+      ),
+    );
   };
 
   useEffect(() => {
@@ -123,7 +127,7 @@ export default function ManagerStockTransfersPage() {
         await approveStockTransfer(transfer.objectId, {
           approvedByName: actorName,
         });
-        setMessage("درخواست انتقال موجودی تأیید شد.");
+        setMessage("درخواست انتقال موجودی تأیید شد و برای ثبت کدهای رهگیری به انبار ارسال شد.");
       } else {
         await rejectStockTransfer(transfer.objectId, {
           rejectedByName: actorName,

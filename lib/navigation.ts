@@ -68,6 +68,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "فروش و موجودی انبار",
     },
     {
+      label: "ردیابی موجودی",
+      href: "/manager/warehouse/inventory-units",
+      icon: "warehouse",
+      description: "کدهای رهگیری و سریال‌ها",
+    },
+    {
       label: "تأیید انتقال موجودی",
       href: "/manager/stock-transfers",
       icon: "truck",
@@ -93,12 +99,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "file-check",
       description: "رسیدهای ثبت‌شده",
     },
-    // {
-    //   label: "موجودی واقعی انبار",
-    //   href: "/warehouse/inventory",
-    //   icon: "boxes",
-    //   description: "موجودی انبارهای سپیدار",
-    // },
+    {
+      label: "ردیابی موجودی",
+      href: "/warehouse/inventory-units",
+      icon: "boxes",
+      description: "کدهای رهگیری و سریال‌ها",
+    },
     {
       label: "انتقال‌ها",
       href: "/warehouse/stock-transfers",
@@ -180,6 +186,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/product-stock-inventory",
       icon: "boxes",
       description: "کالا و انبار سپیدار",
+    },
+    {
+      label: "ردیابی موجودی",
+      href: "/support/warehouse/inventory-units",
+      icon: "warehouse",
+      description: "کدهای رهگیری و سریال‌ها",
     },
     {
       label: "انتقال موجودی",

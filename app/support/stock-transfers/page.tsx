@@ -25,7 +25,7 @@ import { listProducts } from "@/lib/services/product.service";
 import {
   createStockTransfer,
   listProductStockInventory,
-  listSepidarStocks,
+  listSupportStocks,
   listStockTransfers,
 } from "@/lib/services/stock.service";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
@@ -52,7 +52,7 @@ export default function SupportStockTransfersPage() {
   const loadData = async () => {
     const [productData, stockData, transferData] = await Promise.all([
       listProducts("support"),
-      listSepidarStocks(),
+      listSupportStocks(),
       listStockTransfers(),
     ]);
     setProducts(productData.filter((product) => product.isSyncedFromSepidar));
@@ -147,6 +147,14 @@ export default function SupportStockTransfersPage() {
     }
     if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
       nextErrors.quantity = "تعداد باید بیشتر از صفر باشد.";
+    }
+    if (
+      Number.isFinite(normalizedQuantity) &&
+      normalizedQuantity > 0 &&
+      sourceInventory &&
+      normalizedQuantity > sourceInventory.realQuantity
+    ) {
+      nextErrors.quantity = "تعداد انتقال نمی‌تواند بیشتر از موجودی واقعی مبدأ باشد.";
     }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;

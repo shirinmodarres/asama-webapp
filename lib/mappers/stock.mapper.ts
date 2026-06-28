@@ -15,7 +15,10 @@ import { normalizeDigits } from "@/lib/utils/number-format";
 
 const TRANSFER_STATUS_LABELS: Record<string, string> = {
   pending: "در انتظار تأیید",
+  pending_manager_approval: "در انتظار تأیید مدیر",
+  approved_waiting_tracking_codes: "در انتظار ثبت کدهای رهگیری",
   approved: "تأیید شده",
+  completed: "تکمیل شده",
   rejected: "رد شده",
 };
 
@@ -132,6 +135,11 @@ export function mapStockTransferRequestDto(dto: unknown): StockTransferRequest {
     rejectedByName: toNullableString(record.rejectedByName),
     status,
     statusLabel: TRANSFER_STATUS_LABELS[status] || status,
+    scannedUnitObjectIds: toArray(record.scannedUnitObjectIds).map((id) =>
+      toStringValue(id),
+    ),
+    movedUnitCount: toNumberValue(record.movedUnitCount),
+    transferSlipId: toNullableString(record.transferSlipId),
     requestedAt: toNullableString(record.requestedAt),
     approvedAt: toNullableString(record.approvedAt),
     rejectedAt: toNullableString(record.rejectedAt),

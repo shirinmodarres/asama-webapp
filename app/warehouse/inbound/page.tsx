@@ -23,8 +23,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
+import type { SepidarStock } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
+import { listStocks } from "@/lib/services/stock.service";
 import { createInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
@@ -53,7 +55,9 @@ type UnitRowErrors = Record<
 
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedStockId, setSelectedStockId] = useState("");
   const [productIdentifier, setProductIdentifier] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
@@ -77,9 +81,14 @@ export default function WarehouseInboundPage() {
       setIsLoading(true);
       setError("");
       try {
-        const productData = await listProducts("warehouse");
+        const [productData, stockData] = await Promise.all([
+          listProducts("warehouse"),
+          listStocks(),
+        ]);
         if (!isMounted) return;
         setProducts(productData.filter((product) => product.isSyncedFromSepidar));
+        setStocks(stockData.filter((stock) => stock.isActive));
+        setSelectedStockId((current) => current || stockData.find((stock) => stock.isZagros)?.objectId || stockData[0]?.objectId || "");
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -261,6 +270,10 @@ export default function WarehouseInboundPage() {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
       return;
     }
+    if (!selectedStockId) {
+      setFieldErrors({ selectedStockId: "لطفاً انبار مقصد را انتخاب کنید." });
+      return;
+    }
     if (units.length === 0) {
       setError("حداقل یک کالا برای ثبت ورود اضافه کنید.");
       return;
@@ -270,6 +283,7 @@ export default function WarehouseInboundPage() {
     try {
       const receipt = await createInboundReceipt({
         productObjectId: selectedProductId,
+        stockObjectId: selectedStockId,
         units: units.map(({ productIdentifier, serialNumber, trackingCode }) => ({
           productIdentifier,
           serialNumber,
@@ -279,7 +293,7 @@ export default function WarehouseInboundPage() {
         createdByName: getStoredCurrentUser()?.fullName ?? undefined,
       });
       setMessage(
-        `رسید ورود ${formatFaDigits(receipt.receiptCode)} ثبت شد. ورود کالا فقط در انبار زاگرس ثبت شد.`,
+        `رسید ورود ${formatFaDigits(receipt.receiptCode)} در ${receipt.stockTitle || "انبار انتخاب‌شده"} ثبت شد.`,
       );
       setUnits([]);
       setNotes("");
@@ -354,6 +368,14 @@ export default function WarehouseInboundPage() {
       })),
     [products],
   );
+  const stockOptions = useMemo(
+    () =>
+      stocks.map((stock) => ({
+        value: stock.objectId,
+        label: `${stock.code ? formatFaDigits(stock.code) + " - " : ""}${stock.title}`,
+      })),
+    [stocks],
+  );
   return (
     <DashboardLayout role="warehouse" title="ورود کالا">
       {isLoading ? (
@@ -369,9 +391,9 @@ export default function WarehouseInboundPage() {
 
           <Card className="p-5">
             <div className="mb-4 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A]">
-              تمام ورود کالاها در انبار زاگرس ثبت می‌شوند.
+              ورود کالا در انبار انتخاب‌شده از فهرست انبارهای سپیدار ثبت می‌شود.
             </div>
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_240px]">
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_180px]">
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>کالا</span>
                 <div className="relative">
@@ -397,6 +419,27 @@ export default function WarehouseInboundPage() {
                   />
                   <FieldError message={fieldErrors.selectedProductId} />
                 </div>
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <span>انبار مقصد</span>
+                <SearchableSelect
+                  value={selectedStockId || undefined}
+                  onValueChange={(value) => {
+                    setSelectedStockId(value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedStockId: "",
+                    }));
+                  }}
+                  options={stockOptions}
+                  placeholder="انتخاب انبار"
+                  searchPlaceholder="جستجو در انبارها"
+                  emptyMessage="انباری پیدا نشد"
+                  invalid={Boolean(fieldErrors.selectedStockId)}
+                  normalizeSearch
+                />
+                <FieldError message={fieldErrors.selectedStockId} />
               </label>
 
               <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm">

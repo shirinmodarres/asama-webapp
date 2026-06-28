@@ -15,6 +15,8 @@ import type {
   StockTransferRequest,
   UpdateProductStockInventoryPayload,
 } from "@/lib/models/stock.model";
+import { mapWarehouseItemUnitDto } from "@/lib/mappers/warehouse.mapper";
+import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
 import { toRecord } from "@/lib/mappers/mapper-utils";
 import { toNumber } from "@/lib/utils/number-format";
 
@@ -107,6 +109,38 @@ export async function rejectStockTransfer(
     payload,
   );
   return mapStockTransferRequestDto(data);
+}
+
+export async function validateStockTransferScan(
+  objectId: string,
+  payload: {
+    scannedCode: string;
+    currentScannedUnitIds?: string[];
+  },
+): Promise<WarehouseItemUnit> {
+  const data = await httpClient.post<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}/validate-scan`,
+    payload,
+  );
+  return mapWarehouseItemUnitDto(data);
+}
+
+export async function executeStockTransfer(
+  objectId: string,
+  payload: {
+    unitObjectIds: string[];
+    executedByName?: string;
+  },
+): Promise<{ transfer: StockTransferRequest; slip?: unknown }> {
+  const data = await httpClient.post<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}/execute`,
+    payload,
+  );
+  const record = toRecord(data);
+  return {
+    transfer: mapStockTransferRequestDto(record.transfer),
+    slip: record.slip,
+  };
 }
 
 export async function listProductStockInventory(filters?: {
