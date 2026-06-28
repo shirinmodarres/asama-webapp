@@ -40,7 +40,23 @@ export interface ProductStockInventory {
   updatedAt: string | null;
 }
 
-export type StockTransferStatus = "pending" | "approved" | "rejected" | string;
+export type StockTransferStatus =
+  | "pending"
+  | "pending_manager_approval"
+  | "approved_waiting_warehouse_scan"
+  | "approved_waiting_tracking_codes"
+  | "completed"
+  | "approved"
+  | "rejected"
+  | string;
+
+export interface StockTransferItem {
+  productObjectId: string;
+  sepidarItemId: number | null;
+  productName: string | null;
+  quantity: number;
+  scannedUnitObjectIds: string[];
+}
 
 export interface StockTransferRequest {
   objectId: string;
@@ -55,11 +71,15 @@ export interface StockTransferRequest {
   sepidarItemId: number | null;
   productName: string | null;
   quantity: number;
+  items: StockTransferItem[];
   requestedByName: string | null;
   approvedByName: string | null;
   rejectedByName: string | null;
   status: StockTransferStatus;
   statusLabel: string;
+  scannedUnitObjectIds: string[];
+  movedUnitCount: number;
+  transferSlipId: string | null;
   requestedAt: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
@@ -69,10 +89,14 @@ export interface StockTransferRequest {
 }
 
 export interface CreateStockTransferPayload {
-  productObjectId: string;
   sourceStockObjectId: string;
   destinationStockObjectId: string;
-  quantity: number;
+  productObjectId?: string;
+  quantity?: number;
+  items?: Array<{
+    productObjectId: string;
+    quantity: number;
+  }>;
   note?: string;
   requestedByName?: string;
 }

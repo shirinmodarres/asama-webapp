@@ -78,6 +78,11 @@ export default function WarehouseInboundReceiptsPage() {
     },
     { key: "productName", header: "کالا", render: (row) => row.productName },
     {
+      key: "stockTitle",
+      header: "انبار",
+      render: (row) => row.stockTitle || "-",
+    },
+    {
       key: "quantity",
       header: "تعداد",
       render: (row) => formatNumber(row.quantity),

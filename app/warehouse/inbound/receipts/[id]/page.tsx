@@ -94,6 +94,7 @@ export default function WarehouseInboundReceiptDetailPage() {
               <InfoItem label="شماره رسید" value={formatFaDigits(receipt.receiptCode)} />
               <InfoItem label="کالا" value={receipt.productName || "-"} />
               <InfoItem label="شناسه کالا" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
+              <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
               <InfoItem label="تعداد" value={formatNumber(receipt.quantity)} />
               <InfoItem label="ثبت کننده" value={receipt.createdByName || "-"} />
               <InfoItem label="زمان ثبت" value={formatDateTime(receipt.createdAt)} />

@@ -13,6 +13,13 @@ import {
   mapWarehouseItemUnitDto,
   mapWarehouseItemUnitListDto,
 } from "@/lib/mappers/warehouse.mapper";
+import {
+  toArray,
+  toNullableString,
+  toNumberValue,
+  toRecord,
+  toStringValue,
+} from "@/lib/mappers/mapper-utils";
 import type { Order } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
 import type { ProductStockInventory } from "@/lib/models/stock.model";
@@ -26,7 +33,10 @@ import type {
   UpdateInboundReceiptPayload,
   ValidateExitSlipScanPayload,
   WarehouseInboundReceipt,
+  WarehouseInventoryUnitRow,
   WarehouseItemUnit,
+  WarehouseStockUnitDetail,
+  WarehouseStockUnitSummary,
 } from "@/lib/models/warehouse.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
@@ -44,6 +54,120 @@ export async function getProductWarehouseInventory(
     `/api/products/${productObjectId}/warehouse-inventory`,
   );
   return mapProductWarehouseInventoryListDto(data);
+}
+
+export async function listWarehouseInventoryUnits(filters?: {
+  stockObjectId?: string;
+  productObjectId?: string;
+  trackingCode?: string;
+  serialNumber?: string;
+  status?: string;
+}): Promise<WarehouseInventoryUnitRow[]> {
+  const params = new URLSearchParams();
+  Object.entries(filters || {}).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const data = await httpClient.get<unknown>(`/api/warehouse/inventory-units${suffix}`);
+  return toArray(data).map(mapWarehouseInventoryUnitRow);
+}
+
+export async function listWarehouseStocksWithUnits(): Promise<WarehouseStockUnitSummary[]> {
+  const data = await httpClient.get<unknown>("/api/warehouse/stocks");
+  return toArray(data).map(mapWarehouseStockUnitSummary);
+}
+
+export async function getWarehouseStockUnitDetail(
+  stockObjectId: string,
+): Promise<WarehouseStockUnitDetail> {
+  const data = await httpClient.get<unknown>(`/api/warehouse/stocks/${stockObjectId}`);
+  const record = toRecord(data);
+  const stockRecord = toRecord(record.stock);
+  return {
+    stock: {
+      objectId: toStringValue(stockRecord.objectId),
+      id: toStringValue(stockRecord.id) || toStringValue(stockRecord.objectId),
+      sepidarStockId:
+        stockRecord.sepidarStockId === undefined || stockRecord.sepidarStockId === null
+          ? null
+          : toNumberValue(stockRecord.sepidarStockId),
+      code: toNullableString(stockRecord.code),
+      title: toStringValue(stockRecord.title),
+    },
+    groups: toArray(record.groups).map((groupDto) => {
+      const group = toRecord(groupDto);
+      return {
+        productObjectId: toStringValue(group.productObjectId),
+        sepidarItemId:
+          group.sepidarItemId === undefined || group.sepidarItemId === null
+            ? null
+            : toNumberValue(group.sepidarItemId),
+        sepidarCode: toStringValue(group.sepidarCode),
+        productName: toStringValue(group.productName),
+        inStockUnitCount: toNumberValue(group.inStockUnitCount),
+        realQuantity: toNumberValue(group.realQuantity),
+        units: toArray(group.units).map((unitDto) => {
+          const unit = toRecord(unitDto);
+          return {
+            objectId: toStringValue(unit.objectId),
+            id: toStringValue(unit.id) || toStringValue(unit.objectId),
+            trackingCode: toStringValue(unit.trackingCode),
+            serialNumber: toStringValue(unit.serialNumber),
+            productIdentifier: toStringValue(unit.productIdentifier),
+            status: toStringValue(unit.status),
+            statusLabel: toStringValue(unit.statusLabel),
+            inboundReceiptId: toNullableString(unit.inboundReceiptId),
+            inboundReceiptCode: toNullableString(unit.inboundReceiptCode),
+            createdAt: toNullableString(unit.createdAt),
+          };
+        }),
+      };
+    }),
+  };
+}
+
+function mapWarehouseStockUnitSummary(dto: unknown): WarehouseStockUnitSummary {
+  const record = toRecord(dto);
+  return {
+    objectId: toStringValue(record.objectId),
+    id: toStringValue(record.id) || toStringValue(record.objectId),
+    sepidarStockId:
+      record.sepidarStockId === undefined || record.sepidarStockId === null
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    code: toNullableString(record.code),
+    title: toStringValue(record.title),
+    isActive: Boolean(record.isActive),
+    totalProductCount: toNumberValue(record.totalProductCount),
+    totalUnitCount: toNumberValue(record.totalUnitCount),
+    lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
+  };
+}
+
+function mapWarehouseInventoryUnitRow(dto: unknown): WarehouseInventoryUnitRow {
+  const record = toRecord(dto);
+  return {
+    objectId: toStringValue(record.objectId),
+    id: toStringValue(record.id) || toStringValue(record.objectId),
+    productObjectId: record.productObjectId ? String(record.productObjectId) : null,
+    sepidarItemId:
+      record.sepidarItemId === undefined || record.sepidarItemId === null
+        ? null
+        : toNumberValue(record.sepidarItemId),
+    productSku: toStringValue(record.productSku),
+    productName: toStringValue(record.productName),
+    stockObjectId: record.stockObjectId ? String(record.stockObjectId) : null,
+    sepidarStockId:
+      record.sepidarStockId === undefined || record.sepidarStockId === null
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    stockTitle: toStringValue(record.stockTitle),
+    realQuantity: toNumberValue(record.realQuantity),
+    salesQuantity: toNumberValue(record.salesQuantity),
+    reservedQuantity: toNumberValue(record.reservedQuantity),
+    availableSalesQuantity: toNumberValue(record.availableSalesQuantity),
+    units: mapWarehouseItemUnitListDto(record.units),
+  };
 }
 
 export async function createInboundReceipt(

@@ -63,6 +63,69 @@ export interface WarehouseInboundReceipt {
   updatedAt: string;
 }
 
+export interface WarehouseInventoryUnitRow {
+  objectId: string;
+  id: string;
+  productObjectId: string | null;
+  sepidarItemId: number | null;
+  productSku: string;
+  productName: string;
+  stockObjectId: string | null;
+  sepidarStockId: number | null;
+  stockTitle: string;
+  realQuantity: number;
+  salesQuantity: number;
+  reservedQuantity: number;
+  availableSalesQuantity: number;
+  units: WarehouseItemUnit[];
+}
+
+export interface WarehouseStockUnitSummary {
+  objectId: string;
+  id: string;
+  sepidarStockId: number | null;
+  code: string | null;
+  title: string;
+  isActive: boolean;
+  totalProductCount: number;
+  totalUnitCount: number;
+  lastSepidarSyncAt: string | null;
+}
+
+export interface WarehouseStockProductUnit {
+  objectId: string;
+  id: string;
+  trackingCode: string;
+  serialNumber: string;
+  productIdentifier: string;
+  status: string;
+  statusLabel: string;
+  inboundReceiptId: string | null;
+  inboundReceiptCode: string | null;
+  createdAt: string | null;
+}
+
+export interface WarehouseStockProductGroup {
+  productObjectId: string;
+  sepidarItemId: number | null;
+  sepidarCode: string;
+  productName: string;
+  inStockUnitCount: number;
+  realQuantity: number;
+  units: WarehouseStockProductUnit[];
+}
+
+export interface WarehouseStockUnitDetail {
+  stock: {
+    objectId: string;
+    id: string;
+    sepidarStockId: number | null;
+    code: string | null;
+    title: string;
+  };
+  groups: WarehouseStockProductGroup[];
+}
+
 export interface ExitSlipItemUnit {
   unitObjectId: string;
   productIdentifier: string;
@@ -162,6 +225,7 @@ export interface ExitSlipPdfData {
 
 export interface CreateInboundReceiptPayload {
   productObjectId: string;
+  stockObjectId?: string;
   units: Array<{
     productIdentifier: string;
     serialNumber: string;

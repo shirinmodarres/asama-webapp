@@ -25,10 +25,17 @@ import { listProducts } from "@/lib/services/product.service";
 import {
   createStockTransfer,
   listProductStockInventory,
-  listSepidarStocks,
+  listSupportStocks,
   listStockTransfers,
 } from "@/lib/services/stock.service";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
+
+interface TransferDraftItem {
+  productObjectId: string;
+  productName: string;
+  quantity: number;
+  sourceRealQuantity: number;
+}
 
 export default function SupportStockTransfersPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,6 +49,7 @@ export default function SupportStockTransfersPage() {
   >([]);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [quantity, setQuantity] = useState("");
+  const [items, setItems] = useState<TransferDraftItem[]>([]);
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +60,7 @@ export default function SupportStockTransfersPage() {
   const loadData = async () => {
     const [productData, stockData, transferData] = await Promise.all([
       listProducts("support"),
-      listSepidarStocks(),
+      listSupportStocks(),
       listStockTransfers(),
     ]);
     setProducts(productData.filter((product) => product.isSyncedFromSepidar));
@@ -133,10 +141,51 @@ export default function SupportStockTransfersPage() {
     (inventory) => inventory.stockObjectId === destinationStockId,
   );
 
-  const submitTransfer = async () => {
+  const addItem = () => {
     const nextErrors: Record<string, string> = {};
     const normalizedQuantity = toNumber(quantity);
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
+    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
+      nextErrors.quantity = "تعداد باید بیشتر از صفر باشد.";
+    }
+    if (
+      Number.isFinite(normalizedQuantity) &&
+      normalizedQuantity > 0 &&
+      sourceInventory &&
+      normalizedQuantity > sourceInventory.realQuantity
+    ) {
+      nextErrors.quantity = "تعداد انتقال نمی‌تواند بیشتر از موجودی واقعی مبدأ باشد.";
+    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    const product = products.find((item) => item.objectId === productId);
+    setItems((current) => {
+      const existing = current.find((item) => item.productObjectId === productId);
+      if (existing) {
+        return current.map((item) =>
+          item.productObjectId === productId
+            ? { ...item, quantity: item.quantity + normalizedQuantity }
+            : item,
+        );
+      }
+      return [
+        ...current,
+        {
+          productObjectId: productId,
+          productName: product?.name || "-",
+          quantity: normalizedQuantity,
+          sourceRealQuantity: sourceInventory?.realQuantity ?? 0,
+        },
+      ];
+    });
+    setProductId("");
+    setProductInventories([]);
+    setQuantity("");
+  };
+
+  const submitTransfer = async () => {
+    const nextErrors: Record<string, string> = {};
     if (!sourceStockId)
       nextErrors.sourceStockId = "لطفاً انبار مبدأ را انتخاب کنید.";
     if (!destinationStockId)
@@ -145,8 +194,8 @@ export default function SupportStockTransfersPage() {
       nextErrors.destinationStockId =
         "انبار مبدأ و مقصد باید متفاوت باشند.";
     }
-    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
-      nextErrors.quantity = "تعداد باید بیشتر از صفر باشد.";
+    if (!items.length) {
+      nextErrors.items = "حداقل یک کالا برای انتقال اضافه کنید.";
     }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
@@ -156,10 +205,12 @@ export default function SupportStockTransfersPage() {
     setMessage("");
     try {
       await createStockTransfer({
-        productObjectId: productId,
         sourceStockObjectId: sourceStockId,
         destinationStockObjectId: destinationStockId,
-        quantity: normalizedQuantity,
+        items: items.map((item) => ({
+          productObjectId: item.productObjectId,
+          quantity: item.quantity,
+        })),
         note: note.trim() || undefined,
         requestedByName:
           getStoredCurrentUser()?.fullName ||
@@ -172,6 +223,7 @@ export default function SupportStockTransfersPage() {
       setDestinationStockId("");
       setProductInventories([]);
       setQuantity("");
+      setItems([]);
       setNote("");
       setMessage("درخواست انتقال موجودی ثبت شد.");
     } catch (submitError) {
@@ -182,7 +234,14 @@ export default function SupportStockTransfersPage() {
   };
 
   const columns: DataTableColumn<StockTransferRequest>[] = [
-    { key: "product", header: "کالا", render: (row) => row.productName || "-" },
+    {
+      key: "product",
+      header: "کالا",
+      render: (row) =>
+        row.items.length > 1
+          ? `${formatNumber(row.items.length)} کالا`
+          : row.items[0]?.productName || row.productName || "-",
+    },
     {
       key: "source",
       header: "انبار مبدأ",
@@ -254,6 +313,7 @@ export default function SupportStockTransfersPage() {
                   value={sourceStockId || undefined}
                   onValueChange={(value) => {
                     setSourceStockId(value);
+                    setItems([]);
                     if (value === destinationStockId) {
                       setDestinationStockId("");
                     }
@@ -318,11 +378,61 @@ export default function SupportStockTransfersPage() {
                 />
                 <FieldError message={fieldErrors.quantity} />
               </label>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addItem}
+                  disabled={!sourceStockId}
+                >
+                  افزودن کالا به انتقال
+                </Button>
+              </div>
               <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
                 <span>توضیحات</span>
                 <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
               </label>
             </div>
+            <FieldError message={fieldErrors.items} />
+            {items.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                <table className="min-w-full text-right text-sm">
+                  <thead className="bg-[#F8FAFC] text-[#64748B]">
+                    <tr>
+                      <th className="px-3 py-2">کالا</th>
+                      <th className="px-3 py-2">تعداد</th>
+                      <th className="px-3 py-2">موجودی مبدأ</th>
+                      <th className="px-3 py-2">عملیات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.productObjectId} className="border-t border-[#E5E7EB]">
+                        <td className="px-3 py-2">{item.productName}</td>
+                        <td className="px-3 py-2">{formatNumber(item.quantity)}</td>
+                        <td className="px-3 py-2">{formatNumber(item.sourceRealQuantity)}</td>
+                        <td className="px-3 py-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setItems((current) =>
+                                current.filter(
+                                  (row) => row.productObjectId !== item.productObjectId,
+                                ),
+                              )
+                            }
+                          >
+                            حذف
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
             <Button
               type="button"
               className="mt-4"

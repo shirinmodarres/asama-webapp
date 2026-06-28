@@ -15,6 +15,8 @@ import type {
   StockTransferRequest,
   UpdateProductStockInventoryPayload,
 } from "@/lib/models/stock.model";
+import { mapWarehouseItemUnitDto } from "@/lib/mappers/warehouse.mapper";
+import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
 import { toRecord } from "@/lib/mappers/mapper-utils";
 import { toNumber } from "@/lib/utils/number-format";
 
@@ -80,10 +82,25 @@ async function listTransfersFromPath(
 export async function createStockTransfer(
   payload: CreateStockTransferPayload,
 ): Promise<StockTransferRequest> {
+  const normalizedItems = payload.items?.map((item) => ({
+    productObjectId: item.productObjectId,
+    quantity: toNumber(item.quantity),
+  }));
   const data = await httpClient.post<unknown>("/api/support/stock-transfers", {
     ...payload,
-    quantity: toNumber(payload.quantity),
+    items: normalizedItems,
+    quantity:
+      payload.quantity !== undefined ? toNumber(payload.quantity) : undefined,
   });
+  return mapStockTransferRequestDto(data);
+}
+
+export async function getWarehouseStockTransfer(
+  objectId: string,
+): Promise<StockTransferRequest> {
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}`,
+  );
   return mapStockTransferRequestDto(data);
 }
 
@@ -107,6 +124,43 @@ export async function rejectStockTransfer(
     payload,
   );
   return mapStockTransferRequestDto(data);
+}
+
+export async function validateStockTransferScan(
+  objectId: string,
+  payload: {
+    scannedCode: string;
+    productObjectId?: string;
+    currentScannedUnitIds?: string[];
+  },
+): Promise<WarehouseItemUnit> {
+  const data = await httpClient.post<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}/validate-scan`,
+    payload,
+  );
+  return mapWarehouseItemUnitDto(data);
+}
+
+export async function executeStockTransfer(
+  objectId: string,
+  payload: {
+    unitObjectIds?: string[];
+    items?: Array<{
+      productObjectId: string;
+      unitObjectIds: string[];
+    }>;
+    executedByName?: string;
+  },
+): Promise<{ transfer: StockTransferRequest; slip?: unknown }> {
+  const data = await httpClient.post<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}/execute`,
+    payload,
+  );
+  const record = toRecord(data);
+  return {
+    transfer: mapStockTransferRequestDto(record.transfer),
+    slip: record.slip,
+  };
 }
 
 export async function listProductStockInventory(filters?: {
