@@ -136,11 +136,13 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
+  const isNajaOrder = order.orderType === "naja";
   const canApprove = ["pending_approval", "review_resolved"].includes(order.orderStatus);
-  const canNeedReview = order.orderStatus === "pending_approval";
+  const canNeedReview = !isNajaOrder && order.orderStatus === "pending_approval";
   const shouldShowNeedReviewButton =
-    canNeedReview || order.orderStatus === "review_resolved";
+    !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
   const canCancel =
+    !isNajaOrder &&
     ["pending_approval", "needs_review", "review_resolved"].includes(
       order.orderStatus,
     ) && !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
