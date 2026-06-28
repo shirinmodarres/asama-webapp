@@ -82,10 +82,25 @@ async function listTransfersFromPath(
 export async function createStockTransfer(
   payload: CreateStockTransferPayload,
 ): Promise<StockTransferRequest> {
+  const normalizedItems = payload.items?.map((item) => ({
+    productObjectId: item.productObjectId,
+    quantity: toNumber(item.quantity),
+  }));
   const data = await httpClient.post<unknown>("/api/support/stock-transfers", {
     ...payload,
-    quantity: toNumber(payload.quantity),
+    items: normalizedItems,
+    quantity:
+      payload.quantity !== undefined ? toNumber(payload.quantity) : undefined,
   });
+  return mapStockTransferRequestDto(data);
+}
+
+export async function getWarehouseStockTransfer(
+  objectId: string,
+): Promise<StockTransferRequest> {
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/stock-transfers/${objectId}`,
+  );
   return mapStockTransferRequestDto(data);
 }
 
@@ -115,6 +130,7 @@ export async function validateStockTransferScan(
   objectId: string,
   payload: {
     scannedCode: string;
+    productObjectId?: string;
     currentScannedUnitIds?: string[];
   },
 ): Promise<WarehouseItemUnit> {
@@ -128,7 +144,11 @@ export async function validateStockTransferScan(
 export async function executeStockTransfer(
   objectId: string,
   payload: {
-    unitObjectIds: string[];
+    unitObjectIds?: string[];
+    items?: Array<{
+      productObjectId: string;
+      unitObjectIds: string[];
+    }>;
     executedByName?: string;
   },
 ): Promise<{ transfer: StockTransferRequest; slip?: unknown }> {

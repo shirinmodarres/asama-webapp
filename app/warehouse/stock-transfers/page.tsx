@@ -1,6 +1,7 @@
 "use client";
 
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, ListFilter, ScanLine, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -198,20 +199,13 @@ export default function WarehouseStockTransfersPage() {
       key: "actions",
       header: "عملیات",
       render: (row) =>
-        row.status === "approved_waiting_tracking_codes" ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setActiveTransfer(row);
-              setScannedUnits([]);
-              setScanCode("");
-              setScanError("");
-            }}
-          >
-            <ScanLine className="size-4" />
-            ثبت کدها
+        row.status === "approved_waiting_tracking_codes" ||
+        row.status === "approved_waiting_warehouse_scan" ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/warehouse/stock-transfers/${row.objectId}/execute`}>
+              <ScanLine className="size-4" />
+              ثبت کدها
+            </Link>
           </Button>
         ) : (
           "-"
@@ -339,6 +333,7 @@ export default function WarehouseStockTransfersPage() {
                   { value: "all", label: "همه وضعیت‌ها" },
                   { value: "pending", label: "در انتظار تأیید" },
                   { value: "pending_manager_approval", label: "در انتظار تأیید مدیر" },
+                  { value: "approved_waiting_warehouse_scan", label: "در انتظار اسکن انبار" },
                   { value: "approved_waiting_tracking_codes", label: "در انتظار ثبت کد رهگیری" },
                   { value: "completed", label: "تکمیل شده" },
                   { value: "rejected", label: "رد شده" },
