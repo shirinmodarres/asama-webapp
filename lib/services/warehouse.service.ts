@@ -355,6 +355,7 @@ function normalizeUpdateInboundPayload(
 ): UpdateInboundReceiptPayload {
   return {
     ...payload,
+    productObjectId: payload.productObjectId,
     units: payload.units.map((unit) => ({
       objectId: unit.objectId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
