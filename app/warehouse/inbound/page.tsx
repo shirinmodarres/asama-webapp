@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  type ChangeEvent,
   type KeyboardEvent,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { PackageSearch, Trash2 } from "lucide-react";
+import { PackageSearch, Trash2, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -29,29 +30,19 @@ import { listProducts } from "@/lib/services/product.service";
 import { listStocks } from "@/lib/services/stock.service";
 import { createInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
-
-interface DraftUnit {
-  rowId: string;
-  productIdentifier: string;
-  serialNumber: string;
-  trackingCode: string;
-}
-
-interface DuplicateWarehouseUnitDetail {
-  field: "serialNumber" | "trackingCode";
-  value: string;
-  inputRowIndex: number;
-  existingUnitId?: string | null;
-  existingProductName?: string | null;
-  existingStockTitle?: string | null;
-  existingReceiptCode?: string | null;
-  existingCreatedAt?: string | null;
-}
-
-type UnitRowErrors = Record<
-  string,
-  Partial<Record<"serialNumber" | "trackingCode", string>>
->;
+import {
+  buildDuplicateRowErrors,
+  buildImportPreviewRows,
+  buildLocalUnitRowErrors,
+  countImportRows,
+  extractDuplicateDetails,
+  hasUnitRowErrors,
+  isEmptyImportRow,
+  parseInboundImportFile,
+  type DraftUnit,
+  type ImportPreviewRow,
+  type UnitRowErrors,
+} from "./import-helpers";
 
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -65,10 +56,14 @@ export default function WarehouseInboundPage() {
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState("");
+  const [importError, setImportError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [unitRowErrors, setUnitRowErrors] = useState<UnitRowErrors>({});
+  const [importPreviewRows, setImportPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [message, setMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const serialNumberRef = useRef<HTMLInputElement | null>(null);
   const trackingCodeRef = useRef<HTMLInputElement | null>(null);
@@ -119,7 +114,15 @@ export default function WarehouseInboundPage() {
     {
       key: "productIdentifier",
       header: "شناسه محصول",
-      render: (row) => formatFaDigits(row.productIdentifier),
+      render: (row) => (
+        <div className="min-w-52">
+          <span>{row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-"}</span>
+          <FieldError
+            message={unitRowErrors[row.rowId]?.productIdentifier}
+            className="mt-1 leading-5"
+          />
+        </div>
+      ),
     },
     {
       key: "serialNumber",
@@ -166,6 +169,64 @@ export default function WarehouseInboundPage() {
     },
   ];
 
+  const importColumns: DataTableColumn<ImportPreviewRow>[] = [
+    {
+      key: "row",
+      header: "ردیف اکسل",
+      render: (row) => formatNumber(row.excelRowNumber),
+    },
+    {
+      key: "productIdentifier",
+      header: "شناسه محصول",
+      render: (row) =>
+        row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
+    },
+    {
+      key: "serialNumber",
+      header: "سریال محصول",
+      render: (row) => row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
+    },
+    {
+      key: "trackingCode",
+      header: "کد رهگیری",
+      render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-",
+    },
+    {
+      key: "status",
+      header: "وضعیت",
+      render: (row) => (
+        <div className="min-w-56">
+          {row.messages.length ? (
+            <div className="space-y-1">
+              {row.messages.map((message) => (
+                <p key={message} className="text-xs leading-5 text-[#B42318]">
+                  {message}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs font-semibold text-[#2F6B3A]">معتبر</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "عملیات",
+      render: (row) => (
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          aria-label="حذف"
+          onClick={() => removeImportPreviewRow(row.rowId)}
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      ),
+    },
+  ];
+
   const focusField = (
     field: "productIdentifier" | "serialNumber" | "trackingCode" | "notes",
   ) => {
@@ -182,7 +243,6 @@ export default function WarehouseInboundPage() {
     setError("");
     setMessage("");
     setFieldErrors({});
-    setUnitRowErrors({});
 
     if (!selectedProductId) {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
@@ -230,7 +290,10 @@ export default function WarehouseInboundPage() {
       return;
     }
 
-    setUnits((current) => [...current, nextUnit]);
+    const nextUnits = [...units, nextUnit];
+    setUnits(nextUnits);
+    setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
+    setImportPreviewRows((current) => buildImportPreviewRows(current, nextUnits));
     setProductIdentifier("");
     setSerialNumber("");
     setTrackingCode("");
@@ -255,6 +318,63 @@ export default function WarehouseInboundPage() {
     addUnit();
   };
 
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setError("");
+    setMessage("");
+    setImportError("");
+    setFieldErrors({});
+
+    if (!selectedProductId || !selectedStockId) {
+      setFieldErrors({
+        selectedProductId: selectedProductId ? "" : "لطفاً یک گزینه انتخاب کنید.",
+        selectedStockId: selectedStockId ? "" : "لطفاً انبار مقصد را انتخاب کنید.",
+      });
+      setImportError("برای ایمپورت اکسل ابتدا کالا و انبار مقصد را انتخاب کنید.");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const importedRows = await parseInboundImportFile(file);
+      const importBatchId = `${Date.now()}`;
+      const nonEmptyRows = importedRows.filter((row) => !isEmptyImportRow(row));
+      const importedUnits = nonEmptyRows.map((row, index) => ({
+        rowId: `import-${importBatchId}-${index}`,
+        productIdentifier: normalizeDigits(row.productIdentifier.trim()),
+        serialNumber: normalizeDigits(row.serialNumber.trim()),
+        trackingCode: normalizeDigits(row.trackingCode.trim()),
+      }));
+      const previewRows: ImportPreviewRow[] = importedRows.map((row, index) => {
+        const matchingNonEmptyIndex = nonEmptyRows.indexOf(row);
+        return {
+          ...row,
+          rowId: `preview-${importBatchId}-${index}`,
+          unitRowId:
+            matchingNonEmptyIndex >= 0
+              ? importedUnits[matchingNonEmptyIndex]?.rowId
+              : undefined,
+          messages: [],
+        };
+      });
+      const nextUnits = [...units, ...importedUnits];
+
+      setUnits(nextUnits);
+      setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
+      setImportPreviewRows(buildImportPreviewRows(previewRows, nextUnits));
+      if (!importedRows.length) {
+        setImportError("ردیفی برای ایمپورت پیدا نشد.");
+      }
+    } catch (loadError) {
+      setImportError(getErrorMessage(loadError));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const submitReceipt = async () => {
     setError("");
     setMessage("");
@@ -271,6 +391,13 @@ export default function WarehouseInboundPage() {
     }
     if (units.length === 0) {
       setError("حداقل یک کالا برای ثبت ورود اضافه کنید.");
+      return;
+    }
+    const localErrors = buildLocalUnitRowErrors(units);
+    if (hasUnitRowErrors(localErrors)) {
+      setUnitRowErrors(localErrors);
+      setImportPreviewRows((current) => buildImportPreviewRows(current, units));
+      setError("ردیف‌های دارای خطا را اصلاح یا حذف کنید.");
       return;
     }
 
@@ -291,6 +418,8 @@ export default function WarehouseInboundPage() {
         `رسید ورود ${formatFaDigits(receipt.receiptCode)} در ${receipt.stockTitle || "انبار انتخاب‌شده"} ثبت شد.`,
       );
       setUnits([]);
+      setImportPreviewRows([]);
+      setImportError("");
       setNotes("");
       const refreshedProducts = await listProducts("warehouse");
       setProducts(refreshedProducts.filter((product) => product.isSyncedFromSepidar));
@@ -301,7 +430,11 @@ export default function WarehouseInboundPage() {
       ) {
         const duplicates = extractDuplicateDetails(submitError.details);
         if (duplicates.length) {
-          setUnitRowErrors(buildDuplicateRowErrors(duplicates, units));
+          const duplicateErrors = buildDuplicateRowErrors(duplicates, units);
+          setUnitRowErrors(duplicateErrors);
+          setImportPreviewRows((current) =>
+            buildImportPreviewRows(current, units, duplicateErrors),
+          );
           setError("سریال یا کد رهگیری تکراری است. ردیف‌های مشخص‌شده را اصلاح یا حذف کنید.");
         } else {
           setError("سریال یا کد رهگیری تکراری است.");
@@ -330,12 +463,31 @@ export default function WarehouseInboundPage() {
   };
 
   const removeUnitRow = (rowId: string) => {
-    setUnits((current) => current.filter((unit) => unit.rowId !== rowId));
-    setUnitRowErrors((current) => {
-      const next = { ...current };
-      delete next[rowId];
-      return next;
+    setUnits((current) => {
+      const nextUnits = current.filter((unit) => unit.rowId !== rowId);
+      setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
+      setImportPreviewRows((previewRows) =>
+        buildImportPreviewRows(
+          previewRows.filter((row) => row.unitRowId !== rowId),
+          nextUnits,
+        ),
+      );
+      return nextUnits;
     });
+  };
+
+  const removeImportPreviewRow = (previewRowId: string) => {
+    const target = importPreviewRows.find((row) => row.rowId === previewRowId);
+    const nextPreviewRows = importPreviewRows.filter(
+      (row) => row.rowId !== previewRowId,
+    );
+    const nextUnits = target?.unitRowId
+      ? units.filter((unit) => unit.rowId !== target.unitRowId)
+      : units;
+
+    setUnits(nextUnits);
+    setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
+    setImportPreviewRows(buildImportPreviewRows(nextPreviewRows, nextUnits));
   };
 
   const productOptions = useMemo(
@@ -398,6 +550,9 @@ export default function WarehouseInboundPage() {
                     onValueChange={(value) => {
                       setSelectedProductId(value);
                       setUnits([]);
+                      setUnitRowErrors({});
+                      setImportPreviewRows([]);
+                      setImportError("");
                       setFieldErrors((current) => ({
                         ...current,
                         selectedProductId: "",
@@ -519,10 +674,59 @@ export default function WarehouseInboundPage() {
               شناسه کالا می‌تواند تکراری باشد، اما سریال کالا و کد رهگیری نباید
               تکراری باشند.
             </p>
-            <Button type="button" className="mt-4" onClick={addUnit}>
-              افزودن به لیست
-            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button type="button" onClick={addUnit}>
+                افزودن به لیست
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!selectedProductId || !selectedStockId || isImporting}
+              >
+                <Upload className="size-4" />
+                {isImporting ? "در حال ایمپورت..." : "ایمپورت اکسل"}
+              </Button>
+            </div>
+            {importError ? (
+              <InlineErrorMessage message={importError} />
+            ) : null}
           </Card>
+
+          {importPreviewRows.length > 0 ? (
+            <Card className="p-5">
+              <div className="mb-4 grid gap-3 sm:grid-cols-4">
+                <ImportSummaryItem
+                  label="ردیف معتبر"
+                  value={countImportRows(importPreviewRows, "valid")}
+                />
+                <ImportSummaryItem
+                  label="سریال تکراری"
+                  value={countImportRows(importPreviewRows, "serial")}
+                />
+                <ImportSummaryItem
+                  label="کد رهگیری تکراری"
+                  value={countImportRows(importPreviewRows, "tracking")}
+                />
+                <ImportSummaryItem
+                  label="ردیف خالی"
+                  value={countImportRows(importPreviewRows, "empty")}
+                />
+              </div>
+              <DataTable
+                columns={importColumns}
+                rows={importPreviewRows}
+                rowKey={(row) => row.rowId}
+              />
+            </Card>
+          ) : null}
 
           {units.length > 0 ? (
             <DataTable
@@ -568,62 +772,13 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function extractDuplicateDetails(details: unknown): DuplicateWarehouseUnitDetail[] {
-  if (!details || typeof details !== "object") return [];
-  const duplicates = (details as { duplicates?: unknown }).duplicates;
-  if (!Array.isArray(duplicates)) return [];
-  return duplicates.flatMap((item) => {
-      if (!item || typeof item !== "object") return [];
-      const record = item as Record<string, unknown>;
-      const field: DuplicateWarehouseUnitDetail["field"] | null =
-        record.field === "serialNumber" || record.field === "trackingCode"
-          ? record.field
-          : null;
-      const inputRowIndex = Number(record.inputRowIndex);
-      if (!field || !Number.isInteger(inputRowIndex)) return [];
-      return [{
-        field,
-        value: String(record.value ?? ""),
-        inputRowIndex,
-        existingUnitId: toNullableString(record.existingUnitId),
-        existingProductName: toNullableString(record.existingProductName),
-        existingStockTitle: toNullableString(record.existingStockTitle),
-        existingReceiptCode: toNullableString(record.existingReceiptCode),
-        existingCreatedAt: toNullableString(record.existingCreatedAt),
-      }];
-    });
-}
-
-function buildDuplicateRowErrors(
-  duplicates: DuplicateWarehouseUnitDetail[],
-  units: DraftUnit[],
-): UnitRowErrors {
-  return duplicates.reduce<UnitRowErrors>((result, duplicate) => {
-    const row = units[duplicate.inputRowIndex];
-    if (!row) return result;
-    result[row.rowId] = {
-      ...result[row.rowId],
-      [duplicate.field]: duplicateMessage(duplicate),
-    };
-    return result;
-  }, {});
-}
-
-function duplicateMessage(duplicate: DuplicateWarehouseUnitDetail): string {
-  const fieldLabel =
-    duplicate.field === "serialNumber" ? "این سریال" : "این کد رهگیری";
-  const productName = duplicate.existingProductName || "کالا";
-  const receiptCode = duplicate.existingReceiptCode
-    ? formatFaDigits(duplicate.existingReceiptCode)
-    : "-";
-  const stockTitle = duplicate.existingStockTitle
-    ? ` در ${duplicate.existingStockTitle}`
-    : "";
-  return `${fieldLabel} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode} ثبت شده است.`;
-}
-
-function toNullableString(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const text = String(value);
-  return text ? text : null;
+function ImportSummaryItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
+      <dt className="text-xs text-[#6B7280]">{label}</dt>
+      <dd className="mt-1 text-lg font-semibold text-[#1F3A5F]">
+        {formatNumber(value)}
+      </dd>
+    </div>
+  );
 }
