@@ -207,10 +207,10 @@ export default function NajaRialReportPage() {
   ];
 
   return (
-    <DashboardLayout role="naja" title="گزارش ریالی ناجا">
+    <DashboardLayout role="naja" title="گزارش مالی سفارش‌های ناجا">
       <SectionHeader
-        title="گزارش ریالی سفارش‌های ناجا"
-        description="گزارش ردیفی کالاها، مبالغ و اطلاعات تحویل‌گیرنده سفارش‌های ناجا"
+        title="گزارش مالی تفکیکی سفارش‌های ناجا"
+        description="بررسی ردیف‌های کالا، مبالغ ریالی، مراکز سپیدار و اطلاعات تحویل‌گیرنده"
       />
 
       <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -314,9 +314,9 @@ export default function NajaRialReportPage() {
       </section>
 
       <section className="grid gap-3 md:grid-cols-3">
-        <SummaryBox label="تعداد سفارش" value={formatFaNumber(report.totals.totalOrders)} />
-        <SummaryBox label="جمع تعداد" value={formatFaNumber(report.totals.totalQuantity)} />
-        <SummaryBox label="جمع ریالی" value={formatFaCurrency(report.totals.totalRialAmount)} />
+        <SummaryBox label="کل سفارش‌ها" value={formatFaNumber(report.totals.totalOrders)} />
+        <SummaryBox label="جمع تعداد کالا" value={formatFaNumber(report.totals.totalQuantity)} />
+        <SummaryBox label="جمع مبلغ ریالی" value={formatFaCurrency(report.totals.totalRialAmount)} />
       </section>
 
       {isLoading ? (

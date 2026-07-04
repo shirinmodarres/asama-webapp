@@ -29,7 +29,7 @@ function getBadgeConfig(type: BadgeType, status: string) {
     if (orderStatus === "pending_approval") {
       return { label: getOrderStatusLabel(orderStatus), variant: "warning" as const };
     }
-    if (orderStatus === "approved") {
+    if (orderStatus === "approved" || orderStatus === "completed") {
       return { label: getOrderStatusLabel(orderStatus), variant: "success" as const };
     }
     if (orderStatus === "cancelled" || orderStatus === "returned") {
@@ -51,7 +51,7 @@ function getBadgeConfig(type: BadgeType, status: string) {
     if (status === "reviewing" || status === "dispatchIssued") {
       return { label: getWarehouseStatusLabel(status), variant: "brand" as const };
     }
-    if (status === "delivered" || status === "najaDetailsCompleted") {
+    if (status === "delivered" || status === "najaDetailsCompleted" || status === "completed") {
       return { label: getWarehouseStatusLabel(status), variant: "success" as const };
     }
     if (status === "awaitingNajaDetails" || status === "returnedFromWarehouse") {

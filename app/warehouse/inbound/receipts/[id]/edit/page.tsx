@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { PackageSearch, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -16,9 +16,12 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
+import type { Product } from "@/lib/models/product.model";
 import type { WarehouseInboundReceipt } from "@/lib/models/warehouse.model";
+import { listProducts } from "@/lib/services/product.service";
 import {
   getInboundReceiptEditData,
   updateInboundReceipt,
@@ -43,6 +46,8 @@ export default function WarehouseInboundReceiptEditPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [receipt, setReceipt] = useState<WarehouseInboundReceipt | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [units, setUnits] = useState<EditableUnit[]>([]);
   const [notes, setNotes] = useState("");
   const [supplierName, setSupplierName] = useState("");
@@ -64,9 +69,14 @@ export default function WarehouseInboundReceiptEditPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await getInboundReceiptEditData(params.id);
+        const [data, productData] = await Promise.all([
+          getInboundReceiptEditData(params.id),
+          listProducts("warehouse"),
+        ]);
         if (!isMounted) return;
         setReceipt(data);
+        setProducts(productData.filter((product) => product.isSyncedFromSepidar));
+        setSelectedProductId(data.productObjectId);
         setNotes(data.notes || "");
         setSupplierName(data.supplierName || "");
         setReceiptDate(toDateInputValue(data.receiptDate));
@@ -103,6 +113,79 @@ export default function WarehouseInboundReceiptEditPage() {
     [receipt],
   );
 
+  const productCanBeEdited = receipt?.canEditProduct === true;
+
+  const selectedProduct = useMemo(
+    () =>
+      products.find((product) => product.objectId === selectedProductId) ||
+      (receipt && receipt.productObjectId === selectedProductId
+        ? {
+            objectId: receipt.productObjectId,
+            id: receipt.productObjectId,
+            sku: receipt.productSku,
+            barcode: null,
+            sepidarItemId: null,
+            sepidarCode: null,
+            name: receipt.productName,
+            brand: "",
+            model: null,
+            category: "",
+            unit: "",
+            unitPrice: 0,
+            priceNoteItemId: null,
+            description: null,
+            isSyncedFromSepidar: true,
+            isActive: true,
+            isSellable: true,
+            status: "active",
+            statusLabel: "",
+            totalStock: 0,
+            salesStock: 0,
+            warehouseStock: 0,
+            reservedStock: 0,
+            availableStock: 0,
+            availableSalesQuantity: 0,
+            hasAvailableSalesQuantity: false,
+            availableStocks: [],
+            warehouseAvailableStock: 0,
+            najaInventoryQty: 0,
+            inventories: [],
+            createdAt: "",
+            updatedAt: "",
+          } satisfies Product
+        : undefined),
+    [products, receipt, selectedProductId],
+  );
+
+  const productOptions = useMemo(() => {
+    const optionProducts =
+      selectedProduct && !products.some((product) => product.objectId === selectedProduct.objectId)
+        ? [selectedProduct, ...products]
+        : products;
+
+    return optionProducts.map((product) => ({
+      value: product.objectId,
+      label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
+      description: [
+        product.brand,
+        product.model ? `مدل ${formatFaDigits(product.model)}` : "",
+        product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
+      ]
+        .filter(Boolean)
+        .join(" • "),
+      searchText: [
+        product.name,
+        product.sku,
+        product.sepidarCode,
+        product.model,
+        product.barcode,
+        product.brand,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
+  }, [products, selectedProduct]);
+
   const totalQuantity = useMemo(
     () =>
       units.reduce((sum, unit) => {
@@ -119,6 +202,7 @@ export default function WarehouseInboundReceiptEditPage() {
       render: (row) => (
         <Input
           value={row.productIdentifier}
+          disabled={!isEditable}
           onChange={(event) =>
             updateUnit(row.rowId, { productIdentifier: event.target.value })
           }
@@ -131,6 +215,7 @@ export default function WarehouseInboundReceiptEditPage() {
       render: (row) => (
         <Input
           value={row.serialNumber}
+          disabled={!isEditable}
           onChange={(event) =>
             updateUnit(row.rowId, { serialNumber: event.target.value })
           }
@@ -143,6 +228,7 @@ export default function WarehouseInboundReceiptEditPage() {
       render: (row) => (
         <Input
           value={row.trackingCode}
+          disabled={!isEditable}
           onChange={(event) =>
             updateUnit(row.rowId, { trackingCode: event.target.value })
           }
@@ -156,6 +242,7 @@ export default function WarehouseInboundReceiptEditPage() {
         <Input
           inputMode="numeric"
           value={row.quantity}
+          disabled={!isEditable}
           onChange={(event) =>
             updateUnit(row.rowId, { quantity: event.target.value })
           }
@@ -171,6 +258,7 @@ export default function WarehouseInboundReceiptEditPage() {
           size="icon"
           variant="outline"
           aria-label="حذف"
+          disabled={!isEditable}
           onClick={() =>
             setUnits((current) =>
               current.filter((unit) => unit.rowId !== row.rowId),
@@ -234,6 +322,12 @@ export default function WarehouseInboundReceiptEditPage() {
     if (!receipt || !isEditable) return;
     setError("");
     setMessage("");
+    setFieldErrors({});
+
+    if (productCanBeEdited && !selectedProductId) {
+      setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
+      return;
+    }
 
     const normalizedUnits = units.map((unit) => ({
       objectId: unit.objectId,
@@ -277,12 +371,18 @@ export default function WarehouseInboundReceiptEditPage() {
     setIsSubmitting(true);
     try {
       const updated = await updateInboundReceipt(receipt.objectId, {
+        productObjectId: productCanBeEdited ? selectedProductId : undefined,
         supplierName: supplierName.trim() || null,
         receiptDate: receiptDate || null,
         notes: notes.trim() || null,
         units: normalizedUnits,
       });
+      const refreshedProducts = await listProducts("warehouse");
+      setProducts(
+        refreshedProducts.filter((product) => product.isSyncedFromSepidar),
+      );
       setMessage("رسید ورود با موفقیت ویرایش شد.");
+      router.refresh();
       router.push(`/warehouse/inbound/receipts/${updated.objectId || updated.id}`);
     } catch (submitError) {
       setError(formatInboundSubmitError(submitError));
@@ -299,16 +399,11 @@ export default function WarehouseInboundReceiptEditPage() {
         <PageErrorMessage title="دریافت رسید انجام نشد" message={error} />
       ) : !receipt ? (
         <EmptyState title="رسید یافت نشد" description="شناسه رسید معتبر نیست." />
-      ) : !isEditable ? (
-        <EmptyState
-          title="این رسید به دلیل خروج کالا قابل ویرایش نیست."
-          description="برخی کالاهای این رسید از وضعیت موجود در انبار خارج شده‌اند."
-        />
       ) : (
         <div className="space-y-5">
           <SectionHeader
             title={`ویرایش رسید ${formatFaDigits(receipt.receiptCode)}`}
-            description="کالا در ویرایش رسید قابل تغییر نیست."
+            description="اطلاعات قابل ویرایش رسید ورود"
             actions={
               <Link
                 href={`/warehouse/inbound/receipts/${receipt.objectId}`}
@@ -325,16 +420,56 @@ export default function WarehouseInboundReceiptEditPage() {
 
           <Card className="p-5">
             <dl className="grid gap-3 sm:grid-cols-4">
-              <InfoItem label="کالا" value={receipt.productName || "-"} />
-              <InfoItem label="شناسه کالا" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
+              <InfoItem label="کالای فعلی" value={receipt.productName || "-"} />
+              <InfoItem label="کد کالای فعلی" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
               <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
               <InfoItem label="تعداد فعلی" value={formatFaNumber(totalQuantity)} />
             </dl>
+            {!isEditable ? (
+              <div className="mt-4 rounded-xl border border-[#F7D7A8] bg-[#FFF8ED] px-4 py-3 text-sm leading-7 text-[#8A5A12]">
+                این رسید به دلیل خروج کالا قابل ویرایش نیست. برخی کالاهای این رسید از وضعیت موجود در انبار خارج شده‌اند.
+              </div>
+            ) : null}
             <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                <span>کالا</span>
+                <div className="rounded-xl border border-[#F7D7A8] bg-[#FFF8ED] px-4 py-3 text-sm leading-7 text-[#8A5A12]">
+                  تغییر کالا روی تمام واحدهای این رسید اعمال می‌شود.
+                </div>
+                <div className="relative">
+                  <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                  <SearchableSelect
+                    value={selectedProductId || undefined}
+                    onValueChange={(value) => {
+                      setSelectedProductId(value);
+                      setFieldErrors((current) => ({
+                        ...current,
+                        selectedProductId: "",
+                      }));
+                    }}
+                    options={productOptions}
+                    placeholder="انتخاب کالا"
+                    searchPlaceholder="جستجو در کالاها"
+                    emptyMessage="کالایی پیدا نشد"
+                    disabled={!productCanBeEdited}
+                    triggerClassName="pr-10"
+                    invalid={Boolean(fieldErrors.selectedProductId)}
+                    normalizeSearch
+                    highlightMatches
+                  />
+                </div>
+                <FieldError message={fieldErrors.selectedProductId} />
+                {!productCanBeEdited && receipt.productEditDisabledReason ? (
+                  <p className="text-xs leading-6 text-[#B45309]">
+                    {receipt.productEditDisabledReason}
+                  </p>
+                ) : null}
+              </label>
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>تأمین‌کننده</span>
                 <Input
                   value={supplierName}
+                  disabled={!isEditable}
                   onChange={(event) => setSupplierName(event.target.value)}
                   placeholder="نام تأمین‌کننده"
                 />
@@ -344,6 +479,7 @@ export default function WarehouseInboundReceiptEditPage() {
                 <Input
                   type="date"
                   value={receiptDate}
+                  disabled={!isEditable}
                   onChange={(event) => setReceiptDate(event.target.value)}
                 />
               </label>
@@ -351,6 +487,7 @@ export default function WarehouseInboundReceiptEditPage() {
                 <span>توضیحات</span>
                 <Textarea
                   value={notes}
+                  disabled={!isEditable}
                   onChange={(event) => setNotes(event.target.value)}
                 />
               </label>
@@ -365,6 +502,7 @@ export default function WarehouseInboundReceiptEditPage() {
               <div>
                 <Input
                   value={newProductIdentifier}
+                  disabled={!isEditable}
                   onChange={(event) => {
                     setNewProductIdentifier(event.target.value);
                     setFieldErrors((current) => ({
@@ -380,6 +518,7 @@ export default function WarehouseInboundReceiptEditPage() {
               <div>
                 <Input
                   value={newSerialNumber}
+                  disabled={!isEditable}
                   onChange={(event) => {
                     setNewSerialNumber(event.target.value);
                     setFieldErrors((current) => ({
@@ -395,6 +534,7 @@ export default function WarehouseInboundReceiptEditPage() {
               <div>
                 <Input
                   value={newTrackingCode}
+                  disabled={!isEditable}
                   onChange={(event) => {
                     setNewTrackingCode(event.target.value);
                     setFieldErrors((current) => ({
@@ -414,6 +554,7 @@ export default function WarehouseInboundReceiptEditPage() {
                 <Input
                   inputMode="numeric"
                   value={newQuantity}
+                  disabled={!isEditable}
                   onChange={(event) => {
                     setNewQuantity(event.target.value);
                     setFieldErrors((current) => ({
@@ -430,14 +571,23 @@ export default function WarehouseInboundReceiptEditPage() {
                 <FieldError message={fieldErrors.newQuantity} />
               </div>
             </div>
-            <Button type="button" className="mt-4" onClick={addUnit}>
+            <Button
+              type="button"
+              className="mt-4"
+              onClick={addUnit}
+              disabled={!isEditable}
+            >
               افزودن ردیف
             </Button>
           </Card>
 
           <DataTable columns={columns} rows={units} rowKey={(row) => row.rowId} />
 
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !isEditable}
+          >
             {isSubmitting ? "در حال ذخیره..." : "ذخیره تغییرات"}
           </Button>
         </div>

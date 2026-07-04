@@ -205,6 +205,13 @@ export function mapWarehouseInboundReceiptDto(
     id: toStringValue(record.id) || toStringValue(record.objectId),
     receiptCode: normalizeDigits(toStringValue(record.receiptCode)),
     productObjectId: toStringValue(record.productObjectId),
+    canEditProduct:
+      record.canEditProduct === undefined
+        ? false
+        : toBooleanValue(record.canEditProduct),
+    productEditDisabledReason: toNullableString(
+      record.productEditDisabledReason,
+    ),
     stockObjectId: toNullableString(record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined ? null : toNumberValue(record.sepidarStockId),

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
+import { JalaliDateInput } from "@/components/shared/jalali-date-input";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
@@ -957,14 +958,13 @@ export function OrderForm({
                 <FieldError message={fieldErrors.najaOrderNumber} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
-                <span>تاریخ سفارش</span>
-                <Input
-                  type="date"
+              <div className="md:col-span-2">
+                <JalaliDateInput
+                  label="تاریخ سفارش"
                   value={najaPurchaseDate}
-                  onChange={(event) => setNajaPurchaseDate(event.target.value)}
+                  onChange={setNajaPurchaseDate}
                 />
-              </label>
+              </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-3 text-xs leading-6 text-[#64748B]">

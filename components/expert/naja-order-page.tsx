@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { FieldError } from "@/components/shared/field-error";
+import { JalaliDateInput } from "@/components/shared/jalali-date-input";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
@@ -516,14 +517,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               <FieldError message={fieldErrors.najaOrderNumber} />
             </label>
 
-            <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>تاریخ سفارش</span>
-              <Input
-                type="date"
-                value={najaPurchaseDate}
-                onChange={(event) => setNajaPurchaseDate(event.target.value)}
-              />
-            </label>
+            <JalaliDateInput
+              label="تاریخ سفارش"
+              value={najaPurchaseDate}
+              onChange={setNajaPurchaseDate}
+            />
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>نام ثبت‌کننده / کارشناس ناجا</span>

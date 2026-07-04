@@ -6,6 +6,7 @@ export type OrderStatusCode =
   | "cancelled"
   | "voided"
   | "invoiced"
+  | "completed"
   | "returned"
   | "returnedAfterInvoice";
 
@@ -13,6 +14,7 @@ export type WarehouseStatusCode =
   | "reserved"
   | "reviewing"
   | "dispatchIssued"
+  | "completed"
   | "delivered"
   | "returnedToInventory"
   | "awaitingNajaDetails"
@@ -30,6 +32,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   cancelled: "لغو شده",
   voided: "باطل شده",
   invoiced: "فاکتور شده",
+  completed: "تکمیل شده",
   returned: "برگشتی",
   returnedAfterInvoice: "برگشتی پس از فاکتور",
 };
@@ -38,6 +41,7 @@ export const WAREHOUSE_STATUS_LABELS: Record<WarehouseStatusCode, string> = {
   reserved: "رزرو موجودی",
   reviewing: "در بررسی انبار",
   dispatchIssued: "حواله خروج صادر شد",
+  completed: "تکمیل شده",
   delivered: "تأیید تحویل به مشتری",
   returnedToInventory: "بازگشت به موجودی",
   awaitingNajaDetails: "در انتظار تکمیل اطلاعات انبار ناجا",
