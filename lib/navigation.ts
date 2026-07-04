@@ -236,6 +236,24 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "پیگیری سفارش‌های فروشگاه",
     },
     {
+      label: "مجله",
+      href: "/support/shop/magazine",
+      icon: "file-text",
+      description: "مدیریت محتوای مجله",
+    },
+    {
+      label: "مقاله‌ها",
+      href: "/support/shop/magazine/posts",
+      icon: "file-text",
+      description: "لیست مقاله‌های مجله",
+    },
+    {
+      label: "ایجاد مقاله",
+      href: "/support/shop/magazine/posts/create",
+      icon: "plus-circle",
+      description: "ثبت مقاله جدید",
+    },
+    {
       label: "برندها",
       href: "/support/shop/brands",
       icon: "layers",

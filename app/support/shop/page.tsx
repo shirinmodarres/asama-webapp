@@ -16,6 +16,11 @@ const shopSections = [
     href: "/support/shop/orders",
   },
   {
+    title: "مجله",
+    description: "مدیریت مقاله‌ها و محتوای سئویی سایت",
+    href: "/support/shop/magazine",
+  },
+  {
     title: "برندها",
     description: "تعریف و ویرایش برندهای قابل انتخاب برای محصولات سایت",
     href: "/support/shop/brands",
