@@ -1,34 +1,39 @@
-name: Deploy Frontend
+name: Deploy Dev Frontend
 
 on:
   push:
-    branches:
-      - develop
-      - main
+    branches: [develop]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy
+      - name: Deploy to dev server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          port: ${{ secrets.SERVER_PORT }}
-          key: ${{ secrets.ACTIONS_SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
-            if [ "${{ github.ref_name }}" = "develop" ]; then
-              cd /home/shmodares/apps/asama-dev/frontend
-              git pull origin develop
-              npm install
-              npm run build
-              pm2 restart asama-dev-frontend
-            else
-              cd /home/shmodares/apps/asama-prod/frontend
-              git pull origin main
-              npm install
-              npm run build
-              pm2 restart asama-prod-frontend
-            fi
+            set -e
+
+            cd /home/shmodares/apps/asama-dev/frontend
+
+            git fetch origin
+            git reset --hard origin/develop
+
+            npm install
+
+            set -a
+            source /home/shmodares/env/asama-dev.env
+            set +a
+
+            rm -rf .next
+            NEXT_PUBLIC_API_URL=$FRONTEND_PUBLIC_URL npm run build
+
+            pm2 restart asama-dev-frontend --update-env || \
+            NEXT_PUBLIC_API_URL=$FRONTEND_PUBLIC_URL pm2 start npm --name asama-dev-frontend -- start -- -p 3000
+
+            pm2 save
