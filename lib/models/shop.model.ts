@@ -1,4 +1,5 @@
 export type WebsiteProductStatus = "active" | "inactive";
+export type WebsiteMagazinePostStatus = "draft" | "published" | "archived";
 export type WebsiteOrderStatus =
   | "pending_payment"
   | "paid"
@@ -92,6 +93,83 @@ export interface WebsiteProductPayload {
   maxOrderQuantity?: number | null;
   weight?: number | null;
   dimensions?: WebsiteProductDimensions;
+}
+
+export interface WebsiteMagazineSeoFields {
+  metaTitle: string;
+  metaDescription: string;
+  canonicalUrl: string;
+  ogTitle: string;
+  ogDescription: string;
+  ogImage: string;
+  noIndex: boolean;
+}
+
+export interface WebsiteMagazinePost extends WebsiteMagazineSeoFields {
+  objectId: string;
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  category: string;
+  tags: string[];
+  authorName: string;
+  status: WebsiteMagazinePostStatus;
+  isFeatured: boolean;
+  publishedAt: string | null;
+  readingTimeMinutes: number;
+  sortOrder: number;
+  relatedProductIds: string[];
+  relatedCategorySlugs: string[];
+  relatedProducts: WebsiteProduct[];
+  relatedCategories: WebsiteCategory[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WebsiteMagazinePostListItem = Omit<
+  WebsiteMagazinePost,
+  "content" | "relatedProducts" | "relatedCategories"
+>;
+
+export interface WebsiteMagazinePostPayload extends WebsiteMagazineSeoFields {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage: string;
+  category: string;
+  tags: string[];
+  authorName: string;
+  status: WebsiteMagazinePostStatus;
+  isFeatured: boolean;
+  publishedAt: string | null;
+  readingTimeMinutes: number;
+  sortOrder: number;
+  relatedProductIds: string[];
+  relatedCategorySlugs: string[];
+}
+
+export interface WebsiteMagazinePostFilters {
+  page?: number;
+  limit?: number;
+  status?: "all" | WebsiteMagazinePostStatus;
+  category?: string;
+  tag?: string;
+  featured?: "all" | "featured" | "normal" | boolean;
+  search?: string;
+}
+
+export interface WebsiteMagazineCategorySummary {
+  category: string;
+  postCount: number;
+}
+
+export interface WebsiteMagazineTagSummary {
+  tag: string;
+  postCount: number;
 }
 
 export interface WebsiteBrand {
