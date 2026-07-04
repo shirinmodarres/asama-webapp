@@ -127,7 +127,7 @@ export default function ManagerStockTransfersPage() {
         await approveStockTransfer(transfer.objectId, {
           approvedByName: actorName,
         });
-        setMessage("درخواست انتقال موجودی تأیید شد و برای ثبت کدهای رهگیری به انبار ارسال شد.");
+        setMessage("درخواست انتقال موجودی تأیید شد و برای اسکن انبار ارسال شد.");
       } else {
         await rejectStockTransfer(transfer.objectId, {
           rejectedByName: actorName,
@@ -143,7 +143,14 @@ export default function ManagerStockTransfersPage() {
   };
 
   const columns: DataTableColumn<StockTransferRequest>[] = [
-    { key: "product", header: "کالا", render: (row) => row.productName || "-" },
+    {
+      key: "product",
+      header: "کالا",
+      render: (row) =>
+        row.items.length > 1
+          ? `${formatNumber(row.items.length)} کالا`
+          : row.items[0]?.productName || row.productName || "-",
+    },
     {
       key: "source",
       header: "انبار مبدأ",

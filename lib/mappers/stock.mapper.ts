@@ -105,6 +105,27 @@ export function mapProductStockInventoryListDto(
 export function mapStockTransferRequestDto(dto: unknown): StockTransferRequest {
   const record = toRecord(dto);
   const status = toStringValue(record.status) || "pending";
+  const items = toArray(record.items).map((itemDto) => {
+    const item = toRecord(itemDto);
+    return {
+      productObjectId: toStringValue(item.productObjectId),
+      sepidarItemId:
+        item.sepidarItemId === undefined || item.sepidarItemId === null
+          ? null
+          : toNumberValue(item.sepidarItemId),
+      productName: toNullableString(item.productName ?? item.productNameSnapshot),
+      productNameSnapshot: toNullableString(
+        item.productNameSnapshot ?? item.productName,
+      ),
+      quantity: toNumberValue(item.quantity),
+      scannedUnitIds: toArray(
+        item.scannedUnitIds ?? item.scannedUnitObjectIds,
+      ).map((id) => toStringValue(id)),
+      scannedUnitObjectIds: toArray(
+        item.scannedUnitObjectIds ?? item.scannedUnitIds,
+      ).map((id) => toStringValue(id)),
+    };
+  });
   return {
     objectId: toStringValue(record.objectId),
     id: toStringValue(record.id) || toStringValue(record.objectId),
@@ -130,22 +151,11 @@ export function mapStockTransferRequestDto(dto: unknown): StockTransferRequest {
         ? null
         : toNumberValue(record.sepidarItemId),
     productName: toNullableString(record.productName),
-    quantity: toNumberValue(record.quantity),
-    items: toArray(record.items).map((itemDto) => {
-      const item = toRecord(itemDto);
-      return {
-        productObjectId: toStringValue(item.productObjectId),
-        sepidarItemId:
-          item.sepidarItemId === undefined || item.sepidarItemId === null
-            ? null
-            : toNumberValue(item.sepidarItemId),
-        productName: toNullableString(item.productName),
-        quantity: toNumberValue(item.quantity),
-        scannedUnitObjectIds: toArray(item.scannedUnitObjectIds).map((id) =>
-          toStringValue(id),
-        ),
-      };
-    }),
+    quantity:
+      record.quantity === undefined
+        ? items.reduce((sum, item) => sum + item.quantity, 0)
+        : toNumberValue(record.quantity),
+    items,
     requestedByName: toNullableString(record.requestedByName),
     approvedByName: toNullableString(record.approvedByName),
     rejectedByName: toNullableString(record.rejectedByName),

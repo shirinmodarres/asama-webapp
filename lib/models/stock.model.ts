@@ -54,7 +54,9 @@ export interface StockTransferItem {
   productObjectId: string;
   sepidarItemId: number | null;
   productName: string | null;
+  productNameSnapshot: string | null;
   quantity: number;
+  scannedUnitIds: string[];
   scannedUnitObjectIds: string[];
 }
 
@@ -95,6 +97,8 @@ export interface CreateStockTransferPayload {
   quantity?: number;
   items?: Array<{
     productObjectId: string;
+    sepidarItemId?: number | null;
+    productNameSnapshot?: string;
     quantity: number;
   }>;
   note?: string;

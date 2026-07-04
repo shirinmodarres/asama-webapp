@@ -84,6 +84,8 @@ export async function createStockTransfer(
 ): Promise<StockTransferRequest> {
   const normalizedItems = payload.items?.map((item) => ({
     productObjectId: item.productObjectId,
+    sepidarItemId: item.sepidarItemId,
+    productNameSnapshot: item.productNameSnapshot,
     quantity: toNumber(item.quantity),
   }));
   const data = await httpClient.post<unknown>("/api/support/stock-transfers", {
@@ -147,6 +149,7 @@ export async function executeStockTransfer(
     unitObjectIds?: string[];
     items?: Array<{
       productObjectId: string;
+      sepidarItemId?: number | null;
       unitObjectIds: string[];
     }>;
     executedByName?: string;

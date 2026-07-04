@@ -32,7 +32,9 @@ import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 
 interface TransferDraftItem {
   productObjectId: string;
+  sepidarItemId: number | null;
   productName: string;
+  productNameSnapshot: string;
   quantity: number;
   sourceRealQuantity: number;
 }
@@ -144,15 +146,27 @@ export default function SupportStockTransfersPage() {
   const addItem = () => {
     const nextErrors: Record<string, string> = {};
     const normalizedQuantity = toNumber(quantity);
+    const existingQuantity =
+      items.find((item) => item.productObjectId === productId)?.quantity || 0;
+    const nextTotalQuantity = existingQuantity + normalizedQuantity;
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
+    if (!sourceStockId)
+      nextErrors.sourceStockId = "لطفاً انبار مبدأ را انتخاب کنید.";
+    if (!destinationStockId)
+      nextErrors.destinationStockId = "لطفاً انبار مقصد را انتخاب کنید.";
+    if (sourceStockId && destinationStockId === sourceStockId) {
+      nextErrors.destinationStockId =
+        "انبار مبدأ و مقصد باید متفاوت باشند.";
+    }
     if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
       nextErrors.quantity = "تعداد باید بیشتر از صفر باشد.";
     }
     if (
       Number.isFinite(normalizedQuantity) &&
       normalizedQuantity > 0 &&
-      sourceInventory &&
-      normalizedQuantity > sourceInventory.realQuantity
+      sourceStockId &&
+      !isLoadingInventory &&
+      nextTotalQuantity > (sourceInventory?.realQuantity ?? 0)
     ) {
       nextErrors.quantity = "تعداد انتقال نمی‌تواند بیشتر از موجودی واقعی مبدأ باشد.";
     }
@@ -165,7 +179,12 @@ export default function SupportStockTransfersPage() {
       if (existing) {
         return current.map((item) =>
           item.productObjectId === productId
-            ? { ...item, quantity: item.quantity + normalizedQuantity }
+            ? {
+                ...item,
+                quantity: item.quantity + normalizedQuantity,
+                sourceRealQuantity:
+                  sourceInventory?.realQuantity ?? item.sourceRealQuantity,
+              }
             : item,
         );
       }
@@ -173,7 +192,9 @@ export default function SupportStockTransfersPage() {
         ...current,
         {
           productObjectId: productId,
+          sepidarItemId: product?.sepidarItemId ?? null,
           productName: product?.name || "-",
+          productNameSnapshot: product?.name || "-",
           quantity: normalizedQuantity,
           sourceRealQuantity: sourceInventory?.realQuantity ?? 0,
         },
@@ -197,6 +218,9 @@ export default function SupportStockTransfersPage() {
     if (!items.length) {
       nextErrors.items = "حداقل یک کالا برای انتقال اضافه کنید.";
     }
+    if (items.some((item) => item.quantity <= 0)) {
+      nextErrors.items = "تعداد همه کالاهای انتقال باید بیشتر از صفر باشد.";
+    }
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -209,6 +233,8 @@ export default function SupportStockTransfersPage() {
         destinationStockObjectId: destinationStockId,
         items: items.map((item) => ({
           productObjectId: item.productObjectId,
+          sepidarItemId: item.sepidarItemId,
+          productNameSnapshot: item.productNameSnapshot,
           quantity: item.quantity,
         })),
         note: note.trim() || undefined,
@@ -295,8 +321,6 @@ export default function SupportStockTransfersPage() {
                   value={productId || undefined}
                   onValueChange={(value) => {
                     setProductId(value);
-                    setSourceStockId("");
-                    setDestinationStockId("");
                     setFieldErrors((current) => ({ ...current, productId: "" }));
                   }}
                   options={productOptions}
@@ -383,7 +407,7 @@ export default function SupportStockTransfersPage() {
                   type="button"
                   variant="outline"
                   onClick={addItem}
-                  disabled={!sourceStockId}
+                  disabled={!sourceStockId || isLoadingInventory}
                 >
                   افزودن کالا به انتقال
                 </Button>
