@@ -356,6 +356,7 @@ function normalizeUpdateInboundPayload(
   return {
     ...payload,
     productObjectId: payload.productObjectId,
+    sepidarItemId: payload.sepidarItemId,
     units: payload.units.map((unit) => ({
       objectId: unit.objectId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),

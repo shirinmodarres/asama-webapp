@@ -124,7 +124,7 @@ export default function WarehouseInboundReceiptEditPage() {
             id: receipt.productObjectId,
             sku: receipt.productSku,
             barcode: null,
-            sepidarItemId: null,
+            sepidarItemId: receipt.sepidarItemId,
             sepidarCode: null,
             name: receipt.productName,
             brand: "",
@@ -372,6 +372,9 @@ export default function WarehouseInboundReceiptEditPage() {
     try {
       const updated = await updateInboundReceipt(receipt.objectId, {
         productObjectId: productCanBeEdited ? selectedProductId : undefined,
+        sepidarItemId: productCanBeEdited
+          ? selectedProduct?.sepidarItemId ?? null
+          : undefined,
         supplierName: supplierName.trim() || null,
         receiptDate: receiptDate || null,
         notes: notes.trim() || null,

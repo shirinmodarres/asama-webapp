@@ -18,6 +18,13 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,6 +69,7 @@ export default function WarehouseInboundPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [unitRowErrors, setUnitRowErrors] = useState<UnitRowErrors>({});
   const [importPreviewRows, setImportPreviewRows] = useState<ImportPreviewRow[]>([]);
+  const [importAcceptedCount, setImportAcceptedCount] = useState(0);
   const [message, setMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
@@ -326,6 +334,7 @@ export default function WarehouseInboundPage() {
     setError("");
     setMessage("");
     setImportError("");
+    setImportAcceptedCount(0);
     setFieldErrors({});
 
     if (!selectedProductId || !selectedStockId) {
@@ -360,11 +369,31 @@ export default function WarehouseInboundPage() {
           messages: [],
         };
       });
-      const nextUnits = [...units, ...importedUnits];
+      const candidateUnits = [...units, ...importedUnits];
+      const candidatePreviewRows = buildImportPreviewRows(
+        previewRows,
+        candidateUnits,
+      );
+      const validImportedUnitIds = new Set(
+        candidatePreviewRows
+          .filter((row) => row.unitRowId && row.messages.length === 0)
+          .map((row) => row.unitRowId),
+      );
+      const acceptedUnits = importedUnits.filter((unit) =>
+        validImportedUnitIds.has(unit.rowId),
+      );
+      const rejectedPreviewRows = candidatePreviewRows.filter(
+        (row) => !row.unitRowId || row.messages.length > 0,
+      );
+      const nextUnits = [...units, ...acceptedUnits];
 
       setUnits(nextUnits);
       setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-      setImportPreviewRows(buildImportPreviewRows(previewRows, nextUnits));
+      setImportPreviewRows(rejectedPreviewRows);
+      setImportAcceptedCount(acceptedUnits.length);
+      if (acceptedUnits.length > 0) {
+        setMessage(`${formatNumber(acceptedUnits.length)} ردیف از اکسل به لیست اضافه شد.`);
+      }
       if (!importedRows.length) {
         setImportError("ردیفی برای ایمپورت پیدا نشد.");
       }
@@ -419,6 +448,7 @@ export default function WarehouseInboundPage() {
       );
       setUnits([]);
       setImportPreviewRows([]);
+      setImportAcceptedCount(0);
       setImportError("");
       setNotes("");
       const refreshedProducts = await listProducts("warehouse");
@@ -467,10 +497,7 @@ export default function WarehouseInboundPage() {
       const nextUnits = current.filter((unit) => unit.rowId !== rowId);
       setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
       setImportPreviewRows((previewRows) =>
-        buildImportPreviewRows(
-          previewRows.filter((row) => row.unitRowId !== rowId),
-          nextUnits,
-        ),
+        previewRows.filter((row) => row.unitRowId !== rowId),
       );
       return nextUnits;
     });
@@ -487,7 +514,8 @@ export default function WarehouseInboundPage() {
 
     setUnits(nextUnits);
     setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-    setImportPreviewRows(buildImportPreviewRows(nextPreviewRows, nextUnits));
+    setImportPreviewRows(nextPreviewRows);
+    if (nextPreviewRows.length === 0) setImportAcceptedCount(0);
   };
 
   const productOptions = useMemo(
@@ -552,6 +580,7 @@ export default function WarehouseInboundPage() {
                       setUnits([]);
                       setUnitRowErrors({});
                       setImportPreviewRows([]);
+                      setImportAcceptedCount(0);
                       setImportError("");
                       setFieldErrors((current) => ({
                         ...current,
@@ -700,12 +729,27 @@ export default function WarehouseInboundPage() {
             ) : null}
           </Card>
 
-          {importPreviewRows.length > 0 ? (
-            <Card className="p-5">
-              <div className="mb-4 grid gap-3 sm:grid-cols-4">
+          <Dialog
+            open={importPreviewRows.length > 0}
+            onOpenChange={(open) => {
+              if (!open) {
+                setImportPreviewRows([]);
+                setImportAcceptedCount(0);
+              }
+            }}
+          >
+            <DialogContent className="max-w-5xl">
+              <DialogHeader>
+                <DialogTitle>بررسی ردیف‌های ایمپورت</DialogTitle>
+                <DialogDescription>
+                  ردیف‌های معتبر به لیست اصلی اضافه شده‌اند. ردیف‌های زیر به
+                  دلیل خطا اضافه نشده‌اند.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3 sm:grid-cols-4">
                 <ImportSummaryItem
-                  label="ردیف معتبر"
-                  value={countImportRows(importPreviewRows, "valid")}
+                  label="اضافه‌شده"
+                  value={importAcceptedCount}
                 />
                 <ImportSummaryItem
                   label="سریال تکراری"
@@ -725,8 +769,8 @@ export default function WarehouseInboundPage() {
                 rows={importPreviewRows}
                 rowKey={(row) => row.rowId}
               />
-            </Card>
-          ) : null}
+            </DialogContent>
+          </Dialog>
 
           {units.length > 0 ? (
             <DataTable
