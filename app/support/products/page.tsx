@@ -65,7 +65,7 @@ export default function SupportProductsPage() {
       Array.from(
         new Set(
           products
-            .map((product) => product.brand)
+            .map(productBrandValue)
             .filter(
               (b): b is string => typeof b === "string" && b.trim().length > 0,
             ),
@@ -92,7 +92,7 @@ export default function SupportProductsPage() {
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchesBrand =
-        brandFilter === "all" || product.brand === brandFilter;
+        brandFilter === "all" || productBrandLabel(product) === brandFilter;
       const matchesCategory =
         categoryFilter === "all" || product.category === categoryFilter;
       const matchesStatus =
@@ -118,7 +118,7 @@ export default function SupportProductsPage() {
         </div>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brand },
+    { key: "brand", header: "برند", render: (row) => productBrandLabel(row) },
     { key: "category", header: "دسته بندی", render: (row) => row.category },
     { key: "unit", header: "واحد", render: (row) => row.unit },
     {
@@ -249,4 +249,12 @@ export default function SupportProductsPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function productBrandLabel(product: Product): string {
+  return productBrandValue(product) || "-";
+}
+
+function productBrandValue(product: Product): string {
+  return product.brandName || product.brand || "";
 }

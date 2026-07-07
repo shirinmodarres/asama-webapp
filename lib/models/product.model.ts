@@ -11,6 +11,8 @@ export interface Product {
   sepidarCode: string | null;
   name: string;
   brand: string;
+  brandName?: string | null;
+  saleGroupRef?: string | number | null;
   model: string | null;
   category: string;
   unit: string;

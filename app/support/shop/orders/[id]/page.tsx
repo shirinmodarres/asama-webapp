@@ -364,6 +364,7 @@ export default function WebsiteOrderDetailPage() {
                 <dl className="mt-4 grid gap-3">
                   <Info label="درگاه" value={order.payment?.gatewayLabel || "SibPay SoftPOS"} />
                   <Info label="وضعیت پرداخت" value={order.paymentStatusLabel} />
+                  <Info label="مبلغ پرداخت" value={formatCurrency(order.payment?.amount ?? order.finalAmount)} />
                   <Info
                     label="توکن پرداخت"
                     value={<span dir="ltr" className="block break-all text-left">{order.payment?.paymentToken || "-"}</span>}

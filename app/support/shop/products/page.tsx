@@ -93,7 +93,8 @@ export default function SupportShopProductsPage() {
         const matchesSearch =
           !query ||
           product.title.toLowerCase().includes(query) ||
-          product.sku.toLowerCase().includes(query);
+          product.sku.toLowerCase().includes(query) ||
+          productBrandLabel(product).toLowerCase().includes(query);
         const matchesCategory =
           categoryFilter === "all" || product.categoryId === categoryFilter;
         const matchesStatus =
@@ -198,6 +199,7 @@ export default function SupportShopProductsPage() {
       render: (row) => formatFaDigits(row.sku) || "-",
     },
     { key: "category", header: "دسته‌بندی", render: (row) => row.categoryTitle || "-" },
+    { key: "brand", header: "برند", render: (row) => productBrandLabel(row) },
     {
       key: "price",
       header: "قیمت سایت (ریال)",
@@ -476,6 +478,10 @@ function FilterSelect({
       </div>
     </label>
   );
+}
+
+function productBrandLabel(product: WebsiteProduct): string {
+  return product.brandName || product.brandTitle || product.brand || "-";
 }
 
 function toProductPayload(product: WebsiteProduct) {

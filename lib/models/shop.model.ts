@@ -46,6 +46,7 @@ export interface WebsiteProduct {
   salePrice: number | null;
   images: string[];
   brand: string | null;
+  brandName?: string | null;
   category: string | null;
   brandId: string | null;
   brandTitle: string | null;
@@ -253,6 +254,7 @@ export interface WebsiteOrderTimelineItem {
 export interface WebsitePaymentInfo {
   gateway: string;
   gatewayLabel: string;
+  amount: number;
   paymentToken: string | null;
   transactionId: string | null;
   referenceId: string | null;

@@ -203,9 +203,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     () =>
       products.map((product) => {
         logOrderDropdownProductSource(product);
+        const brandLabel = product.brandName || product.brand || "-";
         return {
           value: product.objectId,
-          label: `${product.sepidarCode || product.sku} - ${product.name} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(product, formatFaDigits)} ${product.unit}`,
+          label: `${product.sepidarCode || product.sku} - ${product.name} - ${brandLabel} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(product, formatFaDigits)} ${product.unit}`,
         };
       }),
     [products],

@@ -78,6 +78,7 @@ export function mapProductDto(dto: unknown): Product {
   const najaInventoryQty = inventories.length
     ? inventoryNajaStock
     : toNumberValue(record.najaInventoryQty);
+  const brandName = toNullableString(record.brandName) || toNullableString(record.brand);
 
   return {
     objectId,
@@ -91,6 +92,8 @@ export function mapProductDto(dto: unknown): Product {
     sepidarCode: toNullableString(record.sepidarCode ?? record.code),
     name: toStringValue(record.name ?? record.title),
     brand: toStringValue(record.brand),
+    brandName,
+    saleGroupRef: toNullableString(record.saleGroupRef),
     model: toNullableString(record.model),
     category: toStringValue(record.category),
     unit: toStringValue(record.unit) || "عدد",

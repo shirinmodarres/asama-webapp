@@ -1113,11 +1113,12 @@ export function OrderForm({
                           if (sepidarProductsOnly) {
                             logOrderDropdownProductSource(option);
                           }
+                          const brandLabel = option.brandName || option.brand || "-";
                           return {
                             value: option.objectId,
                             label: sepidarProductsOnly
-                              ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
-                              : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(
+                              ? `${option.sepidarCode || option.sku} - ${option.name} - ${brandLabel} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
+                              : `${option.name} - ${brandLabel} - موجودی قابل فروش ${formatNumber(
                                   getEditableAvailableQuantity({
                                     product: option,
                                     mode,

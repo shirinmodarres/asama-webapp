@@ -80,6 +80,7 @@ export function mapWebsiteProductDto(dto: unknown): WebsiteProduct {
       .map((value) => toStringValue(value).trim())
       .filter(Boolean),
     brand: toNullableString(record.brandTitle ?? record.brand),
+    brandName: toNullableString(record.brandName ?? record.brandTitle ?? record.brand),
     category: toNullableString(record.categoryTitle ?? record.category),
     brandId: toNullableString(record.brandId),
     brandTitle: toNullableString(record.brandTitle ?? record.brand),
@@ -285,6 +286,7 @@ export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
       ? {
           gateway: toStringValue(payment.gateway),
           gatewayLabel: toStringValue(payment.gatewayLabel),
+          amount: toNumberValue(payment.amount),
           paymentToken: toNullableString(payment.paymentToken),
           transactionId: toNullableString(payment.transactionId),
           referenceId: toNullableString(payment.referenceId),

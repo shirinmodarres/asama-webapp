@@ -142,7 +142,7 @@ export default function SupportEditProductPage() {
         initialValues={{
           id: product.id,
           name: product.name,
-          brand: product.brand,
+          brand: product.brandName || product.brand || "",
           category: product.category,
           unit: product.unit,
           unitPrice: product.unitPrice,

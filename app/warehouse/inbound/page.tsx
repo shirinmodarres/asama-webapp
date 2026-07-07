@@ -520,27 +520,31 @@ export default function WarehouseInboundPage() {
 
   const productOptions = useMemo(
     () =>
-      products.map((product) => ({
-        value: product.objectId,
-        label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
-        description: [
-          product.brand,
-          product.model ? `مدل ${formatFaDigits(product.model)}` : "",
-          product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
-        ]
-          .filter(Boolean)
-          .join(" • "),
-        searchText: [
-          product.name,
-          product.sku,
-          product.sepidarCode,
-          product.model,
-          product.barcode,
-          product.brand,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      })),
+      products.map((product) => {
+        const brandLabel = product.brandName || product.brand || "-";
+        const brandSearch = product.brandName || product.brand || "";
+        return {
+          value: product.objectId,
+          label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)} - ${formatFaDigits(brandLabel)}`,
+          description: [
+            brandLabel,
+            product.model ? `مدل ${formatFaDigits(product.model)}` : "",
+            product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
+          ]
+            .filter(Boolean)
+            .join(" • "),
+          searchText: [
+            product.name,
+            product.sku,
+            product.sepidarCode,
+            product.model,
+            product.barcode,
+            brandSearch,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        };
+      }),
     [products],
   );
   const stockOptions = useMemo(
@@ -633,7 +637,7 @@ export default function WarehouseInboundPage() {
               <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                 <InfoItem label="نام کالا" value={selectedProduct.name} />
                 <InfoItem label="شناسه/کد" value={formatFaDigits(selectedProduct.sku)} />
-                <InfoItem label="برند" value={selectedProduct.brand || "-"} />
+                <InfoItem label="برند" value={selectedProduct.brandName || selectedProduct.brand || "-"} />
                 <InfoItem label="مدل" value={selectedProduct.model || "-"} />
               </dl>
             ) : null}

@@ -115,10 +115,13 @@ export default function SupportStockTransfersPage() {
 
   const productOptions = useMemo(
     () =>
-      products.map((product) => ({
-        value: product.objectId,
-        label: `${formatFaDigits(product.sepidarCode || product.sku)} - ${formatFaDigits(product.name)}`,
-      })),
+      products.map((product) => {
+        const brandLabel = product.brandName || product.brand || "-";
+        return {
+          value: product.objectId,
+          label: `${formatFaDigits(product.sepidarCode || product.sku)} - ${formatFaDigits(product.name)} - ${formatFaDigits(brandLabel)}`,
+        };
+      }),
     [products],
   );
 
