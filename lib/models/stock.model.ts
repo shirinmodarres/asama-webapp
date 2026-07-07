@@ -109,3 +109,25 @@ export interface UpdateProductStockInventoryPayload {
   salesQuantity?: number;
   useFullRealQuantityForSales?: boolean;
 }
+
+export interface BulkUpdateProductStockInventoryItem
+  extends UpdateProductStockInventoryPayload {
+  objectId: string;
+}
+
+export interface BulkUpdateProductStockInventoryFailure {
+  objectId: string | null;
+  code: string;
+  message: string;
+  status?: number;
+}
+
+export interface BulkUpdateProductStockInventoryResult {
+  updated: ProductStockInventory[];
+  failed: BulkUpdateProductStockInventoryFailure[];
+  summary: {
+    requested: number;
+    updated: number;
+    failed: number;
+  };
+}

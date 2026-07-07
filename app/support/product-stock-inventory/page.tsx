@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
-import type { ProductStockInventory } from "@/lib/models/stock.model";
+import type {
+  BulkUpdateProductStockInventoryFailure,
+  ProductStockInventory,
+} from "@/lib/models/stock.model";
 import {
+  bulkUpdateProductStockInventory,
   listProductStockInventory,
-  updateProductStockInventory,
 } from "@/lib/services/stock.service";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 
@@ -29,9 +32,12 @@ export default function SupportProductStockInventoryPage() {
   const [rows, setRows] = useState<ProductStockInventory[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftState>>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [savingId, setSavingId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [failedUpdates, setFailedUpdates] = useState<
+    BulkUpdateProductStockInventoryFailure[]
+  >([]);
 
   const loadRows = async () => {
     const data = await listProductStockInventory();
@@ -69,6 +75,8 @@ export default function SupportProductStockInventoryPage() {
   }, []);
 
   const updateDraft = (objectId: string, patch: Partial<DraftState>) => {
+    setMessage("");
+    setFailedUpdates([]);
     setDrafts((current) => ({
       ...current,
       [objectId]: {
@@ -80,28 +88,129 @@ export default function SupportProductStockInventoryPage() {
     }));
   };
 
-  const saveRow = async (row: ProductStockInventory) => {
+  const isSalesQuantityEdited = (row: ProductStockInventory) => {
     const draft = drafts[row.objectId];
-    if (!draft) return;
-    const salesQuantity = toNumber(draft.salesQuantity);
-    if (!draft.useFullRealQuantityForSales && (!Number.isFinite(salesQuantity) || salesQuantity < 0)) {
+    if (!draft) return false;
+    return draft.salesQuantity.trim() !== String(row.salesQuantity);
+  };
+
+  const isUseFullEdited = (row: ProductStockInventory) => {
+    const draft = drafts[row.objectId];
+    return draft
+      ? draft.useFullRealQuantityForSales !== row.useFullRealQuantityForSales
+      : false;
+  };
+
+  const dirtyRows = rows.filter((row) => {
+    const draft = drafts[row.objectId];
+    if (!draft) return false;
+    return isSalesQuantityEdited(row) || isUseFullEdited(row);
+  });
+  const hasDirtyChanges = dirtyRows.length > 0;
+
+  useEffect(() => {
+    if (!hasDirtyChanges) return undefined;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasDirtyChanges]);
+
+  useEffect(() => {
+    if (!hasDirtyChanges) return undefined;
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor || anchor.target === "_blank") return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      if (!window.confirm("تغییرات ذخیره‌نشده دارید. از صفحه خارج می‌شوید؟")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick, true);
+    };
+  }, [hasDirtyChanges]);
+
+  const saveChanges = async () => {
+    if (!dirtyRows.length) return;
+    const invalidRow = dirtyRows.find((row) => {
+      const draft = drafts[row.objectId];
+      const salesQuantity = toNumber(draft?.salesQuantity ?? "");
+      return (
+        draft &&
+        !draft.useFullRealQuantityForSales &&
+        (!Number.isFinite(salesQuantity) || salesQuantity < 0)
+      );
+    });
+    if (invalidRow) {
       setError("موجودی فروش معتبر نیست.");
       return;
     }
-    setSavingId(row.objectId);
+
+    setIsSaving(true);
     setError("");
     setMessage("");
+    setFailedUpdates([]);
     try {
-      await updateProductStockInventory(row.objectId, {
-        salesQuantity,
-        useFullRealQuantityForSales: draft.useFullRealQuantityForSales,
-      });
-      await loadRows();
-      setMessage("موجودی فروش به‌روزرسانی شد.");
+      const result = await bulkUpdateProductStockInventory(
+        dirtyRows.map((row) => {
+          const draft = drafts[row.objectId];
+          return {
+            objectId: row.objectId,
+            salesQuantity: toNumber(draft?.salesQuantity ?? "0"),
+            useFullRealQuantityForSales:
+              draft?.useFullRealQuantityForSales ?? false,
+          };
+        }),
+      );
+      if (result.updated.length) {
+        const updatedById = new Map(
+          result.updated.map((inventory) => [inventory.objectId, inventory]),
+        );
+        setRows((current) =>
+          current.map((row) => updatedById.get(row.objectId) ?? row),
+        );
+        setDrafts((current) => {
+          const next = { ...current };
+          result.updated.forEach((row) => {
+            next[row.objectId] = {
+              salesQuantity: String(row.salesQuantity),
+              useFullRealQuantityForSales: row.useFullRealQuantityForSales,
+            };
+          });
+          return next;
+        });
+      }
+      setFailedUpdates(result.failed);
+      const successText = `به‌روزرسانی موفق: ${formatFaDigits(
+        String(result.summary.updated),
+      )}`;
+      const failedText = result.summary.failed
+        ? `، ناموفق: ${formatFaDigits(String(result.summary.failed))}`
+        : "";
+      setMessage(`${successText}${failedText}`);
     } catch (saveError) {
       setError(getErrorMessage(saveError));
     } finally {
-      setSavingId("");
+      setIsSaving(false);
     }
   };
 
@@ -130,6 +239,7 @@ export default function SupportProductStockInventoryPage() {
       render: (row) => {
         const draft = drafts[row.objectId];
         const useFull = draft?.useFullRealQuantityForSales ?? false;
+        const isEdited = isSalesQuantityEdited(row);
         return (
           <div className="min-w-[160px] space-y-2">
             <Input
@@ -139,6 +249,11 @@ export default function SupportProductStockInventoryPage() {
                 updateDraft(row.objectId, { salesQuantity: event.target.value })
               }
               disabled={useFull}
+              className={
+                isEdited
+                  ? "border-[#D89A20] bg-[#FFF8E8] focus-visible:ring-[#D89A20]"
+                  : undefined
+              }
             />
             {useFull ? (
               <p className="text-xs leading-6 text-[#2F6B3A]">
@@ -152,41 +267,33 @@ export default function SupportProductStockInventoryPage() {
     {
       key: "use-full",
       header: "استفاده کامل",
-      render: (row) => (
-        <label className="inline-flex items-center gap-2 text-xs text-[#334155]">
-          <input
-            type="checkbox"
-            checked={drafts[row.objectId]?.useFullRealQuantityForSales ?? false}
-            onChange={(event) =>
-              updateDraft(row.objectId, {
-                useFullRealQuantityForSales: event.target.checked,
-              })
-            }
-            className="size-4 accent-[#6CAE75]"
-          />
-          کل موجودی واقعی
-        </label>
-      ),
+      render: (row) => {
+        const isEdited = isUseFullEdited(row);
+        return (
+          <label
+            className={`inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
+              isEdited ? "bg-[#FFF8E8] text-[#7A4B00]" : "text-[#334155]"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={drafts[row.objectId]?.useFullRealQuantityForSales ?? false}
+              onChange={(event) =>
+                updateDraft(row.objectId, {
+                  useFullRealQuantityForSales: event.target.checked,
+                })
+              }
+              className="size-4 accent-[#6CAE75]"
+            />
+            کل موجودی واقعی
+          </label>
+        );
+      },
     },
     {
       key: "available",
       header: "موجودی قابل فروش",
       render: (row) => formatNumber(row.availableSalesQuantity),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => saveRow(row)}
-          disabled={Boolean(savingId)}
-        >
-          <Save className="size-4" />
-          ذخیره
-        </Button>
-      ),
     },
   ];
 
@@ -196,8 +303,35 @@ export default function SupportProductStockInventoryPage() {
         title="موجودی فروش بر اساس انبار"
         description="موجودی فروش هر کالا را برای هر انبار سپیدار مدیریت کنید."
       />
+      <div className="sticky top-3 z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#E2E8F0] bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="text-sm text-[#334155]">
+          {hasDirtyChanges
+            ? `${formatFaDigits(String(dirtyRows.length))} تغییر ذخیره‌نشده`
+            : "همه تغییرات ذخیره شده‌اند."}
+        </div>
+        <Button
+          type="button"
+          onClick={saveChanges}
+          disabled={!hasDirtyChanges || isSaving}
+        >
+          <Save className="size-4" />
+          {isSaving ? "در حال ذخیره..." : "ذخیره تغییرات"}
+        </Button>
+      </div>
       {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
       {error ? <InlineErrorMessage message={error} /> : null}
+      {failedUpdates.length ? (
+        <div className="rounded-lg border border-[#F3B4B4] bg-[#FFF1F1] px-4 py-3 text-sm text-[#8A1F1F]">
+          <p className="font-semibold">خطا در برخی ردیف‌ها</p>
+          <ul className="mt-2 space-y-1">
+            {failedUpdates.map((failure, index) => (
+              <li key={`${failure.objectId ?? "missing"}-${index}`}>
+                {failure.objectId || "-"}: {failure.message || failure.code}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {isLoading ? (
         <LoadingState title="در حال دریافت موجودی کالا و انبار" />
       ) : rows.length ? (
