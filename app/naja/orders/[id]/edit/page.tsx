@@ -14,6 +14,7 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { OrderEditData } from "@/lib/models/order.model";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   getOrderEditData,
   updatePendingOrder,
@@ -23,6 +24,7 @@ import { formatFaDigits } from "@/lib/utils/number-format";
 export default function NajaOrderEditPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const currentUserId = getStoredCurrentUser()?.objectId ?? "";
   const [editData, setEditData] = useState<OrderEditData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,7 +77,7 @@ export default function NajaOrderEditPage() {
           title="سفارش ناجا یافت نشد"
           description="این شناسه در سفارش‌های ناجا وجود ندارد."
         />
-      ) : !canNajaEdit(editData) ? (
+      ) : !canNajaEdit(editData, currentUserId) ? (
         <div className="space-y-4">
           <EmptyState
             title="این سفارش دیگر قابل ویرایش نیست."
@@ -126,9 +128,12 @@ export default function NajaOrderEditPage() {
   );
 }
 
-function canNajaEdit(editData: OrderEditData): boolean {
+function canNajaEdit(editData: OrderEditData, currentUserId?: string): boolean {
   if (!editData.canEdit) return false;
   if (editData.order.orderType !== "naja") return false;
+  if (!currentUserId || editData.order.expertUserId !== currentUserId) {
+    return false;
+  }
   return ["pending_approval", "pending", "review_resolved"].includes(
     editData.order.orderStatus,
   );

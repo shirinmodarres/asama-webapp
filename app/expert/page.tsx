@@ -181,5 +181,5 @@ export default function ExpertPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending_approval" || status === "needs_review";
+  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }

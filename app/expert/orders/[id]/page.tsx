@@ -289,5 +289,5 @@ function formatReviewRemaining(remainingMs: number): string {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return ["pending_approval", "needs_review", "review_resolved"].includes(status);
+  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }

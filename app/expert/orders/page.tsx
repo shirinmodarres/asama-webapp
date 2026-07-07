@@ -165,7 +165,7 @@ export default function ExpertOrdersPage() {
               <button
                 type="button"
                 disabled
-                title="ویرایش فقط برای سفارش‌های در انتظار تأیید یا نیازمند بررسی امکان‌پذیر است."
+                title="ویرایش فقط قبل از تأیید مدیر فروش امکان‌پذیر است."
                 className="inline-flex h-9 min-w-16 shrink-0 cursor-not-allowed items-center justify-center rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 text-xs font-medium text-[#64748B]"
               >
                 ویرایش
@@ -274,7 +274,7 @@ export default function ExpertOrdersPage() {
 }
 
 function isEditableOrderStatus(status: string): boolean {
-  return status === "pending_approval" || status === "needs_review";
+  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }
 
 function isWithinDateRange(
