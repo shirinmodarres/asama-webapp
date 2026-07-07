@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
   formatCurrency,
@@ -75,6 +76,7 @@ export interface OrderFormSubmitPayload {
   recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
+  notes?: string;
   items: Array<{
     productObjectId: string;
     quantity: number;
@@ -151,6 +153,7 @@ export function OrderForm({
   const [najaPurchaseDate, setNajaPurchaseDate] = useState(
     initialOrder?.najaPurchaseDate?.slice(0, 10) ?? "",
   );
+  const [notes, setNotes] = useState(initialOrder?.notes ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     initialOrder?.customerObjectId ?? initialOrder?.customer?.objectId ?? "",
   );
@@ -662,6 +665,7 @@ export function OrderForm({
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
         sepidarSaleTypeId:
           selectedCustomer?.saleType?.sepidarSaleTypeId ?? undefined,
+        notes: notes.trim(),
         items: normalizedItems.map((item) => ({
           productObjectId: item.productId,
           quantity: item.quantity,
@@ -1241,6 +1245,16 @@ export function OrderForm({
             </span>
           </div>
         </div>
+
+        <label className="mt-5 grid gap-2 text-sm font-medium text-[#334155]">
+          <span>یادداشت</span>
+          <Textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="توضیحات داخلی سفارش"
+            rows={3}
+          />
+        </label>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" onClick={addRow}>

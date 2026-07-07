@@ -134,7 +134,7 @@ export default function EditExpertOrderPage() {
 function canExpertEdit(editData: OrderEditData): boolean {
   return (
     editData.canEdit &&
-    ["pending_approval", "needs_review", "review_resolved"].includes(
+    ["pending_approval", "pending", "review_resolved"].includes(
       editData.order.orderStatus,
     )
   );

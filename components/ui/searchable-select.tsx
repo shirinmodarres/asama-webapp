@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, ChevronDown, Search } from "lucide-react";
-import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
@@ -47,9 +46,18 @@ export function SearchableSelect({
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const selectedOption = options.find((option) => option.value === value);
+
+  const closeMenu = ({ restoreFocus = false } = {}) => {
+    setOpen(false);
+    setQuery("");
+    if (restoreFocus) {
+      triggerRef.current?.focus({ preventScroll: true });
+    }
+  };
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = normalizeSearch
@@ -82,13 +90,13 @@ export function SearchableSelect({
       const clickedInsideMenu = menuRef.current?.contains(target);
 
       if (!clickedInsideTrigger && !clickedInsideMenu) {
-        setOpen(false);
+        closeMenu();
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        closeMenu();
       }
     };
 
@@ -101,34 +109,49 @@ export function SearchableSelect({
     };
   }, [open]);
 
+  const updateMenuPosition = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const gap = 6;
+    const viewportPadding = 12;
+    const maxMenuHeight = 340;
+    const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+    const spaceAbove = rect.top - gap - viewportPadding;
+    const openAbove = spaceBelow < 180 && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(
+      160,
+      Math.min(maxMenuHeight, openAbove ? spaceAbove : spaceBelow),
+    );
+
+    setMenuStyle({
+      position: "fixed",
+      top: openAbove ? undefined : rect.bottom + gap,
+      bottom: openAbove ? window.innerHeight - rect.top + gap : undefined,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: availableHeight,
+      zIndex: 120,
+    });
+  };
+
   useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return;
+    if (!open) return;
 
-    const updatePosition = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const gap = 6;
-      const top = rect.bottom + gap;
-
-      setMenuStyle({
-        position: "fixed",
-        top,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 120,
-      });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
 
     return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !menuStyle) return;
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, [menuStyle, open]);
 
   return (
     <div ref={rootRef} className={cn("relative min-w-0", className)}>
@@ -137,7 +160,11 @@ export function SearchableSelect({
         ref={triggerRef}
         disabled={disabled}
         onClick={() => {
-          setOpen((current) => !current);
+          setOpen((current) => {
+            const nextOpen = !current;
+            if (nextOpen) updateMenuPosition();
+            return nextOpen;
+          });
           setQuery("");
         }}
         className={cn(
@@ -160,16 +187,17 @@ export function SearchableSelect({
         />
       </button>
 
-      {open
+      {open && menuStyle
         ? createPortal(
             <div
               ref={menuRef}
               style={menuStyle}
-              className="max-h-[340px] overflow-hidden rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+              className="overflow-hidden rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
             >
               <div className="relative">
                 <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6B7280]" />
                 <Input
+                  ref={searchInputRef}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={(event) => {
@@ -178,12 +206,10 @@ export function SearchableSelect({
                     if (!firstOption) return;
                     event.preventDefault();
                     onValueChange(firstOption.value);
-                    setOpen(false);
-                    setQuery("");
+                    closeMenu({ restoreFocus: true });
                   }}
                   placeholder={searchPlaceholder}
                   className="pr-10 text-xs"
-                  autoFocus
                 />
               </div>
 
@@ -199,8 +225,7 @@ export function SearchableSelect({
                           type="button"
                           onClick={() => {
                             onValueChange(option.value);
-                            setOpen(false);
-                            setQuery("");
+                            closeMenu({ restoreFocus: true });
                           }}
                           className={cn(
                             "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-right text-xs transition-colors",

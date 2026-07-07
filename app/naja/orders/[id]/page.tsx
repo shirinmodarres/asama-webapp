@@ -24,6 +24,7 @@ import {
 } from "@/lib/expert/utils";
 import type { Invoice } from "@/lib/models/invoice.model";
 import type { Order } from "@/lib/models/order.model";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listInvoices } from "@/lib/services/invoice.service";
 import { getOrder } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -41,6 +42,7 @@ interface OrderDetailRow {
 export default function NajaOrderDetailsPage() {
   const params = useParams<{ id: string }>();
   const objectId = decodeURIComponent(params.id);
+  const currentUserId = getStoredCurrentUser()?.objectId ?? "";
   const [order, setOrder] = useState<Order | null>(null);
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,7 +155,7 @@ export default function NajaOrderDetailsPage() {
         description="مشاهده اطلاعات مشتری/مرکز ناجا از سپیدار، وضعیت انبار و فاکتور سفارش"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {canEditNajaOrder(order) ? (
+            {canEditNajaOrder(order, currentUserId) ? (
               <Link
                 href={`/naja/orders/${order.objectId}/edit`}
                 className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white"
@@ -318,7 +320,8 @@ function getQuotationStatusLabel(order: Order): string {
   return "ثبت نشده";
 }
 
-function canEditNajaOrder(order: Order): boolean {
+function canEditNajaOrder(order: Order, currentUserId?: string): boolean {
+  if (!currentUserId || order.expertUserId !== currentUserId) return false;
   return ["pending_approval", "pending", "review_resolved"].includes(
     order.orderStatus,
   );
