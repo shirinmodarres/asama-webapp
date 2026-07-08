@@ -117,6 +117,7 @@ export default function NajaOrderEditPage() {
             sepidarProductsOnly
             initialProducts={editData.products}
             initialCustomers={editData.customers}
+            lockCustomer={Boolean(editData.order.customerObjectId)}
             onSubmit={handleSubmit}
           />
         </>

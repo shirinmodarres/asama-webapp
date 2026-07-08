@@ -184,14 +184,16 @@ export function OrderForm({
       if (!isMounted) return;
 
       if (providedProducts.length > 0) {
-        setProducts(mergeProducts(providedProducts, initialOrder));
+        const mergedProducts = mergeProducts(providedProducts, initialOrder);
+        setProducts(mergedProducts);
         if (initialOrder) {
-          setItems(mapOrderItems(initialOrder.items, providedProducts));
+          setItems(mapOrderItems(initialOrder.items, mergedProducts));
         }
       } else if (productsResult.status === "fulfilled") {
-        setProducts(productsResult.value);
+        const mergedProducts = mergeProducts(productsResult.value, initialOrder);
+        setProducts(mergedProducts);
         if (initialOrder && !sepidarProductsOnly) {
-          setItems(mapOrderItems(initialOrder.items, productsResult.value));
+          setItems(mapOrderItems(initialOrder.items, mergedProducts));
         }
       } else {
         setProducts([]);
@@ -203,7 +205,7 @@ export function OrderForm({
       }
 
       if (customersResult.status === "fulfilled") {
-        setCustomers(customersResult.value);
+        setCustomers(mergeCustomers(customersResult.value, initialOrder));
       } else {
         setCustomers([]);
         setCustomersError(
@@ -1307,7 +1309,8 @@ function hasAssignmentInventory(customer: Customer | null | undefined): boolean 
     customer?.saleType?.sepidarSaleTypeId &&
       (customer.allowedStockObjectIds.length > 0 ||
         customer.allowedSepidarStockIds.length > 0 ||
-        customer.allowedStocks.length > 0),
+        customer.allowedStocks.length > 0 ||
+        customer.allowedStockTitles.length > 0),
   );
 }
 
@@ -1456,12 +1459,24 @@ function createCustomerFromOrder(order: Order): Customer | null {
     sepidarCustomerId:
       order.sepidarCustomerId === null ? null : String(order.sepidarCustomerId),
     sepidarCustomerCode: order.sepidarCustomerCode,
-    saleType: order.saleType,
+    saleType:
+      order.saleType ??
+      (order.saleTypeTitle || order.sepidarSaleTypeId
+        ? {
+            objectId: order.saleTypeObjectId,
+            sepidarSaleTypeId: order.sepidarSaleTypeId,
+            title: order.saleTypeTitle,
+          }
+        : null),
     allowedStockObjectIds: order.stockObjectId ? [order.stockObjectId] : [],
     allowedSepidarStockIds:
       order.sepidarStockId === null ? [] : [order.sepidarStockId],
     allowedStocks: [],
-    allowedStockTitles: order.stockTitle ? [order.stockTitle] : [],
+    allowedStockTitles: order.selectedStockTitles.length
+      ? order.selectedStockTitles
+      : order.stockTitle
+        ? [order.stockTitle]
+        : [],
     isSyncedFromSepidar: true,
     fullName: order.customerName ?? "",
     phone: order.customerPhone ?? order.customerMobile ?? "",

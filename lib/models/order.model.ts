@@ -46,6 +46,7 @@ export interface Order {
   stockObjectId: string | null;
   sepidarStockId: number | null;
   stockTitle: string | null;
+  selectedStockTitles: string[];
   recipientFirstName: string | null;
   recipientLastName: string | null;
   recipientNationalId: string | null;

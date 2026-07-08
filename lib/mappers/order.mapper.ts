@@ -120,6 +120,9 @@ export function mapOrderDto(dto: unknown): Order {
     stockTitle: toNullableString(
       record.stockTitle ?? toRecord(record.stock).title,
     ),
+    selectedStockTitles: toArray(record.selectedStockTitles)
+      .map(toStringValue)
+      .filter(Boolean),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),

@@ -118,7 +118,6 @@ export default function SupportOrderEditPage() {
             sepidarProductsOnly
             initialProducts={editData.products}
             initialCustomers={editData.customers}
-            lockCustomer
             onSubmit={handleSubmit}
           />
         </>
