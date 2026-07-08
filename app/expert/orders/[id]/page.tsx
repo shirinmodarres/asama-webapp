@@ -146,7 +146,7 @@ export default function ExpertOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code)}`}
             description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
             actions={
-              isEditableOrderStatus(order.orderStatus) ? (
+              order.canEdit ? (
                 <Link
                   href={`/expert/orders/${order.objectId}/edit`}
                   className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
@@ -286,8 +286,4 @@ function formatReviewRemaining(remainingMs: number): string {
   const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
 
   return `مهلت باقی‌مانده: ${formatNumber(hours)} ساعت و ${formatNumber(minutes)} دقیقه`;
-}
-
-function isEditableOrderStatus(status: string): boolean {
-  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }

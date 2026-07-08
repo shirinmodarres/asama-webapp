@@ -14,6 +14,7 @@ import {
 } from "@/lib/mappers/customer.mapper";
 import {
   toArray,
+  toBooleanValue,
   toNullableString,
   toNumberValue,
   toRecord,
@@ -265,6 +266,8 @@ export function mapOrderDto(dto: unknown): Order {
     ),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
     sepidarLastError: toNullableString(record.sepidarLastError),
+    canEdit: toBooleanValue(record.canEdit),
+    editBlockedReason: toNullableString(record.editBlockedReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
     najaCenter: mapNajaCenterSummaryDto(

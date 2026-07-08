@@ -55,8 +55,7 @@ export default function ExpertPage() {
     const invoicedOrders = orders.filter(
       (order) => order.orderStatus === "invoiced",
     );
-    const latestEditableOrder =
-      orders.find((order) => isEditableOrderStatus(order.orderStatus)) ?? null;
+    const latestEditableOrder = orders.find((order) => order.canEdit) ?? null;
 
     return {
       cards: [
@@ -178,8 +177,4 @@ export default function ExpertPage() {
       )}
     </DashboardLayout>
   );
-}
-
-function isEditableOrderStatus(status: string): boolean {
-  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }

@@ -128,8 +128,5 @@ export default function SupportOrderEditPage() {
 }
 
 function canSupportEdit(editData: OrderEditData): boolean {
-  if (!editData.canEdit) return false;
-  return !["dispatchIssued", "delivered"].includes(
-    editData.order.warehouseStatus,
-  );
+  return editData.canEdit;
 }

@@ -967,21 +967,12 @@ export function OrderForm({
                   label="تاریخ سفارش"
                   value={najaPurchaseDate}
                   onChange={setNajaPurchaseDate}
+                  placeholder="انتخاب تاریخ سفارش"
                 />
               </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-3 text-xs leading-6 text-[#64748B]">
-              <p>
-                موبایل/تلفن مشتری سپیدار:{" "}
-                {initialOrder?.customerMobile || initialOrder?.customerPhone
-                  ? formatFaDigits(
-                      initialOrder.customerMobile ||
-                        initialOrder.customerPhone ||
-                        "",
-                    )
-                  : "-"}
-              </p>
               <p>آدرس مشتری سپیدار: {initialOrder?.customerAddress || "-"}</p>
             </div>
           </div>

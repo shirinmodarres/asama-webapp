@@ -105,6 +105,8 @@ export interface Order {
   quotationStatus: QuotationStatus;
   sepidarIntegrationStatus: string | null;
   sepidarLastError: string | null;
+  canEdit: boolean;
+  editBlockedReason: string | null;
   createdAt: string;
   updatedAt: string;
   najaCenter: NajaCenter | null;

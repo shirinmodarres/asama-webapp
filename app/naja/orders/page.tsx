@@ -19,12 +19,10 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
-import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listOrders } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function NajaOrdersPage() {
-  const currentUserId = getStoredCurrentUser()?.objectId ?? "";
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -177,7 +175,7 @@ export default function NajaOrdersPage() {
           >
             مشاهده جزئیات
           </Link>
-          {canEditNajaOrder(row, currentUserId) ? (
+          {row.canEdit ? (
             <Link
               href={`/naja/orders/${row.objectId}/edit`}
               className="rounded-xl border border-[#1F3A5F] px-3 py-1.5 text-xs font-semibold text-[#1F3A5F]"
@@ -280,13 +278,6 @@ export default function NajaOrdersPage() {
         />
       )}
     </DashboardLayout>
-  );
-}
-
-function canEditNajaOrder(order: Order, currentUserId?: string): boolean {
-  if (!currentUserId || order.expertUserId !== currentUserId) return false;
-  return ["pending_approval", "pending", "review_resolved"].includes(
-    order.orderStatus,
   );
 }
 

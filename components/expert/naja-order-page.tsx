@@ -522,6 +522,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               label="تاریخ سفارش"
               value={najaPurchaseDate}
               onChange={setNajaPurchaseDate}
+              placeholder="انتخاب تاریخ سفارش"
             />
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">

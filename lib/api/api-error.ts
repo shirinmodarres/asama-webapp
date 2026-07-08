@@ -61,6 +61,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     "چند انبار مجاز موجودی کافی دارند؛ لطفاً انبار خروج را انتخاب کنید.",
   ORDER_STOCK_NOT_AVAILABLE:
     "موجودی فروش در انبارهای مجاز این کارشناس کافی نیست.",
+  ORDER_NOT_EDITABLE: "این سفارش قابل ویرایش نیست.",
   OUTBOUND_STOCK_MISMATCH:
     "این کالا متعلق به انبار خروج این سفارش نیست.",
   WAREHOUSE_UNIT_ALREADY_DISPATCHED:

@@ -116,7 +116,7 @@ export default function SupportOrdersPage() {
       key: "actions",
       header: "عملیات",
       render: (row) =>
-        canSupportEditOrder(row) ? (
+        row.canEdit ? (
           <Link
             href={`/support/orders/${row.objectId}/edit`}
             className="rounded-xl border border-[#F59E0B] bg-[#FFFBEB] px-3 py-1.5 text-xs text-[#92400E]"
@@ -207,8 +207,4 @@ export default function SupportOrdersPage() {
       )}
     </DashboardLayout>
   );
-}
-
-function canSupportEditOrder(order: Order): boolean {
-  return !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
 }

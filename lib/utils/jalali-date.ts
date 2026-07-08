@@ -24,9 +24,64 @@ export function jalaliDisplayToIso(value: string): string | null {
   const jy = Number(match[1]);
   const jm = Number(match[2]);
   const jd = Number(match[3]);
-  if (jm < 1 || jm > 12 || jd < 1 || jd > 31) return null;
+  if (!isValidJalaliDate(jy, jm, jd)) return null;
   const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
   return `${gy}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;
+}
+
+export function jalaliToIso(jy: number, jm: number, jd: number): string {
+  const [gy, gm, gd] = jalaliToGregorian(jy, jm, jd);
+  return `${gy}-${String(gm).padStart(2, "0")}-${String(gd).padStart(2, "0")}`;
+}
+
+export function jalaliPartsFromIso(value?: string | null): [number, number, number] | null {
+  if (!value) return null;
+  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return gregorianToJalali(
+    date.getUTCFullYear(),
+    date.getUTCMonth() + 1,
+    date.getUTCDate(),
+  );
+}
+
+export function todayJalaliParts(): [number, number, number] {
+  const today = new Date();
+  return gregorianToJalali(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    today.getDate(),
+  );
+}
+
+export function getJalaliMonthLength(jy: number, jm: number): number {
+  if (jm >= 1 && jm <= 6) return 31;
+  if (jm >= 7 && jm <= 11) return 30;
+  return isJalaliLeapYear(jy) ? 30 : 29;
+}
+
+export function isValidJalaliDate(jy: number, jm: number, jd: number): boolean {
+  if (!Number.isInteger(jy) || !Number.isInteger(jm) || !Number.isInteger(jd)) return false;
+  if (jm < 1 || jm > 12) return false;
+  return jd >= 1 && jd <= getJalaliMonthLength(jy, jm);
+}
+
+function isJalaliLeapYear(jy: number): boolean {
+  const breaks = [
+    -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097,
+    2192, 2262, 2324, 2394, 2456, 3178,
+  ];
+  let jp = breaks[0];
+  let jump = 0;
+  for (let i = 1; i < breaks.length; i += 1) {
+    const jm = breaks[i];
+    jump = jm - jp;
+    if (jy < jm) break;
+    jp = jm;
+  }
+  let n = jy - jp;
+  if (jump - n < 6) n = n - jump + Math.floor((jump + 4) / 33) * 33;
+  return ((((n + 1) % 33) - 1) % 4) === 0;
 }
 
 function gregorianToJalali(gy: number, gm: number, gd: number): [number, number, number] {

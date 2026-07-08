@@ -122,7 +122,6 @@ export default function EditExpertOrderPage() {
             sepidarProductsOnly
             initialProducts={editData.products}
             initialCustomers={editData.customers}
-            lockCustomer
             onSubmit={handleSubmit}
           />
         </>
@@ -132,10 +131,5 @@ export default function EditExpertOrderPage() {
 }
 
 function canExpertEdit(editData: OrderEditData): boolean {
-  return (
-    editData.canEdit &&
-    ["pending_approval", "pending", "review_resolved"].includes(
-      editData.order.orderStatus,
-    )
-  );
+  return editData.canEdit;
 }

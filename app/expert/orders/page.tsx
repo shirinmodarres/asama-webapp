@@ -154,7 +154,7 @@ export default function ExpertOrdersPage() {
             >
               مشاهده
             </Link>
-            {isEditableOrderStatus(row.orderStatus) ? (
+            {row.canEdit ? (
               <Link
                 href={`/expert/orders/${row.objectId}/edit`}
                 className="btn-primary inline-flex h-9 min-w-16 shrink-0 items-center justify-center rounded-xl px-3 text-xs font-medium text-white visited:text-white hover:text-white focus:text-white"
@@ -271,10 +271,6 @@ export default function ExpertOrdersPage() {
       )}
     </DashboardLayout>
   );
-}
-
-function isEditableOrderStatus(status: string): boolean {
-  return ["pending_approval", "pending", "review_resolved"].includes(status);
 }
 
 function isWithinDateRange(
