@@ -85,7 +85,7 @@ export default function NajaOrderDetailsPage() {
     return order.items.map((item) => ({
       id: item.objectId || item.productId,
       name: item.productName || "کالای نامشخص",
-      brand: item.brand || "-",
+      brand: item.brandName || item.brand || "-",
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       productIdentifier: item.productIdentifier,

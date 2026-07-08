@@ -174,7 +174,11 @@ export default function ManagerOrderReviewPage() {
         </span>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brand || "-" },
+    {
+      key: "brand",
+      header: "برند",
+      render: (row) => row.brandName || row.brand || "-",
+    },
     {
       key: "unitPrice",
       header: "قیمت واحد",

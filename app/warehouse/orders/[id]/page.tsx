@@ -52,7 +52,11 @@ export default function WarehouseOrderDetailsPage() {
             ? formatFaDigits(row.productName)
             : formatFaDigits(row.productSku || "-"),
       },
-      { key: "brand", header: "برند", render: (row) => row.brand || "-" },
+      {
+        key: "brand",
+        header: "برند",
+        render: (row) => row.brandName || row.brand || "-",
+      },
       { key: "quantity", header: "تعداد", render: (row) => formatNumber(row.quantity) },
       { key: "tracking", header: "کد رهگیری", render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-" },
     ],

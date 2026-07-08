@@ -13,6 +13,7 @@ export interface OrderItem {
   productSku: string;
   productName: string;
   brand: string;
+  brandName: string | null;
   quantity: number;
   unitPrice: number;
   productIdentifier: string | null;

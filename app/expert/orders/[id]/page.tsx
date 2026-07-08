@@ -59,7 +59,8 @@ export default function ExpertOrderDetailsPage() {
       order?.items.map((item) => ({
         id: item.objectId || item.productId,
         name: item.productName || item.productSku || "کالای نامشخص",
-        brand: item.brand || "-",
+        brandName: item.brandName,
+        brand: item.brandName || item.brand || "-",
         productSku: item.productSku || "-",
         unitPrice: item.unitPrice,
         quantity: item.quantity,
@@ -100,7 +101,7 @@ export default function ExpertOrderDetailsPage() {
         <span className="font-medium text-[#1F3A5F]">{row.name}</span>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brand },
+    { key: "brand", header: "برند", render: (row) => row.brandName || row.brand || "-" },
     {
       key: "sku",
       header: "شناسه کالا",

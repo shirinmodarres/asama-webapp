@@ -204,7 +204,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         logOrderDropdownProductSource(product);
         return {
           value: product.objectId,
-          label: `${product.sepidarCode || product.sku} - ${product.name} - ${formatCurrency(product.unitPrice)}`,
+          label: productIdentityLabel(product),
         };
       }),
     [products],
@@ -385,7 +385,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>کالا</span>
-              <div className="relative">
+              <div className="relative overflow-hidden rounded-[14px]">
                 <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={productId}
@@ -418,16 +418,27 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   invalid={Boolean(fieldErrors.productId)}
                 />
                 <FieldError message={fieldErrors.productId} />
-                {selectedProduct ? (
-                  <p className="mt-2 text-xs leading-6 text-[#64748B]">
-                    موجودی قابل فروش:{" "}
-                    {formatOrderAvailableQuantity(
-                      selectedProduct,
-                      formatFaDigits,
-                    )}{" "}
-                    {selectedProduct.unit}
-                  </p>
-                ) : null}
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <ReadonlyValueInput
+                    label="قیمت واحد"
+                    value={
+                      selectedProduct
+                        ? formatCurrency(selectedProduct.unitPrice)
+                        : "-"
+                    }
+                  />
+                  <ReadonlyValueInput
+                    label="موجودی قابل فروش"
+                    value={
+                      selectedProduct
+                        ? `${formatOrderAvailableQuantity(
+                            selectedProduct,
+                            formatFaDigits,
+                          )} ${selectedProduct.unit || ""}`.trim()
+                        : "-"
+                    }
+                  />
+                </div>
               </div>
             </label>
 
@@ -561,12 +572,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
           {selectedProduct ? (
             <div className="mt-5 rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] px-4 py-3 text-sm leading-7 text-[#6B7280]">
-              کد کالا: {formatFaDigits(selectedProduct.sepidarCode || selectedProduct.sku)}
+              کد کالا:{" "}
+              {formatFaDigits(selectedProduct.sepidarCode || selectedProduct.sku)}
               {selectedProduct.barcode
                 ? ` • بارکد: ${formatFaDigits(selectedProduct.barcode)}`
                 : ""}
-              {" • "}
-              قیمت واحد: {formatCurrency(selectedProduct.unitPrice)}
             </div>
           ) : null}
 
@@ -632,4 +642,33 @@ function getAllowedStockTitles(customer: Customer): string[] {
     );
   }
   return customer.allowedStockTitles;
+}
+
+function productIdentityLabel(product: Product): string {
+  return [
+    product.sepidarCode || product.sku || product.objectId,
+    product.name,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function ReadonlyValueInput({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <label className="grid gap-1 text-[11px] font-medium text-[#64748B]">
+      <span>{label}</span>
+      <Input
+        value={value}
+        readOnly
+        disabled
+        className="h-10 bg-[#F7F9FB] text-sm font-semibold text-[#102034] disabled:opacity-100"
+      />
+    </label>
+  );
 }

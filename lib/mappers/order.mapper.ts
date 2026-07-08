@@ -305,6 +305,9 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     productSku: toStringValue(record.productSku ?? productRecord.sku),
     productName: toStringValue(record.productName ?? productRecord.name),
     brand: toStringValue(record.brand ?? productRecord.brand),
+    brandName: toNullableString(
+      record.brandName ?? productRecord.brandName ?? record.brand ?? productRecord.brand,
+    ),
     quantity: toNumberValue(record.quantity),
     unitPrice: toNumberValue(record.unitPrice),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),

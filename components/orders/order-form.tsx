@@ -1047,45 +1047,22 @@ export function OrderForm({
               ? product.sepidarCode || product.sku || product.objectId
               : "";
             const helperText = product
-              ? sepidarProductsOnly
-                ? [
-                    productCode
-                      ? `کد کالا: ${formatFaDigits(productCode)}`
-                      : "",
-                    product.barcode
-                      ? `بارکد: ${formatFaDigits(product.barcode)}`
-                      : "",
-                    `${
-                      mode === "edit"
-                        ? "موجودی قابل ویرایش"
-                        : "موجودی قابل فروش"
-                    }: ${formatNumber(
-                      getEditableAvailableQuantity({
-                        product,
-                        mode,
-                        oldQuantityByProductId,
-                      }),
-                    )} ${product.unit}`,
-                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")
-                : [
-                    productCode
-                      ? `کد کالا: ${formatFaDigits(productCode)}`
-                      : "",
-                    `موجودی قابل فروش: ${formatNumber(
-                      getEditableAvailableQuantity({
-                        product,
-                        mode,
-                        oldQuantityByProductId,
-                      }),
-                    )} ${product.unit}`,
-                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")
+              ? [
+                  productCode ? `کد کالا: ${formatFaDigits(productCode)}` : "",
+                  product.barcode
+                    ? `بارکد: ${formatFaDigits(product.barcode)}`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • ")
               : `آیتم ${formatNumber(index + 1)}`;
+            const editableAvailableQuantity = product
+              ? getEditableAvailableQuantity({
+                  product,
+                  mode,
+                  oldQuantityByProductId,
+                })
+              : 0;
 
             return (
               <div
@@ -1093,7 +1070,7 @@ export function OrderForm({
                 className="rounded-2xl border border-[#E7EDF3] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
               >
                 <div className="grid gap-2">
-                  <div className="relative min-w-0">
+                  <div className="relative min-w-0 overflow-hidden rounded-[14px]">
                     <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                     <SearchableSelect
                       value={item.productId || undefined}
@@ -1117,19 +1094,9 @@ export function OrderForm({
                           if (sepidarProductsOnly) {
                             logOrderDropdownProductSource(option);
                           }
-                          const productCode = option.sepidarCode || option.sku;
                           return {
                             value: option.objectId,
-                            label: sepidarProductsOnly
-                              ? [
-                                  productCode,
-                                  option.name,
-                                  formatCurrency(option.unitPrice),
-                                ].filter(Boolean).join(" - ")
-                              : [
-                                  option.name,
-                                  formatCurrency(option.unitPrice),
-                                ].filter(Boolean).join(" - "),
+                            label: productIdentityLabel(option),
                           };
                         })}
                       placeholder={
@@ -1160,13 +1127,33 @@ export function OrderForm({
                   <p className="text-[11px] leading-5 text-[#64748B]">
                     {helperText}
                   </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <ReadonlyValueInput
+                      label="قیمت واحد"
+                      value={product ? formatCurrency(product.unitPrice) : "-"}
+                    />
+                    <ReadonlyValueInput
+                      label={
+                        mode === "edit"
+                          ? "موجودی قابل ویرایش"
+                          : "موجودی قابل فروش"
+                      }
+                      value={
+                        product
+                          ? `${formatNumber(editableAvailableQuantity)} ${
+                              product.unit || ""
+                            }`.trim()
+                          : "-"
+                      }
+                    />
+                  </div>
                   <FieldError
                     message={rowErrors[item.rowId]?.productId}
                     className="mt-0 leading-5"
                   />
                 </div>
 
-                <div className="mt-3 grid gap-2 sm:grid-cols-[96px_minmax(150px,1fr)_minmax(150px,1fr)_40px] sm:items-start">
+                <div className="mt-3 grid gap-2 sm:grid-cols-[96px_minmax(150px,1fr)_40px] sm:items-start">
                   <div className="w-24">
                     <Input
                       inputMode="numeric"
@@ -1202,11 +1189,6 @@ export function OrderForm({
                       className="mt-1 leading-5"
                     />
                   </div>
-
-                  <ReadonlyAmountPill
-                    label="قیمت واحد"
-                    value={product ? formatCurrency(product.unitPrice) : "-"}
-                  />
 
                   <ReadonlyAmountPill
                     label="مبلغ ردیف"
@@ -1402,6 +1384,7 @@ function createProductFromOrderItem(item: OrderItem): Product {
     sepidarCode: item.productSku,
     name: item.productName,
     brand: item.brand,
+    brandName: item.brandName,
     model: null,
     category: "",
     unit: "عدد",
@@ -1421,6 +1404,35 @@ function createProductFromOrderItem(item: OrderItem): Product {
     createdAt: "",
     updatedAt: "",
   };
+}
+
+function productIdentityLabel(product: Product): string {
+  return [
+    product.sepidarCode || product.sku || product.objectId,
+    product.name,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function ReadonlyValueInput({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <label className="grid gap-1 text-[11px] font-medium text-[#64748B]">
+      <span>{label}</span>
+      <Input
+        value={value}
+        readOnly
+        disabled
+        className="h-10 bg-[#F7F9FB] text-sm font-semibold text-[#102034] disabled:opacity-100"
+      />
+    </label>
+  );
 }
 
 function ReadonlyAmountPill({

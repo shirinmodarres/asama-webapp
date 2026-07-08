@@ -168,7 +168,7 @@ export function SearchableSelect({
           setQuery("");
         }}
         className={cn(
-          "flex h-11 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
+          "relative flex h-11 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
           invalid &&
             "border-red-400 focus:border-red-500 focus:ring-red-200",
           !selectedOption && "text-[#94A3B8]",
@@ -194,8 +194,8 @@ export function SearchableSelect({
               style={menuStyle}
               className="overflow-hidden rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
             >
-              <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6B7280]" />
+              <div className="relative overflow-hidden rounded-[14px]">
+                <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6B7280]" />
                 <Input
                   ref={searchInputRef}
                   value={query}
@@ -209,7 +209,7 @@ export function SearchableSelect({
                     closeMenu({ restoreFocus: true });
                   }}
                   placeholder={searchPlaceholder}
-                  className="pr-10 text-xs"
+                  className="pl-3.5 pr-10 text-xs"
                 />
               </div>
 

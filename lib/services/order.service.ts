@@ -199,6 +199,7 @@ function mergeOrderProducts(products: ReturnType<typeof mapProductOrderOptionLis
         sepidarCode: item.productSku,
         name: item.productName,
         brand: item.brand,
+        brandName: item.brandName,
         unit: "عدد",
         unitPrice: item.unitPrice,
       }),
