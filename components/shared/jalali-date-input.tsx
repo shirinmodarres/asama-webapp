@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,10 @@ export function JalaliDateInput({
   disabled = false,
 }: JalaliDateInputProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({
+    top: 0,
+    right: 0,
+  });
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const [year, month] = jalaliPartsFromIso(value) ?? todayJalaliParts();
     return { year, month };
@@ -84,10 +89,93 @@ export function JalaliDateInput({
     setIsOpen(false);
   };
 
+  const openCalendar = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    setPopoverPosition({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+    setIsOpen(true);
+  };
+
   const handleClear = () => {
     onChange("");
     setIsOpen(false);
   };
+
+  const calendarPopover =
+    isOpen && !disabled && typeof document !== "undefined"
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              aria-label="بستن تقویم"
+              className="fixed inset-0 z-[9998] cursor-default bg-transparent"
+              onClick={() => setIsOpen(false)}
+            />
+            <div
+              className="fixed z-[9999] w-72 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-lg"
+              style={{
+                top: popoverPosition.top,
+                right: popoverPosition.right,
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => moveMonth(-1)}
+                  aria-label="ماه قبل"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+                <div className="text-sm font-semibold text-[#1F3A5F]">
+                  {JALALI_MONTHS[visibleMonth.month - 1]}{" "}
+                  {formatFaDigits(String(visibleMonth.year))}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => moveMonth(1)}
+                  aria-label="ماه بعد"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-xs text-[#64748B]">
+                {WEEKDAYS.map((weekday) => (
+                  <span key={weekday} className="py-1 font-semibold">
+                    {weekday}
+                  </span>
+                ))}
+                {calendarDays.map((day, index) =>
+                  day ? (
+                    <button
+                      key={`${visibleMonth.year}-${visibleMonth.month}-${day}`}
+                      type="button"
+                      onClick={() => handleSelectDay(day)}
+                      className={`flex h-9 items-center justify-center rounded-lg text-sm transition ${
+                        selectedParts?.[0] === visibleMonth.year &&
+                        selectedParts?.[1] === visibleMonth.month &&
+                        selectedParts?.[2] === day
+                          ? "bg-[#1F3A5F] text-white"
+                          : "text-[#334155] hover:bg-[#F1F5F9]"
+                      }`}
+                    >
+                      {formatFaDigits(String(day))}
+                    </button>
+                  ) : (
+                    <span key={`empty-${index}`} />
+                  ),
+                )}
+              </div>
+            </div>
+          </>,
+          document.body,
+        )
+      : null;
 
   return (
     <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -98,8 +186,8 @@ export function JalaliDateInput({
           value={displayValue}
           readOnly
           disabled={disabled}
-          onFocus={() => setIsOpen(true)}
-          onClick={() => setIsOpen(true)}
+          onFocus={(event) => openCalendar(event.currentTarget)}
+          onClick={(event) => openCalendar(event.currentTarget)}
           placeholder={placeholder}
           className="cursor-pointer pr-10"
           aria-invalid={Boolean(error)}
@@ -115,61 +203,7 @@ export function JalaliDateInput({
             <X className="size-4" />
           </button>
         ) : null}
-        {isOpen && !disabled ? (
-          <div className="absolute right-0 top-full z-30 mt-2 w-72 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-lg">
-            <div className="mb-3 flex items-center justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => moveMonth(-1)}
-                aria-label="ماه قبل"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-              <div className="text-sm font-semibold text-[#1F3A5F]">
-                {JALALI_MONTHS[visibleMonth.month - 1]}{" "}
-                {formatFaDigits(String(visibleMonth.year))}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => moveMonth(1)}
-                aria-label="ماه بعد"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-xs text-[#64748B]">
-              {WEEKDAYS.map((weekday) => (
-                <span key={weekday} className="py-1 font-semibold">
-                  {weekday}
-                </span>
-              ))}
-              {calendarDays.map((day, index) =>
-                day ? (
-                  <button
-                    key={`${visibleMonth.year}-${visibleMonth.month}-${day}`}
-                    type="button"
-                    onClick={() => handleSelectDay(day)}
-                    className={`flex h-9 items-center justify-center rounded-lg text-sm transition ${
-                      selectedParts?.[0] === visibleMonth.year &&
-                      selectedParts?.[1] === visibleMonth.month &&
-                      selectedParts?.[2] === day
-                        ? "bg-[#1F3A5F] text-white"
-                        : "text-[#334155] hover:bg-[#F1F5F9]"
-                    }`}
-                  >
-                    {formatFaDigits(String(day))}
-                  </button>
-                ) : (
-                  <span key={`empty-${index}`} />
-                ),
-              )}
-            </div>
-          </div>
-        ) : null}
+        {calendarPopover}
       </div>
       <FieldError message={error} />
     </label>

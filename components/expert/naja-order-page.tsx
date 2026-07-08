@@ -25,7 +25,7 @@ import {
 import { createNajaOrder } from "@/lib/services/naja.service";
 import { listOrderProductsBySaleType } from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
-import { formatFaDigits, normalizeDigits, normalizePhone, toNumber } from "@/lib/utils/number-format";
+import { formatFaDigits, normalizeDigits, toNumber } from "@/lib/utils/number-format";
 import {
   formatOrderAvailableQuantity,
   logOrderDropdownProductSource,
@@ -52,7 +52,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const [recipientFirstName, setRecipientFirstName] = useState("");
   const [recipientLastName, setRecipientLastName] = useState("");
   const [recipientNationalId, setRecipientNationalId] = useState("");
-  const [recipientMobile, setRecipientMobile] = useState("");
   const [najaOrderNumber, setNajaOrderNumber] = useState("");
   const [najaPurchaseDate, setNajaPurchaseDate] = useState("");
   const [createdByName, setCreatedByName] = useState(
@@ -203,10 +202,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     () =>
       products.map((product) => {
         logOrderDropdownProductSource(product);
-        const brandLabel = product.brandName || product.brand || "-";
         return {
           value: product.objectId,
-          label: `${product.sepidarCode || product.sku} - ${product.name} - ${brandLabel} - قیمت ${formatCurrency(product.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(product, formatFaDigits)} ${product.unit}`,
+          label: `${product.sepidarCode || product.sku} - ${product.name} - ${formatCurrency(product.unitPrice)}`,
         };
       }),
     [products],
@@ -218,11 +216,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     const nextErrors: Record<string, string> = {};
 
     if (!customerObjectId) {
-      nextErrors.customerObjectId = "لطفاً مشتری/مرکز ناجا را انتخاب کنید.";
+      nextErrors.customerObjectId = "لطفاً مرکز ناجا را انتخاب کنید.";
     }
     if (customerObjectId && !hasAssignmentInventory(selectedCustomer)) {
       nextErrors.customerObjectId =
-        "برای این مشتری تنظیمات فروش تعریف نشده است.";
+        "برای این مرکز تنظیمات فروش تعریف نشده است.";
     }
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
     if (!productId) nextErrors.items = "حداقل یک کالا به سفارش اضافه کنید.";
@@ -234,9 +232,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     }
     if (!recipientNationalId.trim()) {
       nextErrors.recipientNationalId = "کد ملی الزامی است.";
-    }
-    if (!recipientMobile.trim()) {
-      nextErrors.recipientMobile = "شماره موبایل الزامی است.";
     }
     if (!najaOrderNumber.trim()) {
       nextErrors.najaOrderNumber = "شماره سفارش الزامی است.";
@@ -274,7 +269,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         recipientFirstName: recipientFirstName.trim(),
         recipientLastName: recipientLastName.trim(),
         recipientNationalId: normalizeDigits(recipientNationalId.trim()),
-        recipientMobile: normalizePhone(recipientMobile.trim()),
         najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
         najaPurchaseDate: najaPurchaseDate || undefined,
         items: [
@@ -302,13 +296,22 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           {isLoading ? (
             <LoadingState
               title="در حال دریافت اطلاعات سفارش ناجا"
-              description="فهرست مشتری‌های اختصاص‌یافته از سرور دریافت می‌شود."
+              description="فهرست مرکزهای ناجای اختصاص‌یافته از سرور دریافت می‌شود."
             />
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <h3 className="text-base font-semibold text-[#102034]">
+                مرکز ناجا
+              </h3>
+              <p className="mt-1 text-sm leading-7 text-[#6B7280]">
+                مرکز یا سازمان ناجا را از مشتری‌های سپیدار انتخاب کنید.
+              </p>
+            </div>
+
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
-              <span>مشتری/مرکز ناجا از سپیدار</span>
+              <span>مرکز ناجا</span>
               <div className="relative">
                 <Landmark className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
@@ -324,37 +327,43 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                     }));
                   }}
                   options={customerOptions}
-                  placeholder="انتخاب مشتری/مرکز ناجا از سپیدار"
-                  searchPlaceholder="جستجو در مشتری‌های اختصاص‌یافته"
-                  emptyMessage="مشتری اختصاص‌یافته‌ای پیدا نشد"
+                  placeholder="انتخاب مرکز ناجا از سپیدار"
+                  searchPlaceholder="جستجو در مرکزهای اختصاص‌یافته"
+                  emptyMessage="مرکز اختصاص‌یافته‌ای پیدا نشد"
                   triggerClassName="pr-10"
                   invalid={Boolean(fieldErrors.customerObjectId)}
                 />
                 <FieldError message={fieldErrors.customerObjectId} />
                 {assignmentError ? (
-                  <FieldError message="برای این مشتری تنظیمات فروش تعریف نشده است." />
+                  <FieldError message="برای این مرکز تنظیمات فروش تعریف نشده است." />
                 ) : null}
               </div>
             </label>
 
             {customers.length === 0 ? (
               <div className="rounded-[18px] border border-dashed border-[#DDEAE0] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#6B7280] md:col-span-2">
-                هنوز مشتری‌ای به شما اختصاص داده نشده است.
+                هنوز مرکز ناجایی به شما اختصاص داده نشده است.
               </div>
             ) : null}
 
             {selectedCustomer ? (
               <div className="rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#334155] md:col-span-2">
-                <p className="font-semibold text-[#102034]">اطلاعات مشتری انتخاب‌شده</p>
+                <p className="font-semibold text-[#102034]">اطلاعات مرکز ناجا</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  <span>نام مرکز/مشتری: {selectedCustomer.fullName || "-"}</span>
+                  <span>نام مرکز: {selectedCustomer.fullName || "-"}</span>
                   <span>
-                    کد مشتری سپیدار:{" "}
+                    کد مرکز در سپیدار:{" "}
                     {selectedCustomer.sepidarCustomerCode
                       ? formatFaDigits(selectedCustomer.sepidarCustomerCode)
                       : "-"}
                   </span>
                   <span>نوع فروش: {selectedCustomer.saleType?.title || "-"}</span>
+                  <span className="sm:col-span-3">
+                    آدرس مرکز:{" "}
+                    {selectedCustomer.address ||
+                      selectedCustomer.defaultAddress?.fullAddress ||
+                      "-"}
+                  </span>
                 </div>
                 {getAllowedStockTitles(selectedCustomer).length ? (
                   <div className="mt-3 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-xs leading-6 text-[#2F6B3A]">
@@ -363,14 +372,14 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   </div>
                 ) : (
                   <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
-                    برای این مشتری تنظیمات فروش تعریف نشده است.
+                    برای این مرکز تنظیمات فروش تعریف نشده است.
                   </div>
                 )}
               </div>
             ) : null}
 
             <div className="rounded-[18px] border border-[#DDEAE0] bg-[#F3FAF4] p-4 text-sm leading-7 text-[#2F6B3A] md:col-span-2">
-              موجودی قابل فروش بر اساس انبارهای مجاز تخصیص این مشتری از سرور
+              موجودی قابل فروش بر اساس انبارهای مجاز تخصیص این مرکز از سرور
               دریافت می‌شود.
             </div>
 
@@ -391,13 +400,13 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   placeholder={
                     selectedCustomer
                       ? "انتخاب کالا"
-                      : "ابتدا مرکز/مشتری را انتخاب کنید."
+                      : "ابتدا مرکز ناجا را انتخاب کنید."
                   }
                   searchPlaceholder="جستجو در کالاها"
                   emptyMessage={
                     selectedCustomer?.saleType?.sepidarSaleTypeId
                       ? "کالایی با موجودی قابل فروش پیدا نشد."
-                      : "ابتدا مرکز/مشتری را انتخاب کنید."
+                      : "ابتدا مرکز ناجا را انتخاب کنید."
                   }
                   disabled={
                     !selectedCustomer ||
@@ -409,6 +418,16 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   invalid={Boolean(fieldErrors.productId)}
                 />
                 <FieldError message={fieldErrors.productId} />
+                {selectedProduct ? (
+                  <p className="mt-2 text-xs leading-6 text-[#64748B]">
+                    موجودی قابل فروش:{" "}
+                    {formatOrderAvailableQuantity(
+                      selectedProduct,
+                      formatFaDigits,
+                    )}{" "}
+                    {selectedProduct.unit}
+                  </p>
+                ) : null}
               </div>
             </label>
 
@@ -434,6 +453,15 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               />
               <FieldError message={fieldErrors.quantity} />
             </label>
+
+            <div className="mt-2 border-t border-[#E5E7EB] pt-4 md:col-span-2">
+              <h3 className="text-base font-semibold text-[#102034]">
+                مصرف‌کننده نهایی
+              </h3>
+              <p className="mt-1 text-sm leading-7 text-[#6B7280]">
+                این شخص خریدار نهایی از مرکز ناجا است و با مرکز انتخاب‌شده تفاوت دارد.
+              </p>
+            </div>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>نام</span>
@@ -480,26 +508,15 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }));
                 }}
                 aria-invalid={Boolean(fieldErrors.recipientNationalId)}
-              />
-              <FieldError message={fieldErrors.recipientNationalId} />
-            </label>
+                />
+                <FieldError message={fieldErrors.recipientNationalId} />
+              </label>
 
-            <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>شماره موبایل</span>
-              <Input
-                inputMode="tel"
-                value={recipientMobile}
-                onChange={(event) => {
-                  setRecipientMobile(event.target.value);
-                  setFieldErrors((current) => ({
-                    ...current,
-                    recipientMobile: "",
-                  }));
-                }}
-                aria-invalid={Boolean(fieldErrors.recipientMobile)}
-              />
-              <FieldError message={fieldErrors.recipientMobile} />
-            </label>
+            <div className="mt-2 border-t border-[#E5E7EB] pt-4 md:col-span-2">
+              <h3 className="text-base font-semibold text-[#102034]">
+                اطلاعات سفارش
+              </h3>
+            </div>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>شماره سفارش</span>
@@ -550,13 +567,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 : ""}
               {" • "}
               قیمت واحد: {formatCurrency(selectedProduct.unitPrice)}
-              {" • "}
-              موجودی قابل فروش:{" "}
-              {formatOrderAvailableQuantity(
-                selectedProduct,
-                formatFaDigits,
-              )}{" "}
-              {selectedProduct.unit}
             </div>
           ) : null}
 

@@ -45,11 +45,9 @@ import {
 import {
   formatFaDigits,
   normalizeDigits,
-  normalizePhone,
   toNumber,
 } from "@/lib/utils/number-format";
 import {
-  formatOrderAvailableQuantity,
   logOrderDropdownProductSource,
 } from "@/lib/utils/order-product-availability";
 import {
@@ -73,7 +71,6 @@ export interface OrderFormSubmitPayload {
   recipientFirstName?: string;
   recipientLastName?: string;
   recipientNationalId?: string;
-  recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
   notes?: string;
@@ -143,9 +140,6 @@ export function OrderForm({
   );
   const [recipientNationalId, setRecipientNationalId] = useState(
     initialOrder?.recipientNationalId ?? "",
-  );
-  const [recipientMobile, setRecipientMobile] = useState(
-    initialOrder?.recipientMobile ?? "",
   );
   const [najaOrderNumber, setNajaOrderNumber] = useState(
     initialOrder?.najaOrderNumber ?? initialOrder?.externalOrderNumber ?? "",
@@ -501,7 +495,11 @@ export function OrderForm({
     setRowErrors({});
 
     if (assignedCustomersOnly && !selectedCustomerId) {
-      setFieldErrors({ selectedCustomerId: "لطفاً مشتری را انتخاب کنید." });
+      setFieldErrors({
+        selectedCustomerId: isNajaOrder
+          ? "لطفاً مرکز ناجا را انتخاب کنید."
+          : "لطفاً مشتری را انتخاب کنید.",
+      });
       return;
     }
 
@@ -566,9 +564,6 @@ export function OrderForm({
       }
       if (!recipientNationalId.trim()) {
         nextNajaErrors.recipientNationalId = "کد ملی الزامی است.";
-      }
-      if (!recipientMobile.trim()) {
-        nextNajaErrors.recipientMobile = "شماره موبایل الزامی است.";
       }
       if (!najaOrderNumber.trim()) {
         nextNajaErrors.najaOrderNumber = "شماره سفارش الزامی است.";
@@ -657,7 +652,6 @@ export function OrderForm({
               recipientNationalId: normalizeDigits(
                 recipientNationalId.trim(),
               ),
-              recipientMobile: normalizePhone(recipientMobile.trim()),
               najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
               najaPurchaseDate: najaPurchaseDate || null,
             }
@@ -688,7 +682,7 @@ export function OrderForm({
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>مشتری</span>
+            <span>{isNajaOrder ? "مرکز ناجا" : "مشتری"}</span>
             <SearchableSelect
               value={selectedCustomerId || undefined}
               onValueChange={(value) => {
@@ -715,10 +709,12 @@ export function OrderForm({
                   .filter(Boolean)
                   .join(" - "),
               }))}
-              placeholder="انتخاب مشتری"
+              placeholder={isNajaOrder ? "انتخاب مرکز ناجا" : "انتخاب مشتری"}
               searchPlaceholder="جستجو بر اساس نام"
               emptyMessage={
-                assignedCustomersOnly
+                isNajaOrder
+                  ? "مرکز ناجا پیدا نشد."
+                  : assignedCustomersOnly
                   ? "هنوز مشتری‌ای به شما اختصاص داده نشده است."
                   : "مشتری پیدا نشد"
               }
@@ -731,7 +727,13 @@ export function OrderForm({
             />
             <FieldError message={fieldErrors.selectedCustomerId} />
             {assignmentError ? (
-              <FieldError message="برای این مشتری تنظیمات فروش تعریف نشده است." />
+              <FieldError
+                message={
+                  isNajaOrder
+                    ? "برای این مرکز تنظیمات فروش تعریف نشده است."
+                    : "برای این مشتری تنظیمات فروش تعریف نشده است."
+                }
+              />
             ) : null}
             {customersError ? (
               <FieldError message={customersError} />
@@ -739,7 +741,9 @@ export function OrderForm({
               !isLoadingCustomers &&
               customers.length === 0 ? (
               <p className="text-xs font-medium text-[#8A5A00]">
-                هنوز مشتری‌ای به شما اختصاص داده نشده است.
+                {isNajaOrder
+                  ? "هنوز مرکز ناجایی به شما اختصاص داده نشده است."
+                  : "هنوز مشتری‌ای به شما اختصاص داده نشده است."}
               </p>
             ) : null}
           </label>
@@ -775,23 +779,35 @@ export function OrderForm({
           <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#334155]">
             {assignedCustomersOnly ? (
               <p className="mb-2 font-semibold text-[#102034]">
-                مشتری انتخاب‌شده
+                {isNajaOrder ? "مرکز ناجا" : "مشتری انتخاب‌شده"}
               </p>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
-              <span>نام مشتری: {selectedCustomer.fullName || "-"}</span>
               <span>
-                کد مشتری:{" "}
+                {isNajaOrder ? "نام مرکز: " : "نام مشتری: "}
+                {selectedCustomer.fullName || "-"}
+              </span>
+              <span>
+                {isNajaOrder ? "کد مرکز در سپیدار: " : "کد مشتری: "}
                 {selectedCustomer.sepidarCustomerCode ||
                   selectedCustomer.id ||
                   "-"}
               </span>
-              <span>
-                {assignedCustomersOnly ? "شماره تماس: " : "موبایل: "}
-                {selectedCustomer.phone
-                  ? formatFaDigits(selectedCustomer.phone)
-                  : "-"}
-              </span>
+              {isNajaOrder ? (
+                <span className="sm:col-span-2">
+                  آدرس مرکز:{" "}
+                  {selectedCustomer.address ||
+                    selectedCustomer.defaultAddress?.fullAddress ||
+                    "-"}
+                </span>
+              ) : (
+                <span>
+                  {assignedCustomersOnly ? "شماره تماس: " : "موبایل: "}
+                  {selectedCustomer.phone
+                    ? formatFaDigits(selectedCustomer.phone)
+                    : "-"}
+                </span>
+              )}
               {assignedCustomersOnly ? (
                 <span>
                   نوع فروش: {selectedCustomer.saleType?.title || "-"}
@@ -806,11 +822,13 @@ export function OrderForm({
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
-                  برای این مشتری تنظیمات فروش تعریف نشده است.
+                  {isNajaOrder
+                    ? "برای این مرکز تنظیمات فروش تعریف نشده است."
+                    : "برای این مشتری تنظیمات فروش تعریف نشده است."}
                 </div>
               )
             ) : null}
-            {selectedAddress ? (
+            {selectedAddress && !isNajaOrder ? (
               <div className="mt-2 space-y-1 text-[#6B7280]">
                 {selectedAddress.title ? (
                   <p className="text-xs text-[#94A3B8]">
@@ -827,7 +845,7 @@ export function OrderForm({
                 </p>
                 <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
               </div>
-            ) : addresses.length === 0 && !isLoadingAddresses ? (
+            ) : !isNajaOrder && addresses.length === 0 && !isLoadingAddresses ? (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
                 <span>این مشتری آدرس فعالی ندارد.</span>
                 <Button asChild size="sm" variant="outline">
@@ -871,10 +889,10 @@ export function OrderForm({
           <div className="mt-5 rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
             <div>
               <h3 className="text-base font-semibold text-[#102034]">
-                اطلاعات تحویل‌گیرنده ناجا
+                مصرف‌کننده نهایی
               </h3>
               <p className="mt-1 text-sm leading-7 text-[#6B7280]">
-                این اطلاعات برای اسناد، فاکتور داخلی و پیگیری تحویل استفاده می‌شود.
+                این شخص خریدار نهایی از مرکز ناجا است و با مرکز انتخاب‌شده تفاوت دارد.
               </p>
             </div>
 
@@ -928,22 +946,11 @@ export function OrderForm({
                 <FieldError message={fieldErrors.recipientNationalId} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>شماره موبایل</span>
-                <Input
-                  inputMode="tel"
-                  value={recipientMobile}
-                  onChange={(event) => {
-                    setRecipientMobile(event.target.value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      recipientMobile: "",
-                    }));
-                  }}
-                  aria-invalid={Boolean(fieldErrors.recipientMobile)}
-                />
-                <FieldError message={fieldErrors.recipientMobile} />
-              </label>
+              <div className="mt-2 border-t border-[#E5E7EB] pt-4 md:col-span-2">
+                <h3 className="text-base font-semibold text-[#102034]">
+                  اطلاعات سفارش
+                </h3>
+              </div>
 
               <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
                 <span>شماره سفارش ناجا</span>
@@ -973,7 +980,7 @@ export function OrderForm({
             </div>
 
             <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-3 text-xs leading-6 text-[#64748B]">
-              <p>آدرس مشتری سپیدار: {initialOrder?.customerAddress || "-"}</p>
+              <p>آدرس مرکز ناجا: {initialOrder?.customerAddress || "-"}</p>
             </div>
           </div>
         ) : null}
@@ -1108,18 +1115,19 @@ export function OrderForm({
                           if (sepidarProductsOnly) {
                             logOrderDropdownProductSource(option);
                           }
-                          const brandLabel = option.brandName || option.brand || "-";
+                          const productCode = option.sepidarCode || option.sku;
                           return {
                             value: option.objectId,
                             label: sepidarProductsOnly
-                              ? `${option.sepidarCode || option.sku} - ${option.name} - ${brandLabel} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
-                              : `${option.name} - ${brandLabel} - موجودی قابل فروش ${formatNumber(
-                                  getEditableAvailableQuantity({
-                                    product: option,
-                                    mode,
-                                    oldQuantityByProductId,
-                                  }),
-                                )} ${option.unit}`,
+                              ? [
+                                  productCode,
+                                  option.name,
+                                  formatCurrency(option.unitPrice),
+                                ].filter(Boolean).join(" - ")
+                              : [
+                                  option.name,
+                                  formatCurrency(option.unitPrice),
+                                ].filter(Boolean).join(" - "),
                           };
                         })}
                       placeholder={

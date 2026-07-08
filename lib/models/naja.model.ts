@@ -8,7 +8,7 @@ export interface CreateNajaOrderPayload {
   recipientFirstName: string;
   recipientLastName: string;
   recipientNationalId: string;
-  recipientMobile: string;
+  recipientMobile?: string | null;
   najaOrderNumber: string;
   najaPurchaseDate?: string | null;
   productObjectId?: string;
