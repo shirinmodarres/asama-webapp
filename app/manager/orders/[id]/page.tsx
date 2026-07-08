@@ -313,6 +313,17 @@ export default function ManagerOrderReviewPage() {
   const retryQuotation = async () => {
     setIsRetryingQuotation(true);
     setMessage("");
+    setOrder((current) =>
+      current
+        ? {
+            ...current,
+            quotationStatus: "pending",
+            quotationSyncError: null,
+            sepidarLastError: null,
+            sepidarIntegrationStatus: null,
+          }
+        : current,
+    );
     try {
       const result = await retryOrderQuotation(order.objectId);
       setOrder((current) =>
@@ -336,6 +347,10 @@ export default function ManagerOrderReviewPage() {
     } catch (retryError) {
       setMessageType("error");
       setMessage(getErrorMessage(retryError));
+      router.refresh();
+      await getOrder(order.objectId)
+        .then((freshOrder) => setOrder(freshOrder))
+        .catch(() => undefined);
     } finally {
       setIsRetryingQuotation(false);
     }

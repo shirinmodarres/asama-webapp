@@ -268,6 +268,7 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarQuotationId,
     ),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
+    quotationSyncError: toNullableString(record.quotationSyncError),
     sepidarLastError: toNullableString(record.sepidarLastError),
     canEdit: toBooleanValue(record.canEdit),
     editBlockedReason: toNullableString(record.editBlockedReason),

@@ -105,6 +105,7 @@ export interface Order {
   sepidarQuotationNumber: number | string | null;
   quotationStatus: QuotationStatus;
   sepidarIntegrationStatus: string | null;
+  quotationSyncError: string | null;
   sepidarLastError: string | null;
   canEdit: boolean;
   editBlockedReason: string | null;
