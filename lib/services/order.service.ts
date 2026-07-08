@@ -228,7 +228,12 @@ export async function retryOrderQuotation(
   const data = await httpClient.post<unknown>(
     `/api/orders/${objectId}/retry-quotation`,
   );
-  return mapApprovalResult(objectId, data);
+  const order = mapOrderDto(data);
+  return {
+    order,
+    quotationStatus: order.quotationStatus,
+    warning: null,
+  };
 }
 
 export async function cancelOrder(
@@ -320,5 +325,6 @@ function mapApprovalResult(
 }
 
 function normalizeQuotationStatus(value: unknown): QuotationStatus {
+  if (value === "created") return "success";
   return value === "success" || value === "failed" ? value : "pending";
 }

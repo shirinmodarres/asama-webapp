@@ -84,7 +84,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   SEPIDAR_TIMEOUT: "اتصال به سپیدار بیش از حد طول کشید.",
   SEPIDAR_UNAUTHORIZED: "ورود یا توکن سپیدار معتبر نیست.",
   SEPIDAR_QUOTATION_CREATE_FAILED:
-    "ثبت پیش‌فاکتور سپیدار ناموفق بود؛ سفارش تأیید نشد.",
+    "ثبت پیش‌فاکتور سپیدار ناموفق بود.",
+  SEPIDAR_QUOTATION_RETRY_NOT_ALLOWED:
+    "تلاش مجدد فقط برای پیش‌فاکتورهای ناموفق امکان‌پذیر است.",
+  INVALID_ORDER_TYPE: "این عملیات فقط برای سفارش ناجا مجاز است.",
   SEPIDAR_QUOTATION_BAD_RESPONSE:
     "پاسخ سپیدار برای پیش‌فاکتور معتبر نبود.",
   SEPIDAR_BAD_RESPONSE: "سپیدار درخواست را نپذیرفت.",
@@ -129,6 +132,12 @@ export class ApiError extends Error {
 
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    if (
+      error.code === "SEPIDAR_QUOTATION_CREATE_FAILED" &&
+      error.message.trim()
+    ) {
+      return error.message;
+    }
     return ERROR_MESSAGES[error.code] ?? error.message ?? FALLBACK_ERROR_MESSAGE;
   }
 

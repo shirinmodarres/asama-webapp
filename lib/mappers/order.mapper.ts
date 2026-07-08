@@ -326,6 +326,7 @@ function mapQuotationStatus(
   quotationId: unknown,
 ): QuotationStatus {
   const explicit = toStringValue(value);
+  if (explicit === "created") return "success";
   if (explicit === "success" || explicit === "failed" || explicit === "pending") {
     return explicit;
   }
