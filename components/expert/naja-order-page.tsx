@@ -23,7 +23,10 @@ import {
   listAssignedCustomersForExpert,
 } from "@/lib/services/expert-customer.service";
 import { createNajaOrder } from "@/lib/services/naja.service";
-import { listOrderProductsBySaleType } from "@/lib/services/product.service";
+import {
+  listOrderProductsByPriceList,
+  listOrderProductsBySaleType,
+} from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
 import { formatFaDigits, normalizeDigits, toNumber } from "@/lib/utils/number-format";
 import {
@@ -144,17 +147,21 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       setProductId("");
       setError("");
       const saleTypeId = selectedCustomer?.saleType?.sepidarSaleTypeId;
-      if (!hasAssignmentInventory(selectedCustomer) || !saleTypeId) {
+      const priceListId = selectedCustomer?.priceListId;
+      if (!hasAssignmentInventory(selectedCustomer) || (!priceListId && !saleTypeId)) {
         setIsLoadingProducts(false);
         return;
       }
 
       setIsLoadingProducts(true);
       try {
-        const data = await listOrderProductsBySaleType(saleTypeId, {
+        const context = {
           customerObjectId: selectedCustomer.objectId,
           expertUserId: getStoredCurrentUser()?.objectId,
-        });
+        };
+        const data = priceListId
+          ? await listOrderProductsByPriceList(priceListId, context)
+          : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (isMounted) {
           setProducts(data);
           if (process.env.NODE_ENV === "development") {
@@ -266,6 +273,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         customerObjectId,
         saleTypeObjectId: selectedCustomer.saleType?.objectId || undefined,
         sepidarSaleTypeId: selectedCustomer.saleType?.sepidarSaleTypeId ?? undefined,
+        priceListId: selectedCustomer.priceListId ?? undefined,
         recipientFirstName: recipientFirstName.trim(),
         recipientLastName: recipientLastName.trim(),
         recipientNationalId: normalizeDigits(recipientNationalId.trim()),

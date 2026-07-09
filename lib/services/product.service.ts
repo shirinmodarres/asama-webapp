@@ -76,6 +76,29 @@ export async function listOrderProductsBySaleType(
   return products;
 }
 
+export async function listOrderProductsByPriceList(
+  priceListId: string,
+  context?: {
+    customerObjectId?: string;
+    expertUserId?: string;
+  },
+): Promise<Product[]> {
+  const params = new URLSearchParams({ priceListId });
+  if (context?.customerObjectId) {
+    params.set("customerObjectId", context.customerObjectId);
+  }
+  if (context?.expertUserId) {
+    params.set("expertUserId", context.expertUserId);
+  }
+  const data = await httpClient.get<unknown>(
+    `/api/products/order-options?${params.toString()}`,
+  );
+  const record = toRecord(data);
+  return mapProductOrderOptionListDto(
+    Array.isArray(data) ? data : record.items ?? record.products ?? [],
+  );
+}
+
 export async function syncPricesFromSepidar(): Promise<SepidarProductSyncSummary> {
   const data = await httpClient.post<unknown>(
     "/api/integrations/sepidar/sync/prices",

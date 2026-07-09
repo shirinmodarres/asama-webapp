@@ -34,6 +34,7 @@ import {
   listAssignedCustomersForExpert,
 } from "@/lib/services/expert-customer.service";
 import {
+  listOrderProductsByPriceList,
   listOrderProductsBySaleType,
   listProducts,
 } from "@/lib/services/product.service";
@@ -82,6 +83,7 @@ export interface OrderFormSubmitPayload {
   }>;
   saleTypeObjectId?: string;
   sepidarSaleTypeId?: number;
+  priceListId?: string;
 }
 
 interface OrderFormProps {
@@ -303,6 +305,8 @@ export function OrderForm({
         : customers.find((entry) => entry.objectId === selectedCustomerId);
       const saleTypeId =
         customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
+      const priceListId =
+        customer?.priceListId ?? initialOrder?.priceListId ?? undefined;
 
       setProductsError("");
       if (!selectedCustomerId) {
@@ -311,7 +315,7 @@ export function OrderForm({
         return;
       }
       if (
-        !saleTypeId ||
+        (!priceListId && !saleTypeId) ||
         (assignedCustomersOnly && !hasAssignmentInventory(customer))
       ) {
         keepOrderSnapshotProducts();
@@ -321,11 +325,14 @@ export function OrderForm({
 
       setIsLoadingProducts(true);
       try {
-        const data = await listOrderProductsBySaleType(saleTypeId, {
+        const context = {
           customerObjectId: selectedCustomerId || customer?.objectId,
           expertUserId:
             initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
-        });
+        };
+        const data = priceListId
+          ? await listOrderProductsByPriceList(priceListId, context)
+          : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (!isMounted) return;
         const mergedProducts = mergeProducts(data, initialOrder);
         setProducts(mergedProducts);
@@ -661,6 +668,7 @@ export function OrderForm({
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
         sepidarSaleTypeId:
           selectedCustomer?.saleType?.sepidarSaleTypeId ?? undefined,
+        priceListId: selectedCustomer?.priceListId ?? undefined,
         notes: notes.trim(),
         items: normalizedItems.map((item) => ({
           productObjectId: item.productId,
@@ -1480,6 +1488,10 @@ function createCustomerFromOrder(order: Order): Customer | null {
             title: order.saleTypeTitle,
           }
         : null),
+    priceListId: order.priceListId,
+    priceListTitle: order.priceListTitle,
+    priceListType: order.priceListType,
+    priceListBrand: order.priceListBrand,
     allowedStockObjectIds: order.stockObjectId ? [order.stockObjectId] : [],
     allowedSepidarStockIds:
       order.sepidarStockId === null ? [] : [order.sepidarStockId],

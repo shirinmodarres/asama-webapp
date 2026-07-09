@@ -19,8 +19,8 @@ import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { AuthUser } from "@/lib/models/auth.model";
 import type {
   ExpertCustomerAssignment,
-  SepidarSaleType,
 } from "@/lib/models/customer-assignment.model";
+import type { PriceList } from "@/lib/models/pricing.model";
 import type { Customer } from "@/lib/models/customer.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
 import {
@@ -28,10 +28,10 @@ import {
   deactivateExpertCustomerAssignment,
   listExpertCustomerAssignments,
   listSepidarCustomers,
-  listSepidarSaleTypes,
   listSupportExperts,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
+import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 import { listSepidarStocks } from "@/lib/services/stock.service";
@@ -39,14 +39,14 @@ import { listSepidarStocks } from "@/lib/services/stock.service";
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [saleTypes, setSaleTypes] = useState<SepidarSaleType[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
     [],
   );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedSaleTypeId, setSelectedSaleTypeId] = useState("");
+  const [selectedPriceListId, setSelectedPriceListId] = useState("");
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,17 +57,17 @@ export default function SupportCustomerAssignmentsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [expertData, customerData, saleTypeData, stockData, assignmentData] =
+    const [expertData, customerData, priceListData, stockData, assignmentData] =
       await Promise.all([
         listSupportExperts(),
         listSepidarCustomers(),
-        listSepidarSaleTypes(),
+        listGeneratedPriceLists({ activeOnly: true }),
         listSepidarStocks(),
         listExpertCustomerAssignments(),
       ]);
     setExperts(expertData);
     setCustomers(customerData);
-    setSaleTypes(saleTypeData);
+    setPriceLists(priceListData);
     setStocks(stockData);
     setAssignments(assignmentData);
   };
@@ -78,18 +78,18 @@ export default function SupportCustomerAssignmentsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [expertData, customerData, saleTypeData, stockData, assignmentData] =
+        const [expertData, customerData, priceListData, stockData, assignmentData] =
           await Promise.all([
             listSupportExperts(),
             listSepidarCustomers(),
-            listSepidarSaleTypes(),
+            listGeneratedPriceLists({ activeOnly: true }),
             listSepidarStocks(),
             listExpertCustomerAssignments(),
           ]);
         if (!isMounted) return;
         setExperts(expertData);
         setCustomers(customerData);
-        setSaleTypes(saleTypeData);
+        setPriceLists(priceListData);
         setStocks(stockData);
         setAssignments(assignmentData);
       } catch (loadError) {
@@ -112,8 +112,8 @@ export default function SupportCustomerAssignmentsPage() {
     if (!selectedCustomerId) {
       nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
     }
-    if (!selectedSaleTypeId) {
-      nextErrors.selectedSaleTypeId = "لطفاً نوع فروش را انتخاب کنید.";
+    if (!selectedPriceListId) {
+      nextErrors.selectedPriceListId = "لطفاً لیست قیمت را انتخاب کنید.";
     }
     if (selectedStockIds.length === 0) {
       nextErrors.selectedStockIds = "لطفاً حداقل یک انبار مجاز انتخاب کنید.";
@@ -129,7 +129,7 @@ export default function SupportCustomerAssignmentsPage() {
     const payload = {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
-      saleTypeObjectId: selectedSaleTypeId,
+      priceListId: selectedPriceListId,
       allowedStockObjectIds: selectedStockIds,
     };
 
@@ -152,7 +152,7 @@ export default function SupportCustomerAssignmentsPage() {
       if (editingAssignmentId) {
         setEditingAssignmentId("");
         setSelectedExpertId("");
-        setSelectedSaleTypeId("");
+        setSelectedPriceListId("");
         setSelectedStockIds([]);
       }
       setSelectedCustomerId("");
@@ -199,15 +199,15 @@ export default function SupportCustomerAssignmentsPage() {
       })),
     [customers],
   );
-  const saleTypeOptions = useMemo(
+  const priceListOptions = useMemo(
     () =>
-      saleTypes.map((saleType) => ({
-        value: saleType.objectId,
-        label: `${formatFaDigits(saleType.sepidarSaleTypeId ?? "-")} - ${saleType.title || "-"}${
-          saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
+      priceLists.map((priceList) => ({
+        value: priceList.objectId,
+        label: `${priceList.brandName || "-"} - ${priceList.name || "-"}${
+          priceList.code ? ` - ${formatFaDigits(priceList.code)}` : ""
         }`,
       })),
-    [saleTypes],
+    [priceLists],
   );
   const stockOptions = useMemo(
     () =>
@@ -239,7 +239,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId(assignment.objectId);
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
-    setSelectedSaleTypeId(assignment.saleTypeObjectId ?? "");
+    setSelectedPriceListId(assignment.priceListId ?? "");
     setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
     setError("");
@@ -250,7 +250,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId("");
     setSelectedExpertId("");
     setSelectedCustomerId("");
-    setSelectedSaleTypeId("");
+    setSelectedPriceListId("");
     setSelectedStockIds([]);
     setFieldErrors({});
   };
@@ -259,11 +259,11 @@ export default function SupportCustomerAssignmentsPage() {
     isSubmitting ||
     expertOptions.length === 0 ||
     customerOptions.length === 0 ||
-    saleTypeOptions.length === 0 ||
+    priceListOptions.length === 0 ||
     stockOptions.length === 0 ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    !selectedSaleTypeId ||
+    !selectedPriceListId ||
     selectedStockIds.length === 0;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
@@ -284,15 +284,19 @@ export default function SupportCustomerAssignmentsPage() {
         row.sepidarCustomerCode ? formatFaDigits(row.sepidarCustomerCode) : "-",
     },
     {
-      key: "sale-type",
-      header: "نوع فروش",
+      key: "price-list",
+      header: "لیست قیمت",
       render: (row) => {
-        const saleTypeTitle = row.saleTypeTitle
-          ? row.saleTypeTitle.split("/")[0].trim()
-          : "";
-
+        if (row.priceListTitle) {
+          return [
+            row.priceListBrand,
+            row.priceListTitle,
+            row.priceListType,
+          ].filter(Boolean).join(" - ");
+        }
+        const saleTypeTitle = row.saleTypeTitle ? row.saleTypeTitle.split("/")[0].trim() : "";
         return saleTypeTitle
-          ? `${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
+          ? `قدیمی: ${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
           : "-";
       },
     },
@@ -431,28 +435,28 @@ export default function SupportCustomerAssignmentsPage() {
                 <FieldError message={fieldErrors.selectedCustomerId} />
               </label>
               <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>نوع فروش</span>
+                <span>لیست قیمت</span>
                 <SearchableSelect
-                  value={selectedSaleTypeId || undefined}
+                  value={selectedPriceListId || undefined}
                   onValueChange={(value) => {
-                    setSelectedSaleTypeId(value);
+                    setSelectedPriceListId(value);
                     setFieldErrors((current) => ({
                       ...current,
-                      selectedSaleTypeId: "",
+                      selectedPriceListId: "",
                     }));
                   }}
-                  options={saleTypeOptions}
-                  placeholder="انتخاب نوع فروش"
-                  searchPlaceholder="جستجو در نوع‌های فروش"
+                  options={priceListOptions}
+                  placeholder="انتخاب لیست قیمت"
+                  searchPlaceholder="جستجو در لیست‌های قیمت"
                   emptyMessage={
-                    saleTypes.length === 0
-                      ? "نوع فروشی پیدا نشد. وضعیت همگام‌سازی را از تنظیمات سپیدار بررسی کنید."
-                      : "نوع فروشی با این جستجو پیدا نشد."
+                    priceLists.length === 0
+                      ? "لیست قیمت فعالی پیدا نشد. ابتدا از بخش قیمت‌گذاری لیست تولید کنید."
+                      : "لیست قیمتی با این جستجو پیدا نشد."
                   }
-                  invalid={Boolean(fieldErrors.selectedSaleTypeId)}
+                  invalid={Boolean(fieldErrors.selectedPriceListId)}
                   className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedSaleTypeId} />
+                <FieldError message={fieldErrors.selectedPriceListId} />
               </label>
               <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
                 <span>انبارهای مجاز</span>

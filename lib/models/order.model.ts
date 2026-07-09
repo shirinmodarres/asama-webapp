@@ -16,6 +16,9 @@ export interface OrderItem {
   brandName: string | null;
   quantity: number;
   unitPrice: number;
+  priceListId?: string | null;
+  priceListItemId?: string | null;
+  pricingSource?: string | null;
   productIdentifier: string | null;
   trackingCode: string | null;
 }
@@ -41,6 +44,10 @@ export interface Order {
     sepidarSaleTypeId: number | null;
     title: string | null;
   } | null;
+  priceListId: string | null;
+  priceListTitle: string | null;
+  priceListType: string | null;
+  priceListBrand: string | null;
   warehouseId: string | null;
   warehouseName: string | null;
   warehouseType: string | null;
@@ -129,6 +136,7 @@ export interface CreateOrderPayload {
   customerAddressObjectId?: string;
   saleTypeObjectId?: string;
   sepidarSaleTypeId?: number;
+  priceListId?: string;
   recipientFirstName?: string;
   recipientLastName?: string;
   recipientNationalId?: string;

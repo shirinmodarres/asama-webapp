@@ -176,6 +176,30 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "مشتریان سپیدار و کارشناسان",
     },
     {
+      label: "لیست‌های قیمت سپیدار",
+      href: "/support/pricing/sepidar-price-lists",
+      icon: "file-text",
+      description: "لیست‌های همگام‌شده از سپیدار",
+    },
+    {
+      label: "لیست‌های مرجع",
+      href: "/support/pricing/reference-price-lists",
+      icon: "layers",
+      description: "انتخاب مرجع فعال برند",
+    },
+    {
+      label: "لیست‌های قیمت تولیدی",
+      href: "/support/pricing/generated-price-lists",
+      icon: "file-check",
+      description: "قیمت‌های داخلی قابل استفاده در سفارش",
+    },
+    {
+      label: "اختصاص قیمت به کارشناس",
+      href: "/support/pricing/expert-price-assignments",
+      icon: "users",
+      description: "لیست‌های مجاز هر کارشناس",
+    },
+    {
       label: "تنظیمات سپیدار",
       href: "/support/sepidar-settings",
       icon: "plug-zap",

@@ -1,6 +1,7 @@
 import { mapAuthUserDto } from "@/lib/mappers/auth.mapper";
 import { mapCustomerDto } from "@/lib/mappers/customer.mapper";
 import { mapSepidarStockDto } from "@/lib/mappers/stock.mapper";
+import { mapPriceListDto } from "@/lib/mappers/pricing.mapper";
 import {
   toArray,
   toNumberValue,
@@ -21,6 +22,7 @@ export function mapExpertCustomerAssignmentDto(
   const expertRecord = toRecord(record.expert ?? record.user);
   const customerRecord = toRecord(record.customer);
   const saleTypeRecord = toRecord(record.saleType);
+  const priceListRecord = toRecord(record.priceList);
   const expert = Object.keys(expertRecord).length
     ? mapAuthUserDto(expertRecord)
     : null;
@@ -29,6 +31,9 @@ export function mapExpertCustomerAssignmentDto(
     : null;
   const saleType = Object.keys(saleTypeRecord).length
     ? mapSepidarSaleTypeDto(saleTypeRecord)
+    : null;
+  const priceList = Object.keys(priceListRecord).length
+    ? mapPriceListDto(priceListRecord)
     : null;
   const status = record.status === "inactive" ? "inactive" : "active";
 
@@ -44,9 +49,17 @@ export function mapExpertCustomerAssignmentDto(
       record.customerObjectId ?? record.customerId ?? customer?.objectId,
     ),
     saleTypeObjectId: toStringValue(record.saleTypeObjectId ?? saleType?.objectId) || null,
+    priceListId: toStringValue(record.priceListId ?? priceList?.objectId) || null,
+    priceListTitle:
+      toStringValue(record.priceListTitle) || priceList?.name || null,
+    priceListType:
+      toStringValue(record.priceListType) || priceList?.typeCode || null,
+    priceListBrand:
+      toStringValue(record.priceListBrand) || priceList?.brandName || null,
     expert,
     customer,
     saleType,
+    priceList,
     expertName: toStringValue(record.expertName) || expert?.fullName || "",
     customerName:
       toStringValue(record.customerName) || customer?.fullName || "",

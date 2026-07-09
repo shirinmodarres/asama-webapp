@@ -99,6 +99,10 @@ export function mapOrderDto(dto: unknown): Order {
             title: toNullableString(record.saleTypeTitle ?? saleTypeRecord.title),
           }
         : null,
+    priceListId: toNullableString(record.priceListId),
+    priceListTitle: toNullableString(record.priceListTitle),
+    priceListType: toNullableString(record.priceListType),
+    priceListBrand: toNullableString(record.priceListBrand),
     warehouseId: toNullableString(
       record.warehouseId ??
         record.warehouseObjectId ??
@@ -310,6 +314,9 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     ),
     quantity: toNumberValue(record.quantity),
     unitPrice: toNumberValue(record.unitPrice),
+    priceListId: toNullableString(record.priceListId),
+    priceListItemId: toNullableString(record.priceListItemId),
+    pricingSource: toNullableString(record.pricingSource),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),
     trackingCode: normalizeNullableDigits(record.trackingCode),
   };

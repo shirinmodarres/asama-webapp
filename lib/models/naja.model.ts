@@ -5,6 +5,7 @@ export interface CreateNajaOrderPayload {
   customerObjectId: string;
   saleTypeObjectId?: string | null;
   sepidarSaleTypeId?: number | null;
+  priceListId?: string | null;
   recipientFirstName: string;
   recipientLastName: string;
   recipientNationalId: string;

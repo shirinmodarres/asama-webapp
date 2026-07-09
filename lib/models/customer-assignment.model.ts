@@ -1,6 +1,7 @@
 import type { Customer } from "@/lib/models/customer.model";
 import type { AuthUser } from "@/lib/models/auth.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
+import type { PriceList } from "@/lib/models/pricing.model";
 
 export type CustomerAssignmentStatus = "active" | "inactive";
 
@@ -9,9 +10,14 @@ export interface ExpertCustomerAssignment {
   expertObjectId: string;
   customerObjectId: string;
   saleTypeObjectId: string | null;
+  priceListId: string | null;
+  priceListTitle: string | null;
+  priceListType: string | null;
+  priceListBrand: string | null;
   expert: AuthUser | null;
   customer: Customer | null;
   saleType: SepidarSaleType | null;
+  priceList: PriceList | null;
   expertName: string;
   customerName: string;
   customerPhone: string;
@@ -29,7 +35,8 @@ export interface ExpertCustomerAssignment {
 export interface CreateExpertCustomerAssignmentPayload {
   expertUserId: string;
   customerObjectId: string;
-  saleTypeObjectId: string;
+  saleTypeObjectId?: string;
+  priceListId?: string;
   allowedStockObjectIds: string[];
   assignedByName: string;
 }
@@ -37,7 +44,8 @@ export interface CreateExpertCustomerAssignmentPayload {
 export interface UpdateExpertCustomerAssignmentPayload {
   expertUserId: string;
   customerObjectId: string;
-  saleTypeObjectId: string;
+  saleTypeObjectId?: string;
+  priceListId?: string;
   allowedStockObjectIds: string[];
   updatedByName: string;
 }
