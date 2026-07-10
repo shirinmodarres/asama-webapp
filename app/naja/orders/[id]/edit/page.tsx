@@ -117,7 +117,7 @@ export default function NajaOrderEditPage() {
             sepidarProductsOnly
             initialProducts={editData.products}
             initialCustomers={editData.customers}
-            lockCustomer
+            lockCustomer={Boolean(editData.order.customerObjectId)}
             onSubmit={handleSubmit}
           />
         </>
@@ -129,7 +129,5 @@ export default function NajaOrderEditPage() {
 function canNajaEdit(editData: OrderEditData): boolean {
   if (!editData.canEdit) return false;
   if (editData.order.orderType !== "naja") return false;
-  return ["pending_approval", "pending", "review_resolved"].includes(
-    editData.order.orderStatus,
-  );
+  return true;
 }

@@ -36,6 +36,10 @@ export interface Customer {
     sepidarSaleTypeId: number | null;
     title: string | null;
   } | null;
+  priceListId: string | null;
+  priceListTitle: string | null;
+  priceListType: string | null;
+  priceListBrand: string | null;
   allowedStockObjectIds: string[];
   allowedSepidarStockIds: number[];
   allowedStocks: SepidarStock[];

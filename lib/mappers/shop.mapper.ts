@@ -17,6 +17,9 @@ import type {
   WebsiteProductSpecification,
   WebsiteBrand,
   WebsiteCategory,
+  WebsiteMagazineCategorySummary,
+  WebsiteMagazinePost,
+  WebsiteMagazinePostStatus,
 } from "@/lib/models/shop.model";
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
@@ -39,6 +42,12 @@ const PAYMENT_STATUS_LABELS: Record<WebsitePaymentStatus, string> = {
   failed: "ناموفق",
   refunded: "مستردشده",
 };
+
+const MAGAZINE_POST_STATUSES: WebsiteMagazinePostStatus[] = [
+  "draft",
+  "published",
+  "archived",
+];
 
 export function mapWebsiteProductDto(dto: unknown): WebsiteProduct {
   const record = toRecord(dto);
@@ -71,6 +80,7 @@ export function mapWebsiteProductDto(dto: unknown): WebsiteProduct {
       .map((value) => toStringValue(value).trim())
       .filter(Boolean),
     brand: toNullableString(record.brandTitle ?? record.brand),
+    brandName: toNullableString(record.brandName ?? record.brandTitle ?? record.brand),
     category: toNullableString(record.categoryTitle ?? record.category),
     brandId: toNullableString(record.brandId),
     brandTitle: toNullableString(record.brandTitle ?? record.brand),
@@ -166,6 +176,69 @@ export function mapWebsiteProductListDto(dto: unknown): WebsiteProduct[] {
   );
 }
 
+export function mapWebsiteMagazinePostDto(dto: unknown): WebsiteMagazinePost {
+  const record = toRecord(dto);
+  const title = toStringValue(record.title);
+  const excerpt = toStringValue(record.excerpt);
+  const coverImage = toStringValue(record.coverImage);
+  const metaTitle = toStringValue(record.metaTitle) || title;
+  const metaDescription = toStringValue(record.metaDescription) || excerpt;
+  const ogTitle = toStringValue(record.ogTitle) || metaTitle;
+  const ogDescription = toStringValue(record.ogDescription) || metaDescription;
+  const ogImage = toStringValue(record.ogImage) || coverImage;
+
+  return {
+    objectId: toStringValue(record.objectId),
+    id: toStringValue(record.id) || toStringValue(record.objectId),
+    title,
+    slug: toStringValue(record.slug),
+    excerpt,
+    content: toStringValue(record.content),
+    coverImage,
+    category: toStringValue(record.category),
+    tags: toStringArray(record.tags),
+    authorName: toStringValue(record.authorName),
+    status: mapMagazinePostStatus(record.status),
+    isFeatured: toBooleanValue(record.isFeatured ?? record.featured),
+    publishedAt: toNullableString(record.publishedAt),
+    readingTimeMinutes: toNumberValue(record.readingTimeMinutes),
+    sortOrder: toNumberValue(record.sortOrder),
+    relatedProductIds: toStringArray(record.relatedProductIds),
+    relatedCategorySlugs: toStringArray(record.relatedCategorySlugs),
+    relatedProducts: toArray(record.relatedProducts).map(mapWebsiteProductDto),
+    relatedCategories: toArray(record.relatedCategories).map(mapWebsiteCategoryDto),
+    metaTitle,
+    metaDescription,
+    canonicalUrl: toStringValue(record.canonicalUrl),
+    ogTitle,
+    ogDescription,
+    ogImage,
+    noIndex: toBooleanValue(record.noIndex),
+    createdAt: toStringValue(record.createdAt),
+    updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+export function mapWebsiteMagazinePostListDto(dto: unknown): WebsiteMagazinePost[] {
+  const record = toRecord(dto);
+  return toArray(record.items ?? record.posts ?? dto).map(mapWebsiteMagazinePostDto);
+}
+
+export function mapWebsiteMagazineCategoryListDto(
+  dto: unknown,
+): WebsiteMagazineCategorySummary[] {
+  const record = toRecord(dto);
+  return toArray(record.items ?? record.categories ?? dto)
+    .map((item) => {
+      const itemRecord = toRecord(item);
+      return {
+        category: toStringValue(itemRecord.category ?? itemRecord.title ?? itemRecord.name),
+        postCount: toNumberValue(itemRecord.postCount ?? itemRecord.count),
+      };
+    })
+    .filter((item) => item.category);
+}
+
 export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
   const record = toRecord(dto);
   const customer = toRecord(record.customer);
@@ -213,6 +286,7 @@ export function mapWebsiteOrderDto(dto: unknown): WebsiteOrder {
       ? {
           gateway: toStringValue(payment.gateway),
           gatewayLabel: toStringValue(payment.gatewayLabel),
+          amount: toNumberValue(payment.amount),
           paymentToken: toNullableString(payment.paymentToken),
           transactionId: toNullableString(payment.transactionId),
           referenceId: toNullableString(payment.referenceId),
@@ -309,6 +383,19 @@ function mapOrderStatus(value: unknown): WebsiteOrderStatus {
 function mapPaymentStatus(value: unknown): WebsitePaymentStatus {
   const status = toStringValue(value);
   return isPaymentStatus(status) ? status : "unpaid";
+}
+
+function mapMagazinePostStatus(value: unknown): WebsiteMagazinePostStatus {
+  const status = toStringValue(value);
+  return MAGAZINE_POST_STATUSES.includes(status as WebsiteMagazinePostStatus)
+    ? (status as WebsiteMagazinePostStatus)
+    : "draft";
+}
+
+function toStringArray(value: unknown): string[] {
+  return toArray(value)
+    .map((item) => toStringValue(item).trim())
+    .filter(Boolean);
 }
 
 function isOrderStatus(status: string): status is WebsiteOrderStatus {

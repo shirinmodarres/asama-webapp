@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
+import { JalaliDateInput } from "@/components/shared/jalali-date-input";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { OrderSummaryCard } from "@/components/shared/order-summary-card";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
   formatCurrency,
@@ -32,6 +34,7 @@ import {
   listAssignedCustomersForExpert,
 } from "@/lib/services/expert-customer.service";
 import {
+  listOrderProductsByPriceList,
   listOrderProductsBySaleType,
   listProducts,
 } from "@/lib/services/product.service";
@@ -43,11 +46,9 @@ import {
 import {
   formatFaDigits,
   normalizeDigits,
-  normalizePhone,
   toNumber,
 } from "@/lib/utils/number-format";
 import {
-  formatOrderAvailableQuantity,
   logOrderDropdownProductSource,
 } from "@/lib/utils/order-product-availability";
 import {
@@ -71,9 +72,9 @@ export interface OrderFormSubmitPayload {
   recipientFirstName?: string;
   recipientLastName?: string;
   recipientNationalId?: string;
-  recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
+  notes?: string;
   items: Array<{
     productObjectId: string;
     quantity: number;
@@ -82,6 +83,7 @@ export interface OrderFormSubmitPayload {
   }>;
   saleTypeObjectId?: string;
   sepidarSaleTypeId?: number;
+  priceListId?: string;
 }
 
 interface OrderFormProps {
@@ -141,15 +143,13 @@ export function OrderForm({
   const [recipientNationalId, setRecipientNationalId] = useState(
     initialOrder?.recipientNationalId ?? "",
   );
-  const [recipientMobile, setRecipientMobile] = useState(
-    initialOrder?.recipientMobile ?? "",
-  );
   const [najaOrderNumber, setNajaOrderNumber] = useState(
     initialOrder?.najaOrderNumber ?? initialOrder?.externalOrderNumber ?? "",
   );
   const [najaPurchaseDate, setNajaPurchaseDate] = useState(
     initialOrder?.najaPurchaseDate?.slice(0, 10) ?? "",
   );
+  const [notes, setNotes] = useState(initialOrder?.notes ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     initialOrder?.customerObjectId ?? initialOrder?.customer?.objectId ?? "",
   );
@@ -186,14 +186,16 @@ export function OrderForm({
       if (!isMounted) return;
 
       if (providedProducts.length > 0) {
-        setProducts(mergeProducts(providedProducts, initialOrder));
+        const mergedProducts = mergeProducts(providedProducts, initialOrder);
+        setProducts(mergedProducts);
         if (initialOrder) {
-          setItems(mapOrderItems(initialOrder.items, providedProducts));
+          setItems(mapOrderItems(initialOrder.items, mergedProducts));
         }
       } else if (productsResult.status === "fulfilled") {
-        setProducts(productsResult.value);
+        const mergedProducts = mergeProducts(productsResult.value, initialOrder);
+        setProducts(mergedProducts);
         if (initialOrder && !sepidarProductsOnly) {
-          setItems(mapOrderItems(initialOrder.items, productsResult.value));
+          setItems(mapOrderItems(initialOrder.items, mergedProducts));
         }
       } else {
         setProducts([]);
@@ -205,7 +207,7 @@ export function OrderForm({
       }
 
       if (customersResult.status === "fulfilled") {
-        setCustomers(customersResult.value);
+        setCustomers(mergeCustomers(customersResult.value, initialOrder));
       } else {
         setCustomers([]);
         setCustomersError(
@@ -303,6 +305,8 @@ export function OrderForm({
         : customers.find((entry) => entry.objectId === selectedCustomerId);
       const saleTypeId =
         customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
+      const priceListId =
+        customer?.priceListId ?? initialOrder?.priceListId ?? undefined;
 
       setProductsError("");
       if (!selectedCustomerId) {
@@ -311,7 +315,7 @@ export function OrderForm({
         return;
       }
       if (
-        !saleTypeId ||
+        (!priceListId && !saleTypeId) ||
         (assignedCustomersOnly && !hasAssignmentInventory(customer))
       ) {
         keepOrderSnapshotProducts();
@@ -321,11 +325,14 @@ export function OrderForm({
 
       setIsLoadingProducts(true);
       try {
-        const data = await listOrderProductsBySaleType(saleTypeId, {
+        const context = {
           customerObjectId: selectedCustomerId || customer?.objectId,
           expertUserId:
             initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
-        });
+        };
+        const data = priceListId
+          ? await listOrderProductsByPriceList(priceListId, context)
+          : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (!isMounted) return;
         const mergedProducts = mergeProducts(data, initialOrder);
         setProducts(mergedProducts);
@@ -497,7 +504,11 @@ export function OrderForm({
     setRowErrors({});
 
     if (assignedCustomersOnly && !selectedCustomerId) {
-      setFieldErrors({ selectedCustomerId: "لطفاً مشتری را انتخاب کنید." });
+      setFieldErrors({
+        selectedCustomerId: isNajaOrder
+          ? "لطفاً مرکز ناجا را انتخاب کنید."
+          : "لطفاً مشتری را انتخاب کنید.",
+      });
       return;
     }
 
@@ -562,9 +573,6 @@ export function OrderForm({
       }
       if (!recipientNationalId.trim()) {
         nextNajaErrors.recipientNationalId = "کد ملی الزامی است.";
-      }
-      if (!recipientMobile.trim()) {
-        nextNajaErrors.recipientMobile = "شماره موبایل الزامی است.";
       }
       if (!najaOrderNumber.trim()) {
         nextNajaErrors.najaOrderNumber = "شماره سفارش الزامی است.";
@@ -653,7 +661,6 @@ export function OrderForm({
               recipientNationalId: normalizeDigits(
                 recipientNationalId.trim(),
               ),
-              recipientMobile: normalizePhone(recipientMobile.trim()),
               najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
               najaPurchaseDate: najaPurchaseDate || null,
             }
@@ -661,6 +668,8 @@ export function OrderForm({
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
         sepidarSaleTypeId:
           selectedCustomer?.saleType?.sepidarSaleTypeId ?? undefined,
+        priceListId: selectedCustomer?.priceListId ?? undefined,
+        notes: notes.trim(),
         items: normalizedItems.map((item) => ({
           productObjectId: item.productId,
           quantity: item.quantity,
@@ -683,7 +692,7 @@ export function OrderForm({
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>مشتری</span>
+            <span>{isNajaOrder ? "مرکز ناجا" : "مشتری"}</span>
             <SearchableSelect
               value={selectedCustomerId || undefined}
               onValueChange={(value) => {
@@ -710,10 +719,12 @@ export function OrderForm({
                   .filter(Boolean)
                   .join(" - "),
               }))}
-              placeholder="انتخاب مشتری"
+              placeholder={isNajaOrder ? "انتخاب مرکز ناجا" : "انتخاب مشتری"}
               searchPlaceholder="جستجو بر اساس نام"
               emptyMessage={
-                assignedCustomersOnly
+                isNajaOrder
+                  ? "مرکز ناجا پیدا نشد."
+                  : assignedCustomersOnly
                   ? "هنوز مشتری‌ای به شما اختصاص داده نشده است."
                   : "مشتری پیدا نشد"
               }
@@ -726,7 +737,13 @@ export function OrderForm({
             />
             <FieldError message={fieldErrors.selectedCustomerId} />
             {assignmentError ? (
-              <FieldError message="برای این مشتری تنظیمات فروش تعریف نشده است." />
+              <FieldError
+                message={
+                  isNajaOrder
+                    ? "برای این مرکز تنظیمات فروش تعریف نشده است."
+                    : "برای این مشتری تنظیمات فروش تعریف نشده است."
+                }
+              />
             ) : null}
             {customersError ? (
               <FieldError message={customersError} />
@@ -734,7 +751,9 @@ export function OrderForm({
               !isLoadingCustomers &&
               customers.length === 0 ? (
               <p className="text-xs font-medium text-[#8A5A00]">
-                هنوز مشتری‌ای به شما اختصاص داده نشده است.
+                {isNajaOrder
+                  ? "هنوز مرکز ناجایی به شما اختصاص داده نشده است."
+                  : "هنوز مشتری‌ای به شما اختصاص داده نشده است."}
               </p>
             ) : null}
           </label>
@@ -770,23 +789,35 @@ export function OrderForm({
           <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#334155]">
             {assignedCustomersOnly ? (
               <p className="mb-2 font-semibold text-[#102034]">
-                مشتری انتخاب‌شده
+                {isNajaOrder ? "مرکز ناجا" : "مشتری انتخاب‌شده"}
               </p>
             ) : null}
             <div className="grid gap-2 sm:grid-cols-2">
-              <span>نام مشتری: {selectedCustomer.fullName || "-"}</span>
               <span>
-                کد مشتری:{" "}
+                {isNajaOrder ? "نام مرکز: " : "نام مشتری: "}
+                {selectedCustomer.fullName || "-"}
+              </span>
+              <span>
+                {isNajaOrder ? "کد مرکز در سپیدار: " : "کد مشتری: "}
                 {selectedCustomer.sepidarCustomerCode ||
                   selectedCustomer.id ||
                   "-"}
               </span>
-              <span>
-                {assignedCustomersOnly ? "شماره تماس: " : "موبایل: "}
-                {selectedCustomer.phone
-                  ? formatFaDigits(selectedCustomer.phone)
-                  : "-"}
-              </span>
+              {isNajaOrder ? (
+                <span className="sm:col-span-2">
+                  آدرس مرکز:{" "}
+                  {selectedCustomer.address ||
+                    selectedCustomer.defaultAddress?.fullAddress ||
+                    "-"}
+                </span>
+              ) : (
+                <span>
+                  {assignedCustomersOnly ? "شماره تماس: " : "موبایل: "}
+                  {selectedCustomer.phone
+                    ? formatFaDigits(selectedCustomer.phone)
+                    : "-"}
+                </span>
+              )}
               {assignedCustomersOnly ? (
                 <span>
                   نوع فروش: {selectedCustomer.saleType?.title || "-"}
@@ -801,11 +832,13 @@ export function OrderForm({
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-xs leading-6 text-[#8A5A00]">
-                  برای این مشتری تنظیمات فروش تعریف نشده است.
+                  {isNajaOrder
+                    ? "برای این مرکز تنظیمات فروش تعریف نشده است."
+                    : "برای این مشتری تنظیمات فروش تعریف نشده است."}
                 </div>
               )
             ) : null}
-            {selectedAddress ? (
+            {selectedAddress && !isNajaOrder ? (
               <div className="mt-2 space-y-1 text-[#6B7280]">
                 {selectedAddress.title ? (
                   <p className="text-xs text-[#94A3B8]">
@@ -822,7 +855,7 @@ export function OrderForm({
                 </p>
                 <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
               </div>
-            ) : addresses.length === 0 && !isLoadingAddresses ? (
+            ) : !isNajaOrder && addresses.length === 0 && !isLoadingAddresses ? (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
                 <span>این مشتری آدرس فعالی ندارد.</span>
                 <Button asChild size="sm" variant="outline">
@@ -866,10 +899,10 @@ export function OrderForm({
           <div className="mt-5 rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
             <div>
               <h3 className="text-base font-semibold text-[#102034]">
-                اطلاعات تحویل‌گیرنده ناجا
+                مصرف‌کننده نهایی
               </h3>
               <p className="mt-1 text-sm leading-7 text-[#6B7280]">
-                این اطلاعات برای اسناد، فاکتور داخلی و پیگیری تحویل استفاده می‌شود.
+                این شخص خریدار نهایی از مرکز ناجا است و با مرکز انتخاب‌شده تفاوت دارد.
               </p>
             </div>
 
@@ -923,22 +956,11 @@ export function OrderForm({
                 <FieldError message={fieldErrors.recipientNationalId} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>شماره موبایل</span>
-                <Input
-                  inputMode="tel"
-                  value={recipientMobile}
-                  onChange={(event) => {
-                    setRecipientMobile(event.target.value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      recipientMobile: "",
-                    }));
-                  }}
-                  aria-invalid={Boolean(fieldErrors.recipientMobile)}
-                />
-                <FieldError message={fieldErrors.recipientMobile} />
-              </label>
+              <div className="mt-2 border-t border-[#E5E7EB] pt-4 md:col-span-2">
+                <h3 className="text-base font-semibold text-[#102034]">
+                  اطلاعات سفارش
+                </h3>
+              </div>
 
               <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
                 <span>شماره سفارش ناجا</span>
@@ -957,28 +979,18 @@ export function OrderForm({
                 <FieldError message={fieldErrors.najaOrderNumber} />
               </label>
 
-              <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
-                <span>تاریخ سفارش</span>
-                <Input
-                  type="date"
+              <div className="md:col-span-2">
+                <JalaliDateInput
+                  label="تاریخ سفارش"
                   value={najaPurchaseDate}
-                  onChange={(event) => setNajaPurchaseDate(event.target.value)}
+                  onChange={setNajaPurchaseDate}
+                  placeholder="انتخاب تاریخ سفارش"
                 />
-              </label>
+              </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-[#E5E7EB] bg-white p-3 text-xs leading-6 text-[#64748B]">
-              <p>
-                موبایل/تلفن مشتری سپیدار:{" "}
-                {initialOrder?.customerMobile || initialOrder?.customerPhone
-                  ? formatFaDigits(
-                      initialOrder.customerMobile ||
-                        initialOrder.customerPhone ||
-                        "",
-                    )
-                  : "-"}
-              </p>
-              <p>آدرس مشتری سپیدار: {initialOrder?.customerAddress || "-"}</p>
+              <p>آدرس مرکز ناجا: {initialOrder?.customerAddress || "-"}</p>
             </div>
           </div>
         ) : null}
@@ -1043,45 +1055,22 @@ export function OrderForm({
               ? product.sepidarCode || product.sku || product.objectId
               : "";
             const helperText = product
-              ? sepidarProductsOnly
-                ? [
-                    productCode
-                      ? `کد کالا: ${formatFaDigits(productCode)}`
-                      : "",
-                    product.barcode
-                      ? `بارکد: ${formatFaDigits(product.barcode)}`
-                      : "",
-                    `${
-                      mode === "edit"
-                        ? "موجودی قابل ویرایش"
-                        : "موجودی قابل فروش"
-                    }: ${formatNumber(
-                      getEditableAvailableQuantity({
-                        product,
-                        mode,
-                        oldQuantityByProductId,
-                      }),
-                    )} ${product.unit}`,
-                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")
-                : [
-                    productCode
-                      ? `کد کالا: ${formatFaDigits(productCode)}`
-                      : "",
-                    `موجودی قابل فروش: ${formatNumber(
-                      getEditableAvailableQuantity({
-                        product,
-                        mode,
-                        oldQuantityByProductId,
-                      }),
-                    )} ${product.unit}`,
-                    `قیمت واحد: ${formatCurrency(product.unitPrice)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")
+              ? [
+                  productCode ? `کد کالا: ${formatFaDigits(productCode)}` : "",
+                  product.barcode
+                    ? `بارکد: ${formatFaDigits(product.barcode)}`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" • ")
               : `آیتم ${formatNumber(index + 1)}`;
+            const editableAvailableQuantity = product
+              ? getEditableAvailableQuantity({
+                  product,
+                  mode,
+                  oldQuantityByProductId,
+                })
+              : 0;
 
             return (
               <div
@@ -1089,7 +1078,7 @@ export function OrderForm({
                 className="rounded-2xl border border-[#E7EDF3] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
               >
                 <div className="grid gap-2">
-                  <div className="relative min-w-0">
+                  <div className="relative min-w-0 overflow-hidden rounded-[14px]">
                     <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                     <SearchableSelect
                       value={item.productId || undefined}
@@ -1115,15 +1104,7 @@ export function OrderForm({
                           }
                           return {
                             value: option.objectId,
-                            label: sepidarProductsOnly
-                              ? `${option.sepidarCode || option.sku} - ${option.name} - قیمت ${formatCurrency(option.unitPrice)} - موجودی قابل فروش ${formatOrderAvailableQuantity(option, formatNumber)} ${option.unit}`
-                              : `${option.name} - ${option.brand} - موجودی قابل فروش ${formatNumber(
-                                  getEditableAvailableQuantity({
-                                    product: option,
-                                    mode,
-                                    oldQuantityByProductId,
-                                  }),
-                                )} ${option.unit}`,
+                            label: productIdentityLabel(option),
                           };
                         })}
                       placeholder={
@@ -1154,13 +1135,33 @@ export function OrderForm({
                   <p className="text-[11px] leading-5 text-[#64748B]">
                     {helperText}
                   </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <ReadonlyValueInput
+                      label="قیمت واحد"
+                      value={product ? formatCurrency(product.unitPrice) : "-"}
+                    />
+                    <ReadonlyValueInput
+                      label={
+                        mode === "edit"
+                          ? "موجودی قابل ویرایش"
+                          : "موجودی قابل فروش"
+                      }
+                      value={
+                        product
+                          ? `${formatNumber(editableAvailableQuantity)} ${
+                              product.unit || ""
+                            }`.trim()
+                          : "-"
+                      }
+                    />
+                  </div>
                   <FieldError
                     message={rowErrors[item.rowId]?.productId}
                     className="mt-0 leading-5"
                   />
                 </div>
 
-                <div className="mt-3 grid gap-2 sm:grid-cols-[96px_minmax(150px,1fr)_minmax(150px,1fr)_40px] sm:items-start">
+                <div className="mt-3 grid gap-2 sm:grid-cols-[96px_minmax(150px,1fr)_40px] sm:items-start">
                   <div className="w-24">
                     <Input
                       inputMode="numeric"
@@ -1196,11 +1197,6 @@ export function OrderForm({
                       className="mt-1 leading-5"
                     />
                   </div>
-
-                  <ReadonlyAmountPill
-                    label="قیمت واحد"
-                    value={product ? formatCurrency(product.unitPrice) : "-"}
-                  />
 
                   <ReadonlyAmountPill
                     label="مبلغ ردیف"
@@ -1240,6 +1236,16 @@ export function OrderForm({
             </span>
           </div>
         </div>
+
+        <label className="mt-5 grid gap-2 text-sm font-medium text-[#334155]">
+          <span>یادداشت</span>
+          <Textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="توضیحات داخلی سفارش"
+            rows={3}
+          />
+        </label>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" onClick={addRow}>
@@ -1293,7 +1299,8 @@ function hasAssignmentInventory(customer: Customer | null | undefined): boolean 
     customer?.saleType?.sepidarSaleTypeId &&
       (customer.allowedStockObjectIds.length > 0 ||
         customer.allowedSepidarStockIds.length > 0 ||
-        customer.allowedStocks.length > 0),
+        customer.allowedStocks.length > 0 ||
+        customer.allowedStockTitles.length > 0),
   );
 }
 
@@ -1385,6 +1392,7 @@ function createProductFromOrderItem(item: OrderItem): Product {
     sepidarCode: item.productSku,
     name: item.productName,
     brand: item.brand,
+    brandName: item.brandName,
     model: null,
     category: "",
     unit: "عدد",
@@ -1404,6 +1412,35 @@ function createProductFromOrderItem(item: OrderItem): Product {
     createdAt: "",
     updatedAt: "",
   };
+}
+
+function productIdentityLabel(product: Product): string {
+  return [
+    product.sepidarCode || product.sku || product.objectId,
+    product.name,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function ReadonlyValueInput({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <label className="grid gap-1 text-[11px] font-medium text-[#64748B]">
+      <span>{label}</span>
+      <Input
+        value={value}
+        readOnly
+        disabled
+        className="h-10 bg-[#F7F9FB] text-sm font-semibold text-[#102034] disabled:opacity-100"
+      />
+    </label>
+  );
 }
 
 function ReadonlyAmountPill({
@@ -1442,12 +1479,28 @@ function createCustomerFromOrder(order: Order): Customer | null {
     sepidarCustomerId:
       order.sepidarCustomerId === null ? null : String(order.sepidarCustomerId),
     sepidarCustomerCode: order.sepidarCustomerCode,
-    saleType: order.saleType,
+    saleType:
+      order.saleType ??
+      (order.saleTypeTitle || order.sepidarSaleTypeId
+        ? {
+            objectId: order.saleTypeObjectId,
+            sepidarSaleTypeId: order.sepidarSaleTypeId,
+            title: order.saleTypeTitle,
+          }
+        : null),
+    priceListId: order.priceListId,
+    priceListTitle: order.priceListTitle,
+    priceListType: order.priceListType,
+    priceListBrand: order.priceListBrand,
     allowedStockObjectIds: order.stockObjectId ? [order.stockObjectId] : [],
     allowedSepidarStockIds:
       order.sepidarStockId === null ? [] : [order.sepidarStockId],
     allowedStocks: [],
-    allowedStockTitles: order.stockTitle ? [order.stockTitle] : [],
+    allowedStockTitles: order.selectedStockTitles.length
+      ? order.selectedStockTitles
+      : order.stockTitle
+        ? [order.stockTitle]
+        : [],
     isSyncedFromSepidar: true,
     fullName: order.customerName ?? "",
     phone: order.customerPhone ?? order.customerMobile ?? "",

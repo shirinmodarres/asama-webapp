@@ -175,7 +175,7 @@ export default function NajaOrdersPage() {
           >
             مشاهده جزئیات
           </Link>
-          {canEditNajaOrder(row) ? (
+          {row.canEdit ? (
             <Link
               href={`/naja/orders/${row.objectId}/edit`}
               className="rounded-xl border border-[#1F3A5F] px-3 py-1.5 text-xs font-semibold text-[#1F3A5F]"
@@ -278,12 +278,6 @@ export default function NajaOrdersPage() {
         />
       )}
     </DashboardLayout>
-  );
-}
-
-function canEditNajaOrder(order: Order): boolean {
-  return ["pending_approval", "pending", "review_resolved"].includes(
-    order.orderStatus,
   );
 }
 

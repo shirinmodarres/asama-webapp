@@ -7,11 +7,17 @@ interface FieldErrorProps {
 }
 
 export function FieldError({ message, id, className }: FieldErrorProps) {
-  if (!message) return null;
-
   return (
-    <p id={id} className={cn("mt-1 text-xs font-medium text-red-600", className)}>
-      {message}
+    <p
+      id={id}
+      aria-live="polite"
+      className={cn(
+        "mt-1 min-h-5 text-xs font-medium leading-5 text-red-600",
+        !message && "invisible",
+        className,
+      )}
+    >
+      {message || "-"}
     </p>
   );
 }

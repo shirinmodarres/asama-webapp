@@ -83,7 +83,7 @@ export default function WebsiteProductDetailPage() {
                 <Info label="SKU" value={formatFaDigits(product.sku) || "-"} />
                 <Info label="اسلاگ" value={product.slug || "-"} />
                 <Info label="دسته‌بندی" value={product.category || "-"} />
-                <Info label="برند" value={product.brand || "-"} />
+                <Info label="برند" value={product.brandName || product.brandTitle || product.brand || "-"} />
                 <Info label="قیمت سایت (ریال)" value={formatFaCurrency(product.price)} />
                 <Info
                   label="قیمت ویژه (ریال)"

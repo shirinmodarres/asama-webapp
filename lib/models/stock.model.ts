@@ -27,6 +27,7 @@ export interface ProductStockInventory {
   sepidarItemId: number | null;
   productSku: string;
   productName: string;
+  brandName?: string | null;
   stockObjectId: string | null;
   sepidarStockId: number | null;
   stockTitle: string;
@@ -54,7 +55,9 @@ export interface StockTransferItem {
   productObjectId: string;
   sepidarItemId: number | null;
   productName: string | null;
+  productNameSnapshot: string | null;
   quantity: number;
+  scannedUnitIds: string[];
   scannedUnitObjectIds: string[];
 }
 
@@ -95,6 +98,8 @@ export interface CreateStockTransferPayload {
   quantity?: number;
   items?: Array<{
     productObjectId: string;
+    sepidarItemId?: number | null;
+    productNameSnapshot?: string;
     quantity: number;
   }>;
   note?: string;
@@ -104,4 +109,26 @@ export interface CreateStockTransferPayload {
 export interface UpdateProductStockInventoryPayload {
   salesQuantity?: number;
   useFullRealQuantityForSales?: boolean;
+}
+
+export interface BulkUpdateProductStockInventoryItem
+  extends UpdateProductStockInventoryPayload {
+  objectId: string;
+}
+
+export interface BulkUpdateProductStockInventoryFailure {
+  objectId: string | null;
+  code: string;
+  message: string;
+  status?: number;
+}
+
+export interface BulkUpdateProductStockInventoryResult {
+  updated: ProductStockInventory[];
+  failed: BulkUpdateProductStockInventoryFailure[];
+  summary: {
+    requested: number;
+    updated: number;
+    failed: number;
+  };
 }

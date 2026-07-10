@@ -8,6 +8,8 @@ import {
   mapStockTransferRequestListDto,
 } from "@/lib/mappers/stock.mapper";
 import type {
+  BulkUpdateProductStockInventoryItem,
+  BulkUpdateProductStockInventoryResult,
   CreateStockTransferPayload,
   ProductStockInventory,
   SepidarStock,
@@ -17,7 +19,7 @@ import type {
 } from "@/lib/models/stock.model";
 import { mapWarehouseItemUnitDto } from "@/lib/mappers/warehouse.mapper";
 import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
-import { toRecord } from "@/lib/mappers/mapper-utils";
+import { toArray, toRecord, toStringValue, toNumberValue } from "@/lib/mappers/mapper-utils";
 import { toNumber } from "@/lib/utils/number-format";
 
 export async function listSepidarStocks(): Promise<SepidarStock[]> {
@@ -84,6 +86,8 @@ export async function createStockTransfer(
 ): Promise<StockTransferRequest> {
   const normalizedItems = payload.items?.map((item) => ({
     productObjectId: item.productObjectId,
+    sepidarItemId: item.sepidarItemId,
+    productNameSnapshot: item.productNameSnapshot,
     quantity: toNumber(item.quantity),
   }));
   const data = await httpClient.post<unknown>("/api/support/stock-transfers", {
@@ -147,6 +151,7 @@ export async function executeStockTransfer(
     unitObjectIds?: string[];
     items?: Array<{
       productObjectId: string;
+      sepidarItemId?: number | null;
       unitObjectIds: string[];
     }>;
     executedByName?: string;
@@ -196,4 +201,46 @@ export async function updateProductStockInventory(
     },
   );
   return mapProductStockInventoryDto(data);
+}
+
+export async function bulkUpdateProductStockInventory(
+  updates: BulkUpdateProductStockInventoryItem[],
+): Promise<BulkUpdateProductStockInventoryResult> {
+  const data = await httpClient.patch<unknown>(
+    "/api/support/product-stock-inventory/sales/bulk",
+    {
+      updates: updates.map((item) => ({
+        ...item,
+        salesQuantity:
+          item.salesQuantity !== undefined
+            ? toNumber(item.salesQuantity)
+            : undefined,
+      })),
+    },
+  );
+  const record = toRecord(data);
+  const summary = toRecord(record.summary);
+  return {
+    updated: mapProductStockInventoryListDto(record.updated),
+    failed: toArray(record.failed).map((item) => {
+      const failure = toRecord(item);
+      return {
+        objectId:
+          failure.objectId === undefined || failure.objectId === null
+            ? null
+            : toStringValue(failure.objectId),
+        code: toStringValue(failure.code),
+        message: toStringValue(failure.message),
+        status:
+          failure.status === undefined || failure.status === null
+            ? undefined
+            : toNumberValue(failure.status),
+      };
+    }),
+    summary: {
+      requested: toNumberValue(summary.requested),
+      updated: toNumberValue(summary.updated),
+      failed: toNumberValue(summary.failed),
+    },
+  };
 }

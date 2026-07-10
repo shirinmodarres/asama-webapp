@@ -8,7 +8,6 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ProductStatusBadge } from "@/components/support/product-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -65,7 +64,7 @@ export default function SupportProductsPage() {
       Array.from(
         new Set(
           products
-            .map((product) => product.brand)
+            .map(productBrandValue)
             .filter(
               (b): b is string => typeof b === "string" && b.trim().length > 0,
             ),
@@ -92,7 +91,7 @@ export default function SupportProductsPage() {
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchesBrand =
-        brandFilter === "all" || product.brand === brandFilter;
+        brandFilter === "all" || productBrandLabel(product) === brandFilter;
       const matchesCategory =
         categoryFilter === "all" || product.category === categoryFilter;
       const matchesStatus =
@@ -112,31 +111,21 @@ export default function SupportProductsPage() {
       key: "name",
       header: "نام کالا",
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-[#1F3A5F]">{row.name}</span>
-          {row.isSyncedFromSepidar ? <Badge variant="brand">سپیدار</Badge> : null}
-        </div>
+        <Link
+          href={`/support/products/${row.objectId || row.id}/edit`}
+          className="font-medium text-[#1F3A5F] hover:text-[#6CAE75]"
+        >
+          {row.name}
+        </Link>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brand },
+    { key: "brand", header: "برند", render: (row) => productBrandLabel(row) },
     { key: "category", header: "دسته بندی", render: (row) => row.category },
     { key: "unit", header: "واحد", render: (row) => row.unit },
     {
       key: "status",
       header: "وضعیت",
       render: (row) => <ProductStatusBadge status={row.status} />,
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Link
-          href={`/support/products/${row.objectId || row.id}/edit`}
-          className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
-        >
-          {row.isSyncedFromSepidar ? "مشاهده" : "ویرایش"}
-        </Link>
-      ),
     },
   ];
 
@@ -249,4 +238,12 @@ export default function SupportProductsPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function productBrandLabel(product: Product): string {
+  return productBrandValue(product) || "-";
+}
+
+function productBrandValue(product: Product): string {
+  return product.brandName || product.brand || "";
 }

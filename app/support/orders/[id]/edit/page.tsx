@@ -118,7 +118,6 @@ export default function SupportOrderEditPage() {
             sepidarProductsOnly
             initialProducts={editData.products}
             initialCustomers={editData.customers}
-            lockCustomer
             onSubmit={handleSubmit}
           />
         </>
@@ -128,8 +127,5 @@ export default function SupportOrderEditPage() {
 }
 
 function canSupportEdit(editData: OrderEditData): boolean {
-  if (!editData.canEdit) return false;
-  return !["dispatchIssued", "delivered"].includes(
-    editData.order.warehouseStatus,
-  );
+  return editData.canEdit;
 }

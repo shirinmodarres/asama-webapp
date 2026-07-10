@@ -43,6 +43,10 @@ export function mapCustomerDto(dto: unknown): Customer {
       record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
     ),
     saleType: mapCustomerSaleType(record.saleType),
+    priceListId: toNullableString(record.priceListId),
+    priceListTitle: toNullableString(record.priceListTitle),
+    priceListType: toNullableString(record.priceListType),
+    priceListBrand: toNullableString(record.priceListBrand),
     allowedStockObjectIds: toArray(record.allowedStockObjectIds)
       .map(toStringValue)
       .filter(Boolean),

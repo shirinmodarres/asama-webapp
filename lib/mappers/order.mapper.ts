@@ -14,6 +14,7 @@ import {
 } from "@/lib/mappers/customer.mapper";
 import {
   toArray,
+  toBooleanValue,
   toNullableString,
   toNumberValue,
   toRecord,
@@ -98,6 +99,10 @@ export function mapOrderDto(dto: unknown): Order {
             title: toNullableString(record.saleTypeTitle ?? saleTypeRecord.title),
           }
         : null,
+    priceListId: toNullableString(record.priceListId),
+    priceListTitle: toNullableString(record.priceListTitle),
+    priceListType: toNullableString(record.priceListType),
+    priceListBrand: toNullableString(record.priceListBrand),
     warehouseId: toNullableString(
       record.warehouseId ??
         record.warehouseObjectId ??
@@ -119,6 +124,9 @@ export function mapOrderDto(dto: unknown): Order {
     stockTitle: toNullableString(
       record.stockTitle ?? toRecord(record.stock).title,
     ),
+    selectedStockTitles: toArray(record.selectedStockTitles)
+      .map(toStringValue)
+      .filter(Boolean),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),
@@ -264,7 +272,10 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarQuotationId,
     ),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
+    quotationSyncError: toNullableString(record.quotationSyncError),
     sepidarLastError: toNullableString(record.sepidarLastError),
+    canEdit: toBooleanValue(record.canEdit),
+    editBlockedReason: toNullableString(record.editBlockedReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
     najaCenter: mapNajaCenterSummaryDto(
@@ -298,8 +309,14 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     productSku: toStringValue(record.productSku ?? productRecord.sku),
     productName: toStringValue(record.productName ?? productRecord.name),
     brand: toStringValue(record.brand ?? productRecord.brand),
+    brandName: toNullableString(
+      record.brandName ?? productRecord.brandName ?? record.brand ?? productRecord.brand,
+    ),
     quantity: toNumberValue(record.quantity),
     unitPrice: toNumberValue(record.unitPrice),
+    priceListId: toNullableString(record.priceListId),
+    priceListItemId: toNullableString(record.priceListItemId),
+    pricingSource: toNullableString(record.pricingSource),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),
     trackingCode: normalizeNullableDigits(record.trackingCode),
   };
@@ -323,6 +340,7 @@ function mapQuotationStatus(
   quotationId: unknown,
 ): QuotationStatus {
   const explicit = toStringValue(value);
+  if (explicit === "created") return "success";
   if (explicit === "success" || explicit === "failed" || explicit === "pending") {
     return explicit;
   }

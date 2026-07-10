@@ -23,6 +23,7 @@ export interface WarehouseItemUnit {
   objectId: string;
   id: string;
   productObjectId: string;
+  sepidarItemId: number | null;
   stockObjectId: string | null;
   sepidarStockId: number | null;
   stockTitle: string | null;
@@ -48,6 +49,9 @@ export interface WarehouseInboundReceipt {
   id: string;
   receiptCode: string;
   productObjectId: string;
+  sepidarItemId: number | null;
+  canEditProduct: boolean;
+  productEditDisabledReason: string | null;
   stockObjectId: string | null;
   sepidarStockId: number | null;
   stockTitle: string | null;
@@ -236,6 +240,8 @@ export interface CreateInboundReceiptPayload {
 }
 
 export interface UpdateInboundReceiptPayload {
+  productObjectId?: string;
+  sepidarItemId?: number | null;
   supplierName?: string | null;
   receiptDate?: string | null;
   notes?: string | null;

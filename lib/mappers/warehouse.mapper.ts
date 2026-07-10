@@ -71,6 +71,16 @@ export function mapWarehouseItemUnitDto(dto: unknown): WarehouseItemUnit {
     productObjectId: toStringValue(
       record.productObjectId ?? productRecord.objectId ?? wrapper.productObjectId,
     ),
+    sepidarItemId:
+      record.sepidarItemId === undefined &&
+      productRecord.sepidarItemId === undefined &&
+      wrapper.sepidarItemId === undefined
+        ? null
+        : toNumberValue(
+            record.sepidarItemId ??
+              productRecord.sepidarItemId ??
+              wrapper.sepidarItemId,
+          ),
     stockObjectId: toNullableString(record.stockObjectId ?? wrapper.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined && wrapper.sepidarStockId === undefined
@@ -199,18 +209,32 @@ export function mapWarehouseInboundReceiptDto(
   dto: unknown,
 ): WarehouseInboundReceipt {
   const record = toRecord(dto);
+  const productRecord = toRecord(record.product);
 
   return {
     objectId: toStringValue(record.objectId),
     id: toStringValue(record.id) || toStringValue(record.objectId),
     receiptCode: normalizeDigits(toStringValue(record.receiptCode)),
-    productObjectId: toStringValue(record.productObjectId),
+    productObjectId: toStringValue(record.productObjectId ?? productRecord.objectId),
+    sepidarItemId:
+      record.sepidarItemId === undefined && productRecord.sepidarItemId === undefined
+        ? null
+        : toNumberValue(record.sepidarItemId ?? productRecord.sepidarItemId),
+    canEditProduct:
+      record.canEditProduct === undefined
+        ? false
+        : toBooleanValue(record.canEditProduct),
+    productEditDisabledReason: toNullableString(
+      record.productEditDisabledReason,
+    ),
     stockObjectId: toNullableString(record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined ? null : toNumberValue(record.sepidarStockId),
     stockTitle: toNullableString(record.stockTitle),
-    productSku: normalizeDigits(toStringValue(record.productSku)),
-    productName: toStringValue(record.productName),
+    productSku: normalizeDigits(
+      toStringValue(record.productSku ?? productRecord.sku),
+    ),
+    productName: toStringValue(record.productName ?? productRecord.name),
     quantity: toNumberValue(record.quantity),
     createdByName: toNullableString(record.createdByName),
     supplierName: toNullableString(record.supplierName),

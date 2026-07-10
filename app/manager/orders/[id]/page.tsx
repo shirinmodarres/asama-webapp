@@ -136,11 +136,13 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
+  const isNajaOrder = order.orderType === "naja";
   const canApprove = ["pending_approval", "review_resolved"].includes(order.orderStatus);
-  const canNeedReview = order.orderStatus === "pending_approval";
+  const canNeedReview = !isNajaOrder && order.orderStatus === "pending_approval";
   const shouldShowNeedReviewButton =
-    canNeedReview || order.orderStatus === "review_resolved";
+    !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
   const canCancel =
+    !isNajaOrder &&
     ["pending_approval", "needs_review", "review_resolved"].includes(
       order.orderStatus,
     ) && !["dispatchIssued", "delivered"].includes(order.warehouseStatus);
@@ -172,7 +174,11 @@ export default function ManagerOrderReviewPage() {
         </span>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brand || "-" },
+    {
+      key: "brand",
+      header: "برند",
+      render: (row) => row.brandName || row.brand || "-",
+    },
     {
       key: "unitPrice",
       header: "قیمت واحد",
@@ -311,6 +317,17 @@ export default function ManagerOrderReviewPage() {
   const retryQuotation = async () => {
     setIsRetryingQuotation(true);
     setMessage("");
+    setOrder((current) =>
+      current
+        ? {
+            ...current,
+            quotationStatus: "pending",
+            quotationSyncError: null,
+            sepidarLastError: null,
+            sepidarIntegrationStatus: null,
+          }
+        : current,
+    );
     try {
       const result = await retryOrderQuotation(order.objectId);
       setOrder((current) =>
@@ -334,6 +351,10 @@ export default function ManagerOrderReviewPage() {
     } catch (retryError) {
       setMessageType("error");
       setMessage(getErrorMessage(retryError));
+      router.refresh();
+      await getOrder(order.objectId)
+        .then((freshOrder) => setOrder(freshOrder))
+        .catch(() => undefined);
     } finally {
       setIsRetryingQuotation(false);
     }

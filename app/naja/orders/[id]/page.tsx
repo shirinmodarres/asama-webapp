@@ -85,7 +85,7 @@ export default function NajaOrderDetailsPage() {
     return order.items.map((item) => ({
       id: item.objectId || item.productId,
       name: item.productName || "کالای نامشخص",
-      brand: item.brand || "-",
+      brand: item.brandName || item.brand || "-",
       unitPrice: item.unitPrice,
       quantity: item.quantity,
       productIdentifier: item.productIdentifier,
@@ -153,10 +153,10 @@ export default function NajaOrderDetailsPage() {
         description="مشاهده اطلاعات مشتری/مرکز ناجا از سپیدار، وضعیت انبار و فاکتور سفارش"
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {canEditNajaOrder(order) ? (
+            {order.canEdit ? (
               <Link
                 href={`/naja/orders/${order.objectId}/edit`}
-                className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white"
+                className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-semibold !text-white visited:!text-white hover:!text-white focus:!text-white"
               >
                 ویرایش سفارش
               </Link>
@@ -284,6 +284,14 @@ export default function NajaOrderDetailsPage() {
             totalAmount={totalAmount}
             status={order.orderStatus as never}
             warehouseStatus={order.warehouseStatus as never}
+            saleTypeTitle={order.saleTypeTitle || order.saleType?.title}
+            stockTitles={
+              order.selectedStockTitles.length
+                ? order.selectedStockTitles
+                : order.stockTitle
+                  ? [order.stockTitle]
+                  : []
+            }
           />
 
           <NajaReturnActionRemote
@@ -316,10 +324,4 @@ function getQuotationStatusLabel(order: Order): string {
   }
 
   return "ثبت نشده";
-}
-
-function canEditNajaOrder(order: Order): boolean {
-  return ["pending_approval", "pending", "review_resolved"].includes(
-    order.orderStatus,
-  );
 }

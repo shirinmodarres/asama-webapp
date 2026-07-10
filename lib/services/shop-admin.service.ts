@@ -4,11 +4,15 @@ import {
   mapWebsiteOrderListDto,
   mapWebsiteProductDto,
   mapWebsiteProductListDto,
+  mapWebsiteMagazineCategoryListDto,
+  mapWebsiteMagazinePostDto,
+  mapWebsiteMagazinePostListDto,
   mapWebsiteBrandDto,
   mapWebsiteBrandListDto,
   mapWebsiteCategoryDto,
   mapWebsiteCategoryListDto,
 } from "@/lib/mappers/shop.mapper";
+import { toArray, toRecord } from "@/lib/mappers/mapper-utils";
 import type {
   WebsiteOrder,
   WebsiteOrderFilters,
@@ -17,6 +21,11 @@ import type {
   WebsiteProductFilters,
   WebsiteProductPayload,
   WebsiteStockUpdatePayload,
+  WebsiteMagazineCategorySummary,
+  WebsiteMagazinePost,
+  WebsiteMagazinePostFilters,
+  WebsiteMagazinePostPayload,
+  WebsiteMagazineTagSummary,
   WebsiteBrand,
   WebsiteBrandPayload,
   WebsiteCategory,
@@ -75,6 +84,102 @@ export async function updateWebsiteProductStock(
     },
   );
   return mapWebsiteProductDto(data);
+}
+
+export async function listWebsiteMagazinePosts(
+  filters?: WebsiteMagazinePostFilters,
+): Promise<WebsiteMagazinePost[]> {
+  const data = await httpClient.get<unknown>(
+    `/api/admin/shop/magazine/posts${buildMagazinePostQuery(filters)}`,
+  );
+  return mapWebsiteMagazinePostListDto(data);
+}
+
+export async function getWebsiteMagazinePost(
+  objectId: string,
+): Promise<WebsiteMagazinePost> {
+  const data = await httpClient.get<unknown>(
+    `/api/admin/shop/magazine/posts/${objectId}`,
+  );
+  return mapWebsiteMagazinePostDto(data);
+}
+
+export async function createWebsiteMagazinePost(
+  payload: WebsiteMagazinePostPayload,
+): Promise<WebsiteMagazinePost> {
+  const data = await httpClient.post<unknown>(
+    "/api/admin/shop/magazine/posts",
+    normalizeMagazinePostPayload(payload),
+  );
+  return mapWebsiteMagazinePostDto(data);
+}
+
+export async function updateWebsiteMagazinePost(
+  objectId: string,
+  payload: WebsiteMagazinePostPayload,
+): Promise<WebsiteMagazinePost> {
+  const data = await httpClient.patch<unknown>(
+    `/api/admin/shop/magazine/posts/${objectId}`,
+    normalizeMagazinePostPayload(payload),
+  );
+  return mapWebsiteMagazinePostDto(data);
+}
+
+export async function archiveWebsiteMagazinePost(
+  objectId: string,
+): Promise<WebsiteMagazinePost> {
+  const data = await httpClient.delete<unknown>(
+    `/api/admin/shop/magazine/posts/${objectId}`,
+  );
+  return mapWebsiteMagazinePostDto(data);
+}
+
+export async function listWebsiteMagazineCategories(): Promise<
+  WebsiteMagazineCategorySummary[]
+> {
+  const data = await httpClient.get<unknown>("/api/admin/shop/magazine/categories");
+  return mapWebsiteMagazineCategoryListDto(data);
+}
+
+export async function listWebsiteMagazineTags(): Promise<
+  WebsiteMagazineTagSummary[]
+> {
+  const data = await httpClient.get<unknown>("/api/admin/shop/magazine/tags");
+  const record = toRecord(data);
+  return toArray(record.items ?? record.tags ?? data)
+    .map((item) => {
+      const itemRecord = toRecord(item);
+      return {
+        tag: String(itemRecord.tag ?? itemRecord.title ?? itemRecord.name ?? "").trim(),
+        postCount: toNumber(String(itemRecord.postCount ?? itemRecord.count ?? 0)),
+      };
+    })
+    .filter((item) => item.tag);
+}
+
+export async function listPublicMagazinePosts(
+  filters?: WebsiteMagazinePostFilters,
+): Promise<WebsiteMagazinePost[]> {
+  const data = await httpClient.get<unknown>(
+    `/api/shop/magazine/posts${buildMagazinePostQuery(filters, true)}`,
+  );
+  return mapWebsiteMagazinePostListDto(data);
+}
+
+export async function getPublicMagazinePost(
+  slug: string,
+): Promise<WebsiteMagazinePost> {
+  const data = await httpClient.get<unknown>(
+    `/api/shop/magazine/posts/${encodeURIComponent(slug)}`,
+  );
+  return mapWebsiteMagazinePostDto(data);
+}
+
+export async function listPublicMagazineCategories(): Promise<
+  WebsiteMagazineCategorySummary[]
+> {
+  const data = await httpClient.get<unknown>("/api/shop/magazine/categories");
+  return mapWebsiteMagazineCategoryListDto(data);
 }
 
 export async function listWebsiteOrders(
@@ -195,6 +300,39 @@ function normalizeProductPayload(
   };
 }
 
+function normalizeMagazinePostPayload(
+  payload: WebsiteMagazinePostPayload,
+): Record<string, unknown> {
+  return {
+    ...payload,
+    title: payload.title.trim(),
+    slug: normalizeSlug(payload.slug || payload.title),
+    excerpt: payload.excerpt.trim(),
+    content: payload.content.trim(),
+    coverImage: payload.coverImage.trim(),
+    category: payload.category.trim(),
+    tags: payload.tags.map((tag) => tag.trim()).filter(Boolean),
+    authorName: payload.authorName.trim(),
+    isFeatured: payload.isFeatured,
+    publishedAt: payload.publishedAt || null,
+    readingTimeMinutes: toNumber(payload.readingTimeMinutes),
+    sortOrder: toNumber(payload.sortOrder),
+    relatedProductIds: payload.relatedProductIds
+      .map((id) => id.trim())
+      .filter(Boolean),
+    relatedCategorySlugs: payload.relatedCategorySlugs
+      .map((slug) => normalizeSlug(slug))
+      .filter(Boolean),
+    metaTitle: payload.metaTitle.trim(),
+    metaDescription: payload.metaDescription.trim(),
+    canonicalUrl: payload.canonicalUrl.trim(),
+    ogTitle: payload.ogTitle.trim(),
+    ogDescription: payload.ogDescription.trim(),
+    ogImage: payload.ogImage.trim(),
+    noIndex: Boolean(payload.noIndex),
+  };
+}
+
 export async function listWebsiteBrands(activeOnly = false): Promise<WebsiteBrand[]> {
   const data = await httpClient.get<unknown>(
     `/api/admin/shop/brands${activeOnly ? "?active=true" : ""}`,
@@ -283,6 +421,31 @@ function buildOrderQuery(filters?: WebsiteOrderFilters): string {
   }
   if (filters?.dateFrom) params.set("dateFrom", filters.dateFrom);
   if (filters?.dateTo) params.set("dateTo", filters.dateTo);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function buildMagazinePostQuery(
+  filters?: WebsiteMagazinePostFilters,
+  publicOnly = false,
+): string {
+  const params = new URLSearchParams();
+  if (filters?.page) params.set("page", String(filters.page));
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  if (!publicOnly && filters?.status && filters.status !== "all") {
+    params.set("status", filters.status);
+  }
+  if (filters?.category?.trim() && filters.category !== "all") {
+    params.set("category", filters.category.trim());
+  }
+  if (filters?.tag?.trim()) params.set("tag", filters.tag.trim());
+  if (filters?.search?.trim()) params.set("search", filters.search.trim());
+  if (filters?.featured !== undefined && filters.featured !== "all") {
+    params.set(
+      "featured",
+      String(filters.featured === "featured" ? true : filters.featured === "normal" ? false : filters.featured),
+    );
+  }
   const query = params.toString();
   return query ? `?${query}` : "";
 }

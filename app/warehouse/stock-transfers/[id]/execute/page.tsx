@@ -127,6 +127,21 @@ export default function WarehouseStockTransferExecutePage() {
         productObjectId: item.productObjectId,
         currentScannedUnitIds: allScannedUnitIds,
       });
+      const validationError = validateScannedUnitForItem(
+        unit,
+        item,
+        transfer,
+        allScannedUnitIds,
+      );
+      if (validationError) {
+        setScanErrors((current) => ({
+          ...current,
+          [item.productObjectId]: validationError,
+        }));
+        setScanInputs((current) => ({ ...current, [item.productObjectId]: "" }));
+        focusProduct(item.productObjectId);
+        return;
+      }
       setScanned((current) => ({
         ...current,
         [item.productObjectId]: [
@@ -182,6 +197,7 @@ export default function WarehouseStockTransferExecutePage() {
       await executeStockTransfer(transfer.objectId, {
         items: transfer.items.map((item) => ({
           productObjectId: item.productObjectId,
+          sepidarItemId: item.sepidarItemId,
           unitObjectIds: (scanned[item.productObjectId] || []).map(
             (unit) => unit.objectId,
           ),
@@ -349,4 +365,29 @@ export default function WarehouseStockTransferExecutePage() {
       )}
     </DashboardLayout>
   );
+}
+
+function validateScannedUnitForItem(
+  unit: WarehouseItemUnit,
+  item: StockTransferItem,
+  transfer: StockTransferRequest,
+  allScannedUnitIds: string[],
+): string {
+  if (allScannedUnitIds.includes(unit.objectId)) {
+    return "این کالا قبلاً در همین انتقال اسکن شده است.";
+  }
+
+  if (String(unit.status) !== "in_stock") {
+    return `این واحد در وضعیت ${unit.statusLabel || unit.status} است و قابل انتقال نیست.`;
+  }
+
+  if (unit.stockObjectId !== transfer.sourceStockObjectId) {
+    return `این واحد متعلق به ${unit.stockTitle || "انبار دیگری"} است، نه ${transfer.sourceStockTitle || "انبار مبدأ"}.`;
+  }
+
+  if (unit.productObjectId !== item.productObjectId) {
+    return `کالای اسکن‌شده ${unit.productName || "-"} است، اما این ردیف برای ${item.productName || "-"} است.`;
+  }
+
+  return "";
 }

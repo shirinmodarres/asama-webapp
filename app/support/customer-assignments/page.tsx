@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Pencil, UserMinus, X } from "lucide-react";
+import { Pencil, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -13,14 +13,17 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  SearchableMultiSelect,
+  SearchableSelect,
+} from "@/components/ui/searchable-select";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { AuthUser } from "@/lib/models/auth.model";
 import type {
   ExpertCustomerAssignment,
-  SepidarSaleType,
 } from "@/lib/models/customer-assignment.model";
+import type { PriceList } from "@/lib/models/pricing.model";
 import type { Customer } from "@/lib/models/customer.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
 import {
@@ -28,10 +31,10 @@ import {
   deactivateExpertCustomerAssignment,
   listExpertCustomerAssignments,
   listSepidarCustomers,
-  listSepidarSaleTypes,
   listSupportExperts,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
+import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 import { listSepidarStocks } from "@/lib/services/stock.service";
@@ -39,14 +42,14 @@ import { listSepidarStocks } from "@/lib/services/stock.service";
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [saleTypes, setSaleTypes] = useState<SepidarSaleType[]>([]);
+  const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
     [],
   );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedSaleTypeId, setSelectedSaleTypeId] = useState("");
+  const [selectedPriceListId, setSelectedPriceListId] = useState("");
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,17 +60,17 @@ export default function SupportCustomerAssignmentsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [expertData, customerData, saleTypeData, stockData, assignmentData] =
+    const [expertData, customerData, priceListData, stockData, assignmentData] =
       await Promise.all([
         listSupportExperts(),
         listSepidarCustomers(),
-        listSepidarSaleTypes(),
+        listGeneratedPriceLists({ activeOnly: true }),
         listSepidarStocks(),
         listExpertCustomerAssignments(),
       ]);
     setExperts(expertData);
     setCustomers(customerData);
-    setSaleTypes(saleTypeData);
+    setPriceLists(priceListData);
     setStocks(stockData);
     setAssignments(assignmentData);
   };
@@ -78,18 +81,18 @@ export default function SupportCustomerAssignmentsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [expertData, customerData, saleTypeData, stockData, assignmentData] =
+        const [expertData, customerData, priceListData, stockData, assignmentData] =
           await Promise.all([
             listSupportExperts(),
             listSepidarCustomers(),
-            listSepidarSaleTypes(),
+            listGeneratedPriceLists({ activeOnly: true }),
             listSepidarStocks(),
             listExpertCustomerAssignments(),
           ]);
         if (!isMounted) return;
         setExperts(expertData);
         setCustomers(customerData);
-        setSaleTypes(saleTypeData);
+        setPriceLists(priceListData);
         setStocks(stockData);
         setAssignments(assignmentData);
       } catch (loadError) {
@@ -112,8 +115,8 @@ export default function SupportCustomerAssignmentsPage() {
     if (!selectedCustomerId) {
       nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
     }
-    if (!selectedSaleTypeId) {
-      nextErrors.selectedSaleTypeId = "لطفاً نوع فروش را انتخاب کنید.";
+    if (!selectedPriceListId) {
+      nextErrors.selectedPriceListId = "لطفاً لیست قیمت را انتخاب کنید.";
     }
     if (selectedStockIds.length === 0) {
       nextErrors.selectedStockIds = "لطفاً حداقل یک انبار مجاز انتخاب کنید.";
@@ -129,7 +132,7 @@ export default function SupportCustomerAssignmentsPage() {
     const payload = {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
-      saleTypeObjectId: selectedSaleTypeId,
+      priceListId: selectedPriceListId,
       allowedStockObjectIds: selectedStockIds,
     };
 
@@ -152,7 +155,7 @@ export default function SupportCustomerAssignmentsPage() {
       if (editingAssignmentId) {
         setEditingAssignmentId("");
         setSelectedExpertId("");
-        setSelectedSaleTypeId("");
+        setSelectedPriceListId("");
         setSelectedStockIds([]);
       }
       setSelectedCustomerId("");
@@ -199,15 +202,15 @@ export default function SupportCustomerAssignmentsPage() {
       })),
     [customers],
   );
-  const saleTypeOptions = useMemo(
+  const priceListOptions = useMemo(
     () =>
-      saleTypes.map((saleType) => ({
-        value: saleType.objectId,
-        label: `${formatFaDigits(saleType.sepidarSaleTypeId ?? "-")} - ${saleType.title || "-"}${
-          saleType.isAvailable === false ? " (غیرفعال در سپیدار)" : ""
+      priceLists.map((priceList) => ({
+        value: priceList.objectId,
+        label: `${priceList.brandName || "-"} - ${priceList.name || "-"}${
+          priceList.code ? ` - ${formatFaDigits(priceList.code)}` : ""
         }`,
       })),
-    [saleTypes],
+    [priceLists],
   );
   const stockOptions = useMemo(
     () =>
@@ -239,7 +242,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId(assignment.objectId);
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
-    setSelectedSaleTypeId(assignment.saleTypeObjectId ?? "");
+    setSelectedPriceListId(assignment.priceListId ?? "");
     setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
     setError("");
@@ -250,7 +253,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId("");
     setSelectedExpertId("");
     setSelectedCustomerId("");
-    setSelectedSaleTypeId("");
+    setSelectedPriceListId("");
     setSelectedStockIds([]);
     setFieldErrors({});
   };
@@ -259,11 +262,11 @@ export default function SupportCustomerAssignmentsPage() {
     isSubmitting ||
     expertOptions.length === 0 ||
     customerOptions.length === 0 ||
-    saleTypeOptions.length === 0 ||
+    priceListOptions.length === 0 ||
     stockOptions.length === 0 ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    !selectedSaleTypeId ||
+    !selectedPriceListId ||
     selectedStockIds.length === 0;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
@@ -284,15 +287,19 @@ export default function SupportCustomerAssignmentsPage() {
         row.sepidarCustomerCode ? formatFaDigits(row.sepidarCustomerCode) : "-",
     },
     {
-      key: "sale-type",
-      header: "نوع فروش",
+      key: "price-list",
+      header: "لیست قیمت",
       render: (row) => {
-        const saleTypeTitle = row.saleTypeTitle
-          ? row.saleTypeTitle.split("/")[0].trim()
-          : "";
-
+        if (row.priceListTitle) {
+          return [
+            row.priceListBrand,
+            row.priceListTitle,
+            row.priceListType,
+          ].filter(Boolean).join(" - ");
+        }
+        const saleTypeTitle = row.saleTypeTitle ? row.saleTypeTitle.split("/")[0].trim() : "";
         return saleTypeTitle
-          ? `${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
+          ? `قدیمی: ${row.sepidarSaleTypeId ? `${formatNumber(row.sepidarSaleTypeId)} - ` : ""}${saleTypeTitle}`
           : "-";
       },
     },
@@ -431,80 +438,46 @@ export default function SupportCustomerAssignmentsPage() {
                 <FieldError message={fieldErrors.selectedCustomerId} />
               </label>
               <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>نوع فروش</span>
+                <span>لیست قیمت</span>
                 <SearchableSelect
-                  value={selectedSaleTypeId || undefined}
+                  value={selectedPriceListId || undefined}
                   onValueChange={(value) => {
-                    setSelectedSaleTypeId(value);
+                    setSelectedPriceListId(value);
                     setFieldErrors((current) => ({
                       ...current,
-                      selectedSaleTypeId: "",
+                      selectedPriceListId: "",
                     }));
                   }}
-                  options={saleTypeOptions}
-                  placeholder="انتخاب نوع فروش"
-                  searchPlaceholder="جستجو در نوع‌های فروش"
+                  options={priceListOptions}
+                  placeholder="انتخاب لیست قیمت"
+                  searchPlaceholder="جستجو در لیست‌های قیمت"
                   emptyMessage={
-                    saleTypes.length === 0
-                      ? "نوع فروشی پیدا نشد. وضعیت همگام‌سازی را از تنظیمات سپیدار بررسی کنید."
-                      : "نوع فروشی با این جستجو پیدا نشد."
+                    priceLists.length === 0
+                      ? "لیست قیمت فعالی پیدا نشد. ابتدا از بخش قیمت‌گذاری لیست تولید کنید."
+                      : "لیست قیمتی با این جستجو پیدا نشد."
                   }
-                  invalid={Boolean(fieldErrors.selectedSaleTypeId)}
+                  invalid={Boolean(fieldErrors.selectedPriceListId)}
                   className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedSaleTypeId} />
+                <FieldError message={fieldErrors.selectedPriceListId} />
               </label>
               <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
                 <span>انبارهای مجاز</span>
-                <div
-                  className={
-                    fieldErrors.selectedStockIds
-                      ? "grid gap-2 rounded-[14px] border border-red-400 bg-white p-3"
-                      : "grid gap-2 rounded-[14px] border border-[#D7DEE6] bg-white p-3"
-                  }
-                >
-                  {stockOptions.length ? (
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                      {stockOptions.map((stock) => {
-                        const checked = selectedStockIds.includes(stock.value);
-                        return (
-                          <button
-                            key={stock.value}
-                            type="button"
-                            className={
-                              checked
-                                ? "flex items-center justify-between gap-2 rounded-xl border border-[#6CAE75] bg-[#F3FAF4] px-3 py-2 text-right text-xs text-[#1F3A5F]"
-                                : "flex items-center justify-between gap-2 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2 text-right text-xs text-[#334155] hover:border-[#CBD5E1]"
-                            }
-                            onClick={() => {
-                              setSelectedStockIds((current) =>
-                                checked
-                                  ? current.filter((id) => id !== stock.value)
-                                  : [...current, stock.value],
-                              );
-                              setFieldErrors((current) => ({
-                                ...current,
-                                selectedStockIds: "",
-                              }));
-                            }}
-                          >
-                            <span className="min-w-0 truncate">
-                              {stock.label}
-                            </span>
-                            {checked ? (
-                              <Check className="size-4 shrink-0 text-[#6CAE75]" />
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-xs leading-6 text-[#6B7280]">
-                      انباری از سپیدار دریافت نشده است. وضعیت همگام‌سازی
-                      انبارهای سپیدار را بررسی کنید.
-                    </p>
-                  )}
-                </div>
+                <SearchableMultiSelect
+                  values={selectedStockIds}
+                  options={stockOptions}
+                  placeholder="انتخاب انبارهای مجاز"
+                  searchPlaceholder="جستجو در انبارها"
+                  emptyMessage="انباری از سپیدار دریافت نشده است."
+                  invalid={Boolean(fieldErrors.selectedStockIds)}
+                  onValuesChange={(values) => {
+                    setSelectedStockIds(values);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedStockIds: "",
+                    }));
+                  }}
+                />
                 <FieldError message={fieldErrors.selectedStockIds} />
               </div>
             </div>
