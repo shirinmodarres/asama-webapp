@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Pencil, UserMinus, X } from "lucide-react";
+import { Pencil, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -13,7 +13,10 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  SearchableMultiSelect,
+  SearchableSelect,
+} from "@/components/ui/searchable-select";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { AuthUser } from "@/lib/models/auth.model";
@@ -460,55 +463,21 @@ export default function SupportCustomerAssignmentsPage() {
               </label>
               <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
                 <span>انبارهای مجاز</span>
-                <div
-                  className={
-                    fieldErrors.selectedStockIds
-                      ? "grid gap-2 rounded-[14px] border border-red-400 bg-white p-3"
-                      : "grid gap-2 rounded-[14px] border border-[#D7DEE6] bg-white p-3"
-                  }
-                >
-                  {stockOptions.length ? (
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                      {stockOptions.map((stock) => {
-                        const checked = selectedStockIds.includes(stock.value);
-                        return (
-                          <button
-                            key={stock.value}
-                            type="button"
-                            className={
-                              checked
-                                ? "flex items-center justify-between gap-2 rounded-xl border border-[#6CAE75] bg-[#F3FAF4] px-3 py-2 text-right text-xs text-[#1F3A5F]"
-                                : "flex items-center justify-between gap-2 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2 text-right text-xs text-[#334155] hover:border-[#CBD5E1]"
-                            }
-                            onClick={() => {
-                              setSelectedStockIds((current) =>
-                                checked
-                                  ? current.filter((id) => id !== stock.value)
-                                  : [...current, stock.value],
-                              );
-                              setFieldErrors((current) => ({
-                                ...current,
-                                selectedStockIds: "",
-                              }));
-                            }}
-                          >
-                            <span className="min-w-0 truncate">
-                              {stock.label}
-                            </span>
-                            {checked ? (
-                              <Check className="size-4 shrink-0 text-[#6CAE75]" />
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-xs leading-6 text-[#6B7280]">
-                      انباری از سپیدار دریافت نشده است. وضعیت همگام‌سازی
-                      انبارهای سپیدار را بررسی کنید.
-                    </p>
-                  )}
-                </div>
+                <SearchableMultiSelect
+                  values={selectedStockIds}
+                  options={stockOptions}
+                  placeholder="انتخاب انبارهای مجاز"
+                  searchPlaceholder="جستجو در انبارها"
+                  emptyMessage="انباری از سپیدار دریافت نشده است."
+                  invalid={Boolean(fieldErrors.selectedStockIds)}
+                  onValuesChange={(values) => {
+                    setSelectedStockIds(values);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedStockIds: "",
+                    }));
+                  }}
+                />
                 <FieldError message={fieldErrors.selectedStockIds} />
               </div>
             </div>

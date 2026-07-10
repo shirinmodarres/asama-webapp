@@ -277,6 +277,277 @@ export function SearchableSelect({
   );
 }
 
+interface SearchableMultiSelectProps {
+  values: string[];
+  onValuesChange: (values: string[]) => void;
+  options: SearchableSelectOption[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  disabled?: boolean;
+  className?: string;
+  triggerClassName?: string;
+  invalid?: boolean;
+  normalizeSearch?: boolean;
+  highlightMatches?: boolean;
+}
+
+export function SearchableMultiSelect({
+  values,
+  onValuesChange,
+  options,
+  placeholder = "انتخاب کنید",
+  searchPlaceholder = "جستجو...",
+  emptyMessage = "موردی یافت نشد",
+  disabled = false,
+  className,
+  triggerClassName,
+  invalid = false,
+  normalizeSearch = false,
+  highlightMatches = false,
+}: SearchableMultiSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
+  const selectedOptions = options.filter((option) =>
+    values.includes(option.value),
+  );
+  const selectedLabel = selectedOptions.map((option) => option.label).join("، ");
+
+  const closeMenu = ({ restoreFocus = false } = {}) => {
+    setOpen(false);
+    setQuery("");
+    if (restoreFocus) {
+      triggerRef.current?.focus({ preventScroll: true });
+    }
+  };
+
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = normalizeSearch
+      ? normalizeSearchValue(query)
+      : query.trim().toLowerCase();
+    if (!normalizedQuery) return options;
+
+    return options.filter((option) => {
+      const searchable = [
+        option.label,
+        option.description,
+        option.searchText,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const normalizedSearchable = normalizeSearch
+        ? normalizeSearchValue(searchable)
+        : searchable.toLowerCase();
+
+      return normalizedSearchable.includes(normalizedQuery);
+    });
+  }, [normalizeSearch, options, query]);
+
+  const updateMenuPosition = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const gap = 6;
+    const viewportPadding = 12;
+    const maxMenuHeight = 360;
+    const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+    const spaceAbove = rect.top - gap - viewportPadding;
+    const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(
+      180,
+      Math.min(maxMenuHeight, openAbove ? spaceAbove : spaceBelow),
+    );
+
+    setMenuStyle({
+      position: "fixed",
+      top: openAbove ? undefined : rect.bottom + gap,
+      bottom: openAbove ? window.innerHeight - rect.top + gap : undefined,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: availableHeight,
+      zIndex: 120,
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const clickedInsideTrigger = rootRef.current?.contains(target);
+      const clickedInsideMenu = menuRef.current?.contains(target);
+
+      if (!clickedInsideTrigger && !clickedInsideMenu) {
+        closeMenu();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu({ restoreFocus: true });
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !menuStyle) return;
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, [menuStyle, open]);
+
+  const toggleValue = (value: string) => {
+    onValuesChange(
+      values.includes(value)
+        ? values.filter((item) => item !== value)
+        : [...values, value],
+    );
+  };
+
+  return (
+    <div ref={rootRef} className={cn("relative min-w-0", className)}>
+      <button
+        type="button"
+        ref={triggerRef}
+        disabled={disabled}
+        onClick={() => {
+          setOpen((current) => {
+            const nextOpen = !current;
+            if (nextOpen) updateMenuPosition();
+            return nextOpen;
+          });
+          setQuery("");
+        }}
+        className={cn(
+          "relative flex h-11 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
+          invalid &&
+            "border-red-400 focus:border-red-500 focus:ring-red-200",
+          values.length === 0 && "text-[#94A3B8]",
+          triggerClassName,
+        )}
+        data-invalid={invalid || undefined}
+      >
+        <span className="min-w-0 flex-1 truncate text-right">
+          {selectedLabel || placeholder}
+        </span>
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-[#6B7280] transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+
+      {open && menuStyle
+        ? createPortal(
+            <div
+              ref={menuRef}
+              style={menuStyle}
+              className="overflow-hidden rounded-2xl border border-[#D7DEE6] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
+            >
+              <div className="relative overflow-hidden rounded-[14px]">
+                <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6B7280]" />
+                <Input
+                  ref={searchInputRef}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    const firstOption = filteredOptions[0];
+                    if (!firstOption) return;
+                    event.preventDefault();
+                    toggleValue(firstOption.value);
+                  }}
+                  placeholder={searchPlaceholder}
+                  className="pl-3.5 pr-10 text-xs"
+                />
+              </div>
+
+              <div className="mt-2 max-h-72 overflow-y-auto">
+                {filteredOptions.length > 0 ? (
+                  <div className="space-y-1">
+                    {filteredOptions.map((option) => {
+                      const isSelected = values.includes(option.value);
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => toggleValue(option.value)}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-right text-xs transition-colors",
+                            isSelected
+                              ? "bg-[#F3FAF4] text-[#1F3A5F]"
+                              : "text-[#334155] hover:bg-[#EFF4F8]",
+                          )}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate">
+                              {highlightMatches
+                                ? renderHighlightedText(
+                                    option.label,
+                                    query,
+                                    normalizeSearch,
+                                  )
+                                : option.label}
+                            </span>
+                            {option.description ? (
+                              <span className="mt-1 block truncate text-[11px] text-[#64748B]">
+                                {highlightMatches
+                                  ? renderHighlightedText(
+                                      option.description,
+                                      query,
+                                      normalizeSearch,
+                                    )
+                                  : option.description}
+                              </span>
+                            ) : null}
+                          </span>
+                          {isSelected ? (
+                            <Check className="size-4 shrink-0 text-[#6CAE75]" />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-3 py-4 text-xs text-[#6B7280]">
+                    {emptyMessage}
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 

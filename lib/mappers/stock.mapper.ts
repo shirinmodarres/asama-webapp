@@ -73,6 +73,7 @@ export function mapProductStockInventoryDto(
         : toNumberValue(record.sepidarItemId),
     productSku: normalizeDigits(toStringValue(record.productSku)),
     productName: toStringValue(record.productName),
+    brandName: toNullableString(record.brandName ?? record.productBrandName),
     stockObjectId: toNullableString(record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null

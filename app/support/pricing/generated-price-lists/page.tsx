@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { PriceList } from "@/lib/models/pricing.model";
@@ -46,7 +47,15 @@ export default function GeneratedPriceListsPage() {
     { key: "reference", header: "کد سپیدار", render: (row) => row.referenceInternalCode ? formatFaDigits(row.referenceInternalCode) : "-" },
     { key: "items", header: "تعداد کالا", render: (row) => formatNumber(row.itemCount) },
     { key: "generated", header: "زمان تولید", render: (row) => row.generatedAt ? formatDateTime(row.generatedAt) : "-" },
-    { key: "status", header: "وضعیت", render: (row) => row.isActive ? "فعال" : "آرشیو" },
+    {
+      key: "status",
+      header: "وضعیت",
+      render: (row) => (
+        <Badge variant={row.isActive ? "success" : "neutral"}>
+          {getPriceListStatusLabel(row)}
+        </Badge>
+      ),
+    },
     {
       key: "actions",
       header: "عملیات",
@@ -71,4 +80,11 @@ export default function GeneratedPriceListsPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function getPriceListStatusLabel(priceList: PriceList): string {
+  const status = (priceList as PriceList & { status?: string | null }).status;
+  if (priceList.isActive) return "فعال";
+  if (status === "inactive" || status === "disabled") return "غیرفعال";
+  return "آرشیو";
 }

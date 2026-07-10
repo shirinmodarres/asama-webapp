@@ -45,6 +45,7 @@ export interface SidebarItem {
   href: string;
   icon: SidebarIconName;
   description?: string;
+  group?: string;
 }
 
 export interface DashboardStat {

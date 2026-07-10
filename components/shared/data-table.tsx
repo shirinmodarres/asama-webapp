@@ -20,8 +20,8 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({ columns, rows, rowKey }: DataTableProps<T>) {
   return (
-    <Card className="overflow-hidden">
-      <div className="max-h-[70vh] overflow-auto overscroll-contain">
+    <Card className="min-w-0 max-w-full overflow-hidden">
+      <div className="overflow-x-auto overflow-y-visible">
         <table className="min-w-full text-right">
           <thead className="border-b border-[#E9EEF3] bg-[#F8FBFD]">
             <tr>

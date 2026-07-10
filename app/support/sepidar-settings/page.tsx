@@ -325,7 +325,7 @@ export default function SupportSepidarSettingsPage() {
                   داده‌های آساما را با آخرین اطلاعات سپیدار به‌روزرسانی کنید.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                 <SyncButton
                   label="کالاها"
                   loading={syncingKey === "items"}
@@ -356,30 +356,31 @@ export default function SupportSepidarSettingsPage() {
                   disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("stocks", syncSepidarStocks)}
                 />
+                <SyncButton
+                  label="آیتم‌های لیست قیمت"
+                  loading={isSyncingPriceNoteItems}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
+                  onClick={runPriceNoteItemsSync}
+                />
               </div>
               <div className="rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                  <label className="grid gap-2 text-sm font-medium text-[#334155] xl:max-w-xs xl:flex-1">
-                    <span>شناسه لیست قیمت سپیدار</span>
+                <div className="grid gap-2 sm:max-w-sm">
+                  <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                    <span>شناسه لیست قیمت سپیدار برای همگام‌سازی محدود</span>
                     <Input
                       dir="ltr"
                       inputMode="numeric"
-                      value={priceNoteSaleTypeRef}
-                      onChange={(event) => setPriceNoteSaleTypeRef(event.target.value)}
                       placeholder="مثلاً 405، خالی = همه"
+                      value={priceNoteSaleTypeRef}
+                      onChange={(event) =>
+                        setPriceNoteSaleTypeRef(event.target.value)
+                      }
                     />
                   </label>
-                  <Button
-                    type="button"
-                    className="gap-2"
-                    onClick={runPriceNoteItemsSync}
-                    disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
-                  >
-                    <RefreshCw className={`size-4 ${isSyncingPriceNoteItems ? "animate-spin" : ""}`} />
-                    {isSyncingPriceNoteItems
-                      ? "در حال همگام‌سازی..."
-                      : "همگام‌سازی آیتم‌های لیست قیمت"}
-                  </Button>
+                  <p className="text-xs leading-6 text-[#6B7280]">
+                    این مقدار اختیاری است. برای همگام‌سازی کامل، فیلد را خالی
+                    بگذارید و دکمه «آیتم‌های لیست قیمت» را بزنید.
+                  </p>
                 </div>
                 {lastPriceNoteItemsSync ? (
                   <PriceNoteItemsSyncSummary summary={lastPriceNoteItemsSync} />

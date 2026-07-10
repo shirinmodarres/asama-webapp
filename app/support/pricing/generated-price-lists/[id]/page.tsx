@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -9,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getErrorMessage } from "@/lib/api/api-error";
@@ -62,11 +64,55 @@ export default function GeneratedPriceListDetailPage({
     { key: "final", header: "قیمت نهایی", render: (row) => row.finalPrice === null ? "-" : formatCurrency(row.finalPrice) },
   ];
 
+  const exportCurrentList = () => {
+    if (!priceList || !items.length) return;
+    const headers = [
+      "کد کالا",
+      "نام کالا",
+      "برند",
+      "قیمت مرجع",
+      "قیمت نهایی",
+      "نوع لیست",
+      "کد داخلی",
+      "کد مرجع",
+    ];
+    const rows = items.map((item) => [
+      item.productCode || "",
+      item.productName || "",
+      item.brandName || priceList.brandName || "",
+      item.sourcePrice ?? "",
+      item.finalPrice ?? "",
+      priceList.typeTitle || priceList.typeCode || "",
+      priceList.internalCode || "",
+      priceList.referenceInternalCode || "",
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map(csvCell).join(","))
+      .join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${priceList.internalCode || priceList.objectId || "price-list"}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <DashboardLayout role="support" title="جزئیات لیست قیمت">
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline">
           <Link href="/support/pricing/generated-price-lists">بازگشت</Link>
+        </Button>
+        <Button
+          type="button"
+          onClick={exportCurrentList}
+          disabled={!priceList || !items.length}
+        >
+          <Download className="size-4" />
+          خروجی اکسل
         </Button>
       </div>
       {error ? <InlineErrorMessage message={error} /> : null}
@@ -78,7 +124,12 @@ export default function GeneratedPriceListDetailPage({
             <div>نوع: {priceList?.typeTitle || priceList?.typeCode || "-"}</div>
             <div>کد لیست قیمت: {priceList?.internalCode ? formatFaDigits(priceList.internalCode) : "-"}</div>
             <div>کد سپیدار: {priceList?.referenceInternalCode ? formatFaDigits(priceList.referenceInternalCode) : "-"}</div>
-            <div>وضعیت: {priceList?.isActive ? "فعال" : "آرشیو"}</div>
+            <div className="flex items-center gap-2">
+              وضعیت:
+              <Badge variant={priceList?.isActive ? "success" : "neutral"}>
+                {priceList ? getPriceListStatusLabel(priceList) : "-"}
+              </Badge>
+            </div>
           </Card>
           {items.length ? (
             <DataTable columns={columns} rows={items} rowKey={(row) => row.objectId} />
@@ -89,4 +140,16 @@ export default function GeneratedPriceListDetailPage({
       )}
     </DashboardLayout>
   );
+}
+
+function csvCell(value: string | number | null | undefined): string {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function getPriceListStatusLabel(priceList: PriceList): string {
+  const status = (priceList as PriceList & { status?: string | null }).status;
+  if (priceList.isActive) return "فعال";
+  if (status === "inactive" || status === "disabled") return "غیرفعال";
+  return "آرشیو";
 }

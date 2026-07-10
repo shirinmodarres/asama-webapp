@@ -8,7 +8,6 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ProductStatusBadge } from "@/components/support/product-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -112,10 +111,12 @@ export default function SupportProductsPage() {
       key: "name",
       header: "نام کالا",
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-[#1F3A5F]">{row.name}</span>
-          {row.isSyncedFromSepidar ? <Badge variant="brand">سپیدار</Badge> : null}
-        </div>
+        <Link
+          href={`/support/products/${row.objectId || row.id}/edit`}
+          className="font-medium text-[#1F3A5F] hover:text-[#6CAE75]"
+        >
+          {row.name}
+        </Link>
       ),
     },
     { key: "brand", header: "برند", render: (row) => productBrandLabel(row) },
@@ -125,18 +126,6 @@ export default function SupportProductsPage() {
       key: "status",
       header: "وضعیت",
       render: (row) => <ProductStatusBadge status={row.status} />,
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Link
-          href={`/support/products/${row.objectId || row.id}/edit`}
-          className="rounded-xl border border-[#E5E7EB] px-3 py-1.5 text-xs text-[#334155]"
-        >
-          {row.isSyncedFromSepidar ? "مشاهده" : "ویرایش"}
-        </Link>
-      ),
     },
   ];
 
