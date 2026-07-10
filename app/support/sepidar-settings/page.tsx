@@ -32,9 +32,17 @@ import {
   type SepidarSyncOperationSummary,
   type UpdateSepidarSettingsPayload,
 } from "@/lib/services/sepidar.service";
+import {
+  listPricingReferences,
+  listSepidarPricingLists,
+  syncPriceNoteItems,
+} from "@/lib/services/pricing.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks";
+type PriceNoteItemsSyncResult = Awaited<ReturnType<typeof syncPriceNoteItems>> & {
+  syncedAt: string;
+};
 
 const SYNC_LABELS: Record<SyncKey, string> = {
   items: "کالاها",
@@ -59,6 +67,10 @@ export default function SupportSepidarSettingsPage() {
   const [settingsEnvOnly, setSettingsEnvOnly] = useState(false);
   const [lastSyncResult, setLastSyncResult] =
     useState<SepidarSyncOperationSummary | null>(null);
+  const [priceNoteSaleTypeRef, setPriceNoteSaleTypeRef] = useState("");
+  const [isSyncingPriceNoteItems, setIsSyncingPriceNoteItems] = useState(false);
+  const [lastPriceNoteItemsSync, setLastPriceNoteItemsSync] =
+    useState<PriceNoteItemsSyncResult | null>(null);
 
   const loadPageData = async () => {
     const [settingsData, summaryData] = await Promise.all([
@@ -161,6 +173,38 @@ export default function SupportSepidarSettingsPage() {
       setError(getSepidarUiError(syncError));
     } finally {
       setSyncingKey("");
+    }
+  };
+
+  const runPriceNoteItemsSync = async () => {
+    const trimmedSaleTypeRef = priceNoteSaleTypeRef.trim();
+    const saleTypeRef = trimmedSaleTypeRef ? Number(trimmedSaleTypeRef) : null;
+    if (trimmedSaleTypeRef && !Number.isFinite(saleTypeRef)) {
+      setError("شناسه لیست قیمت سپیدار باید عددی باشد.");
+      return;
+    }
+
+    setIsSyncingPriceNoteItems(true);
+    setError("");
+    setMessage("");
+    setLastPriceNoteItemsSync(null);
+    try {
+      const result = await syncPriceNoteItems(
+        saleTypeRef === null ? undefined : { saleTypeRef },
+      );
+      const syncedAt = new Date().toISOString();
+      setLastPriceNoteItemsSync({ ...result, syncedAt });
+      const [summaryData] = await Promise.all([
+        getSepidarSyncSummary(),
+        listSepidarPricingLists(),
+        listPricingReferences(),
+      ]);
+      setSyncSummary(summaryData);
+      setMessage("همگام‌سازی آیتم‌های لیست قیمت انجام شد.");
+    } catch (syncError) {
+      setError(getSepidarUiError(syncError));
+    } finally {
+      setIsSyncingPriceNoteItems(false);
     }
   };
 
@@ -285,33 +329,61 @@ export default function SupportSepidarSettingsPage() {
                 <SyncButton
                   label="کالاها"
                   loading={syncingKey === "items"}
-                  disabled={Boolean(syncingKey)}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("items", syncSepidarItems)}
                 />
                 <SyncButton
                   label="مشتریان"
                   loading={syncingKey === "customers"}
-                  disabled={Boolean(syncingKey)}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("customers", syncSepidarCustomers)}
                 />
                 <SyncButton
                   label="نوع‌های فروش"
                   loading={syncingKey === "sale-types"}
-                  disabled={Boolean(syncingKey)}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("sale-types", syncSepidarSaleTypes)}
                 />
                 <SyncButton
                   label="قیمت‌ها"
                   loading={syncingKey === "prices"}
-                  disabled={Boolean(syncingKey)}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("prices", syncSepidarPrices)}
                 />
                 <SyncButton
                   label="انبارهای سپیدار"
                   loading={syncingKey === "stocks"}
-                  disabled={Boolean(syncingKey)}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("stocks", syncSepidarStocks)}
                 />
+              </div>
+              <div className="rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                  <label className="grid gap-2 text-sm font-medium text-[#334155] xl:max-w-xs xl:flex-1">
+                    <span>شناسه لیست قیمت سپیدار</span>
+                    <Input
+                      dir="ltr"
+                      inputMode="numeric"
+                      value={priceNoteSaleTypeRef}
+                      onChange={(event) => setPriceNoteSaleTypeRef(event.target.value)}
+                      placeholder="مثلاً 405، خالی = همه"
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    className="gap-2"
+                    onClick={runPriceNoteItemsSync}
+                    disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
+                  >
+                    <RefreshCw className={`size-4 ${isSyncingPriceNoteItems ? "animate-spin" : ""}`} />
+                    {isSyncingPriceNoteItems
+                      ? "در حال همگام‌سازی..."
+                      : "همگام‌سازی آیتم‌های لیست قیمت"}
+                  </Button>
+                </div>
+                {lastPriceNoteItemsSync ? (
+                  <PriceNoteItemsSyncSummary summary={lastPriceNoteItemsSync} />
+                ) : null}
               </div>
             </div>
             {lastSyncResult ? (
@@ -540,6 +612,28 @@ function SyncOperationSummary({
       <SummaryCell label="به‌روزشده" value={summary.updated} />
       <SummaryCell label="ردشده" value={summary.skipped} />
       <SummaryCell label="خطادار" value={summary.failed} />
+    </div>
+  );
+}
+
+function PriceNoteItemsSyncSummary({
+  summary,
+}: {
+  summary: PriceNoteItemsSyncResult;
+}) {
+  return (
+    <div className="mt-4 grid gap-3 rounded-xl border border-[#D6E8DA] bg-[#F3FAF4] p-4 text-sm sm:grid-cols-3 xl:grid-cols-6">
+      <SummaryCell label="همگام‌شده" value={summary.processedCount} />
+      <SummaryCell label="ایجادشده" value={summary.createdCount} />
+      <SummaryCell label="به‌روزشده" value={summary.updatedCount} />
+      <SummaryCell label="ردشده" value={summary.skippedCount ?? 0} />
+      <SummaryCell label="خطادار" value={summary.failedCount} />
+      <div>
+        <p className="text-xs text-[#536275]">آخرین همگام‌سازی</p>
+        <p className="mt-1 font-semibold text-[#1F3A5F]">
+          {formatDateTime(summary.syncedAt)}
+        </p>
+      </div>
     </div>
   );
 }

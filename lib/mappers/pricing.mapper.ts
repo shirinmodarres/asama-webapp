@@ -11,6 +11,8 @@ import type {
   PricingBrand,
   PriceList,
   PriceListItem,
+  PricingReferenceItem,
+  PricingReferenceItemsResult,
   PricingReference,
   SepidarPriceList,
 } from "@/lib/models/pricing.model";
@@ -55,6 +57,11 @@ export function mapPricingReferenceDto(dto: unknown): PricingReference {
       record.sepidarSaleTypeId === undefined || record.sepidarSaleTypeId === null
         ? null
         : toNumberValue(record.sepidarSaleTypeId),
+    saleTypeTitle: toNullableString(record.saleTypeTitle),
+    customerGroupingRef:
+      record.customerGroupingRef === undefined || record.customerGroupingRef === null
+        ? null
+        : toNumberValue(record.customerGroupingRef),
     sourceSaleTypeObjectId: toNullableString(record.sourceSaleTypeObjectId),
     internalCode: toNullableString(record.internalCode),
     displayName: toNullableString(record.displayName),
@@ -63,6 +70,50 @@ export function mapPricingReferenceDto(dto: unknown): PricingReference {
     archivedAt: toNullableString(record.archivedAt),
     createdBy: toNullableString(record.createdBy),
     createdAt: toNullableString(record.createdAt),
+  };
+}
+
+export function mapPricingReferenceItemDto(dto: unknown): PricingReferenceItem {
+  const record = toRecord(dto);
+  return {
+    objectId: toNullableString(record.objectId || record.id),
+    id: toNullableString(record.id || record.objectId),
+    referenceId: toNullableString(record.referenceId),
+    sepidarItemId:
+      record.sepidarItemId === undefined || record.sepidarItemId === null
+        ? null
+        : toNumberValue(record.sepidarItemId),
+    productCode: toNullableString(record.productCode),
+    productName: toNullableString(record.productName),
+    sourcePrice:
+      record.sourcePrice === undefined || record.sourcePrice === null
+        ? null
+        : toNumberValue(record.sourcePrice),
+    customerGroupingRef:
+      record.customerGroupingRef === undefined || record.customerGroupingRef === null
+        ? null
+        : toNumberValue(record.customerGroupingRef),
+  };
+}
+
+export function mapPricingReferenceItemsResultDto(dto: unknown): PricingReferenceItemsResult {
+  const record = toRecord(dto);
+  const summary = toRecord(record.summary);
+  return {
+    reference: Object.keys(toRecord(record.reference)).length
+      ? mapPricingReferenceDto(record.reference)
+      : null,
+    summary: {
+      referenceId: toNullableString(summary.referenceId),
+      sepidarSaleTypeId:
+        summary.sepidarSaleTypeId === undefined || summary.sepidarSaleTypeId === null
+          ? null
+          : toNumberValue(summary.sepidarSaleTypeId),
+      priceNoteItemCount: toNumberValue(summary.priceNoteItemCount),
+      productFoundCount: toNumberValue(summary.productFoundCount),
+      brandMatchCount: toNumberValue(summary.brandMatchCount),
+    },
+    items: mapList(record.items, mapPricingReferenceItemDto),
   };
 }
 
@@ -115,14 +166,6 @@ export function mapPriceListItemDto(dto: unknown): PriceListItem {
       record.finalPrice === undefined || record.finalPrice === null
         ? null
         : toNumberValue(record.finalPrice),
-    formulaMultiplier:
-      record.formulaMultiplier === undefined || record.formulaMultiplier === null
-        ? null
-        : toNumberValue(record.formulaMultiplier),
-    sourcePriceNoteItemId:
-      record.sourcePriceNoteItemId === undefined || record.sourcePriceNoteItemId === null
-        ? null
-        : toNumberValue(record.sourcePriceNoteItemId),
   };
 }
 

@@ -24,6 +24,8 @@ export interface PricingReference {
   id: string;
   brandName: string | null;
   sepidarSaleTypeId: number | null;
+  saleTypeTitle: string | null;
+  customerGroupingRef: number | null;
   sourceSaleTypeObjectId: string | null;
   internalCode: string | null;
   displayName: string | null;
@@ -32,6 +34,29 @@ export interface PricingReference {
   archivedAt: string | null;
   createdBy: string | null;
   createdAt: string | null;
+}
+
+export interface PricingReferenceItem {
+  objectId: string | null;
+  id: string | null;
+  referenceId: string | null;
+  sepidarItemId: number | null;
+  productCode: string | null;
+  productName: string | null;
+  sourcePrice: number | null;
+  customerGroupingRef: number | null;
+}
+
+export interface PricingReferenceItemsResult {
+  reference: PricingReference | null;
+  summary: {
+    referenceId: string | null;
+    sepidarSaleTypeId: number | null;
+    priceNoteItemCount: number;
+    productFoundCount: number;
+    brandMatchCount: number;
+  };
+  items: PricingReferenceItem[];
 }
 
 export interface PriceList {
@@ -66,8 +91,6 @@ export interface PriceListItem {
   brandName: string | null;
   sourcePrice: number | null;
   finalPrice: number | null;
-  formulaMultiplier: number | null;
-  sourcePriceNoteItemId: number | null;
 }
 
 export interface ExpertPriceListAssignment {

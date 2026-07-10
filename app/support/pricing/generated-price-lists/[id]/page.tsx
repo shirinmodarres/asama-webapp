@@ -17,7 +17,7 @@ import {
   getGeneratedPriceList,
   listGeneratedPriceListItems,
 } from "@/lib/services/pricing.service";
-import { formatCurrency, formatNumber } from "@/lib/expert/utils";
+import { formatCurrency } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function GeneratedPriceListDetailPage({
@@ -60,7 +60,6 @@ export default function GeneratedPriceListDetailPage({
     { key: "brand", header: "برند", render: (row) => row.brandName || "-" },
     { key: "source", header: "قیمت مرجع", render: (row) => row.sourcePrice === null ? "-" : formatCurrency(row.sourcePrice) },
     { key: "final", header: "قیمت نهایی", render: (row) => row.finalPrice === null ? "-" : formatCurrency(row.finalPrice) },
-    { key: "formula", header: "فرمول / نوع", render: (row) => row.formulaMultiplier === null ? "-" : `${priceList?.typeTitle || priceList?.typeCode || "-"} - ${formatNumber(row.formulaMultiplier)}` },
   ];
 
   return (
@@ -77,8 +76,8 @@ export default function GeneratedPriceListDetailPage({
           <Card className="mb-5 grid gap-3 p-5 text-sm text-[#334155] md:grid-cols-5">
             <div>برند: {priceList?.brandName || "-"}</div>
             <div>نوع: {priceList?.typeTitle || priceList?.typeCode || "-"}</div>
-            <div>کد داخلی: {priceList?.internalCode ? formatFaDigits(priceList.internalCode) : "-"}</div>
-            <div>کد مرجع: {priceList?.referenceInternalCode ? formatFaDigits(priceList.referenceInternalCode) : "-"}</div>
+            <div>کد لیست قیمت: {priceList?.internalCode ? formatFaDigits(priceList.internalCode) : "-"}</div>
+            <div>کد سپیدار: {priceList?.referenceInternalCode ? formatFaDigits(priceList.referenceInternalCode) : "-"}</div>
             <div>وضعیت: {priceList?.isActive ? "فعال" : "آرشیو"}</div>
           </Card>
           {items.length ? (

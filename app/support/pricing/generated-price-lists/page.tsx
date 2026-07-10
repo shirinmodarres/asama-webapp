@@ -41,9 +41,9 @@ export default function GeneratedPriceListsPage() {
   const columns: DataTableColumn<PriceList>[] = [
     { key: "brand", header: "برند", render: (row) => row.brandName || "-" },
     { key: "name", header: "لیست قیمت", render: (row) => row.displayName || row.name || "-" },
-    { key: "code", header: "کد داخلی", render: (row) => row.internalCode ? formatFaDigits(row.internalCode) : "-" },
+    { key: "code", header: "کد لیست قیمت", render: (row) => row.internalCode ? formatFaDigits(row.internalCode) : "-" },
     { key: "type", header: "نوع", render: (row) => row.typeTitle || row.typeCode || "-" },
-    { key: "reference", header: "کد مرجع", render: (row) => row.referenceInternalCode ? formatFaDigits(row.referenceInternalCode) : "-" },
+    { key: "reference", header: "کد سپیدار", render: (row) => row.referenceInternalCode ? formatFaDigits(row.referenceInternalCode) : "-" },
     { key: "items", header: "تعداد کالا", render: (row) => formatNumber(row.itemCount) },
     { key: "generated", header: "زمان تولید", render: (row) => row.generatedAt ? formatDateTime(row.generatedAt) : "-" },
     { key: "status", header: "وضعیت", render: (row) => row.isActive ? "فعال" : "آرشیو" },

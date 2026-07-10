@@ -62,7 +62,9 @@ export default function SepidarPriceListsPage() {
     <DashboardLayout role="support" title="لیست‌های قیمت سپیدار">
       <SectionHeader title="لیست‌های قیمت سپیدار" description="نمای خواندنی از لیست‌ها و آیتم‌های قیمت همگام‌شده" />
       <div className="mb-4 max-w-md">
-        <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجو برند، عنوان یا کد" />
+        <div className="max-w-md flex-1">
+          <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="جستجو برند، عنوان یا کد" />
+        </div>
       </div>
       {error ? <InlineErrorMessage message={error} /> : null}
       {isLoading ? <LoadingState title="در حال دریافت لیست‌های سپیدار" /> : filtered.length ? (

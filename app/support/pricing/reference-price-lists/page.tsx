@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Ban, Wand2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -23,7 +24,7 @@ import {
   generatePriceLists,
   listPricingBrands,
   listPricingReferences,
-  listSepidarSaleTypeCandidates,
+  listSepidarPricingLists,
 } from "@/lib/services/pricing.service";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -48,7 +49,7 @@ export default function ReferencePriceListsPage() {
   const load = async () => {
     const [referenceData, saleTypeData, brandData] = await Promise.all([
       listPricingReferences(),
-      listSepidarSaleTypeCandidates(),
+      listSepidarPricingLists(),
       listPricingBrands(),
     ]);
     setReferences(referenceData);
@@ -60,7 +61,7 @@ export default function ReferencePriceListsPage() {
     let mounted = true;
     Promise.all([
       listPricingReferences(),
-      listSepidarSaleTypeCandidates(),
+      listSepidarPricingLists(),
       listPricingBrands(),
     ])
       .then(([referenceData, saleTypeData, brandData]) => {
@@ -101,8 +102,8 @@ export default function ReferencePriceListsPage() {
   const saveReference = async () => {
     const errors: Record<string, string> = {};
     if (!brandName.trim()) errors.brandName = "برند را وارد کنید.";
-    if (!sourceSaleTypeObjectId) errors.sourceSaleTypeObjectId = "لیست قیمت مرجع را انتخاب کنید.";
-    if (!internalCode.trim()) errors.internalCode = "کد داخلی را وارد کنید.";
+    if (!sourceSaleTypeObjectId) errors.sourceSaleTypeObjectId = "لیست قیمت سپیدار را انتخاب کنید.";
+    if (!internalCode.trim()) errors.internalCode = "کد لیست قیمت را وارد کنید.";
     if (!displayName.trim()) errors.displayName = "عنوان نمایشی را وارد کنید.";
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
@@ -163,25 +164,34 @@ export default function ReferencePriceListsPage() {
   const columns: DataTableColumn<PricingReference>[] = [
     { key: "brand", header: "برند", render: (row) => row.brandName || "-" },
     { key: "display", header: "عنوان", render: (row) => row.displayName || "-" },
-    { key: "code", header: "کد داخلی", render: (row) => row.internalCode ? formatFaDigits(row.internalCode) : "-" },
-    { key: "reference-code", header: "کد مرجع", render: (row) => row.sepidarSaleTypeId ? formatNumber(row.sepidarSaleTypeId) : "-" },
+    { key: "code", header: "کد لیست قیمت", render: (row) => row.internalCode ? formatFaDigits(row.internalCode) : "-" },
+    { key: "reference-code", header: "کد سپیدار", render: (row) => row.sepidarSaleTypeId ? formatNumber(row.sepidarSaleTypeId) : "-" },
     { key: "status", header: "وضعیت", render: (row) => row.isActive ? "فعال" : "آرشیو" },
     { key: "created", header: "ایجاد", render: (row) => row.createdAt ? formatDateTime(row.createdAt) : "-" },
     {
       key: "actions",
       header: "عملیات",
-      render: (row) => row.isActive ? (
+      render: (row) => (
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => generate(row.objectId)} disabled={generatingId === row.objectId || deactivatingId === row.objectId}>
-            <Wand2 className="size-4" />
-            {generatingId === row.objectId ? "در حال تولید..." : "تولید لیست‌ها"}
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/support/pricing/reference-price-lists/${row.objectId}`}>
+              جزئیات
+            </Link>
           </Button>
-          <Button size="sm" variant="outline" onClick={() => deactivate(row.objectId)} disabled={deactivatingId === row.objectId || generatingId === row.objectId}>
-            <Ban className="size-4" />
-            {deactivatingId === row.objectId ? "در حال غیرفعال‌سازی..." : "غیرفعال"}
-          </Button>
+          {row.isActive ? (
+            <>
+              <Button size="sm" onClick={() => generate(row.objectId)} disabled={generatingId === row.objectId || deactivatingId === row.objectId}>
+                <Wand2 className="size-4" />
+                {generatingId === row.objectId ? "در حال تولید..." : "تولید لیست‌ها"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => deactivate(row.objectId)} disabled={deactivatingId === row.objectId || generatingId === row.objectId}>
+                <Ban className="size-4" />
+                {deactivatingId === row.objectId ? "در حال غیرفعال‌سازی..." : "غیرفعال"}
+              </Button>
+            </>
+          ) : null}
         </div>
-      ) : "-",
+      ),
     },
   ];
 
@@ -209,7 +219,7 @@ export default function ReferencePriceListsPage() {
             <FieldError message={fieldErrors.brandName} />
           </label>
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>لیست قیمت مرجع</span>
+            <span>لیست قیمت سپیدار</span>
             <SearchableSelect
               value={sourceSaleTypeObjectId || undefined}
               onValueChange={setSourceSaleTypeObjectId}
@@ -220,7 +230,7 @@ export default function ReferencePriceListsPage() {
             <FieldError message={fieldErrors.sourceSaleTypeObjectId} />
           </label>
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>کد داخلی</span>
+            <span>کد لیست قیمت</span>
             <Input value={internalCode} onChange={(event) => setInternalCode(event.target.value)} />
             <FieldError message={fieldErrors.internalCode} />
           </label>

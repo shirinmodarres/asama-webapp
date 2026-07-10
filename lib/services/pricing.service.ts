@@ -5,6 +5,7 @@ import {
   mapPriceListDto,
   mapPriceListItemDto,
   mapPricingBrandDto,
+  mapPricingReferenceItemsResultDto,
   mapPricingReferenceDto,
   mapSepidarPriceListDto,
 } from "@/lib/mappers/pricing.mapper";
@@ -14,6 +15,7 @@ import type {
   PriceListItem,
   PricingBrand,
   PricingReference,
+  PricingReferenceItemsResult,
   SepidarPriceList,
 } from "@/lib/models/pricing.model";
 
@@ -32,9 +34,33 @@ export async function listPricingBrands(): Promise<PricingBrand[]> {
   return mapList(data, mapPricingBrandDto);
 }
 
+export async function syncPriceNoteItems(payload?: {
+  saleTypeRef?: number | null;
+}): Promise<{
+  saleTypeRef: number | null;
+  totalFromSepidar: number;
+  filteredCount: number;
+  processedCount: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount?: number;
+  failedCount: number;
+}> {
+  return httpClient.post("/api/pricing/sync-price-note-items", payload ?? {});
+}
+
 export async function listPricingReferences(): Promise<PricingReference[]> {
   const data = await httpClient.get<unknown>("/api/pricing/references");
   return mapList(data, mapPricingReferenceDto);
+}
+
+export async function listPricingReferenceItems(
+  referenceId: string,
+): Promise<PricingReferenceItemsResult> {
+  const data = await httpClient.get<unknown>(
+    `/api/pricing/references/${referenceId}/items`,
+  );
+  return mapPricingReferenceItemsResultDto(data);
 }
 
 export async function createPricingReference(payload: {
