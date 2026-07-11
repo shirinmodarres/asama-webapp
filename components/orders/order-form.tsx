@@ -62,6 +62,15 @@ interface DraftItem {
   quantity: number;
 }
 
+interface OrderPriceListOption {
+  objectId: string;
+  id: string;
+  title: string;
+  name: string;
+  brandName: string | null;
+  isActive?: boolean;
+}
+
 const EMPTY_PRODUCTS: Product[] = [];
 const EMPTY_CUSTOMERS: Customer[] = [];
 
@@ -155,6 +164,9 @@ export function OrderForm({
   const [notes, setNotes] = useState(initialOrder?.notes ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     initialOrder?.customerObjectId ?? initialOrder?.customer?.objectId ?? "",
+  );
+  const [selectedPriceListId, setSelectedPriceListId] = useState(
+    initialOrder?.priceListId ?? "",
   );
   const [selectedAddressId, setSelectedAddressId] = useState(
     initialOrder?.customerAddressObjectId ?? "",
@@ -280,6 +292,47 @@ export function OrderForm({
   }, [assignedCustomersOnly, selectedCustomerId]);
 
   useEffect(() => {
+    function syncSelectedPriceList() {
+      if (!sepidarProductsOnly || !selectedCustomerId) {
+        setSelectedPriceListId("");
+        return;
+      }
+
+      const customer = assignedCustomersOnly
+        ? selectedAssignment
+        : customers.find((entry) => entry.objectId === selectedCustomerId);
+      const optionIds = getCustomerPriceListOptions(customer, initialOrder).map(
+        (option) => option.objectId,
+      );
+
+      if (optionIds.length === 0) {
+        setSelectedPriceListId("");
+        return;
+      }
+
+      setSelectedPriceListId((current) => {
+        if (current && optionIds.includes(current)) return current;
+        if (
+          initialOrder?.priceListId &&
+          optionIds.includes(initialOrder.priceListId)
+        ) {
+          return initialOrder.priceListId;
+        }
+        return optionIds.length === 1 ? optionIds[0] : "";
+      });
+    }
+
+    syncSelectedPriceList();
+  }, [
+    assignedCustomersOnly,
+    customers,
+    initialOrder,
+    selectedAssignment,
+    selectedCustomerId,
+    sepidarProductsOnly,
+  ]);
+
+  useEffect(() => {
     let isMounted = true;
 
     async function loadProductsBySaleType() {
@@ -308,9 +361,11 @@ export function OrderForm({
         : customers.find((entry) => entry.objectId === selectedCustomerId);
       const saleTypeId =
         customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
-      const priceListIds = customer?.priceListIds ?? [];
-      const priceListId =
-        customer?.priceListId ?? initialOrder?.priceListId ?? undefined;
+      const priceListOptions = getCustomerPriceListOptions(
+        customer,
+        initialOrder,
+      );
+      const hasGeneratedPriceList = priceListOptions.length > 0;
 
       setProductsError("");
       if (!selectedCustomerId) {
@@ -318,8 +373,19 @@ export function OrderForm({
         setIsLoadingProducts(false);
         return;
       }
+      if (assignedCustomersOnly && !hasGeneratedPriceList) {
+        setProducts([]);
+        setProductsError("NO_PRICE_LIST_ASSIGNED");
+        setIsLoadingProducts(false);
+        return;
+      }
+      if (hasGeneratedPriceList && !selectedPriceListId) {
+        setProducts([]);
+        setIsLoadingProducts(false);
+        return;
+      }
       if (
-        (!priceListId && priceListIds.length === 0 && !saleTypeId) ||
+        (!hasGeneratedPriceList && !saleTypeId) ||
         (assignedCustomersOnly && !hasAssignmentInventory(customer))
       ) {
         keepOrderSnapshotProducts();
@@ -334,13 +400,11 @@ export function OrderForm({
           expertUserId:
             initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         };
-        const hasGeneratedPriceList =
-          (priceListIds.length > 0 || Boolean(priceListId)) &&
-          Boolean(context.customerObjectId);
         const data = hasGeneratedPriceList && context.customerObjectId
           ? await listOrderProductsForAssignment({
               customerObjectId: context.customerObjectId,
               expertUserId: context.expertUserId,
+              priceListId: selectedPriceListId,
             })
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (!isMounted) return;
@@ -382,6 +446,7 @@ export function OrderForm({
     providedProducts,
     selectedAssignment,
     selectedCustomerId,
+    selectedPriceListId,
     sepidarProductsOnly,
   ]);
 
@@ -465,6 +530,13 @@ export function OrderForm({
   const selectedAddress = addresses.find(
     (address) => address.objectId === selectedAddressId,
   );
+  const priceListOptions = useMemo(
+    () => getCustomerPriceListOptions(selectedCustomer, initialOrder),
+    [initialOrder, selectedCustomer],
+  );
+  const hasGeneratedPriceList = priceListOptions.length > 0;
+  const requiresPriceListSelection =
+    sepidarProductsOnly && Boolean(selectedCustomerId) && hasGeneratedPriceList;
   const isNajaOrder = initialOrder?.orderType === "naja";
   const currentSaleTypeTitle =
     selectedCustomer?.saleType?.title ?? initialOrder?.saleTypeTitle;
@@ -533,9 +605,34 @@ export function OrderForm({
       return;
     }
 
-    if (sepidarProductsOnly && selectedCustomer && !selectedCustomer.saleType?.sepidarSaleTypeId) {
+    if (
+      sepidarProductsOnly &&
+      selectedCustomer &&
+      assignedCustomersOnly &&
+      !hasGeneratedPriceList
+    ) {
+      setFieldErrors({
+        selectedCustomerId: "NO_PRICE_LIST_ASSIGNED",
+      });
+      setProductsError("NO_PRICE_LIST_ASSIGNED");
+      return;
+    }
+
+    if (
+      sepidarProductsOnly &&
+      selectedCustomer &&
+      !hasGeneratedPriceList &&
+      !selectedCustomer.saleType?.sepidarSaleTypeId
+    ) {
       setFieldErrors({
         selectedCustomerId: "برای این مشتری نوع فروش مشخص نشده است.",
+      });
+      return;
+    }
+
+    if (requiresPriceListSelection && !selectedPriceListId) {
+      setFieldErrors({
+        selectedPriceListId: "لطفاً لیست قیمت را انتخاب کنید.",
       });
       return;
     }
@@ -680,7 +777,8 @@ export function OrderForm({
         saleTypeObjectId: selectedCustomer?.saleType?.objectId || undefined,
         sepidarSaleTypeId:
           selectedCustomer?.saleType?.sepidarSaleTypeId ?? undefined,
-        priceListId: selectedCustomer?.priceListId ?? undefined,
+        priceListId:
+          selectedPriceListId || selectedCustomer?.priceListId || undefined,
         notes: notes.trim(),
         items: normalizedItems.map((item) => ({
           productObjectId:
@@ -716,6 +814,7 @@ export function OrderForm({
               value={selectedCustomerId || undefined}
               onValueChange={(value) => {
                 setSelectedCustomerId(value);
+                setSelectedPriceListId("");
                 if (sepidarProductsOnly) {
                   setProducts([]);
                   setProductsError("");
@@ -1052,6 +1151,16 @@ export function OrderForm({
         !productsError &&
         sepidarProductsOnly &&
         selectedCustomerId &&
+        assignedCustomersOnly &&
+        !hasGeneratedPriceList ? (
+          <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
+            NO_PRICE_LIST_ASSIGNED
+          </p>
+        ) : null}
+        {!isLoadingProducts &&
+        !productsError &&
+        sepidarProductsOnly &&
+        selectedCustomerId &&
         !hasAssignmentInventory(selectedCustomer) ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
             برای این مشتری تنظیمات فروش تعریف نشده است.
@@ -1060,13 +1169,41 @@ export function OrderForm({
         {!isLoadingProducts &&
         !productsError &&
         sepidarProductsOnly &&
+        (!requiresPriceListSelection || Boolean(selectedPriceListId)) &&
         (selectedCustomer?.saleType?.sepidarSaleTypeId ||
-          selectedCustomer?.priceListId ||
-          (selectedCustomer?.priceListIds?.length ?? 0) > 0) &&
+          hasGeneratedPriceList) &&
         products.length === 0 ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
             در انبارهای مجاز این کارشناس کالایی با موجودی قابل فروش پیدا نشد.
           </p>
+        ) : null}
+
+        {requiresPriceListSelection && priceListOptions.length > 1 ? (
+          <label className="mt-5 grid gap-2 text-sm font-medium text-[#334155]">
+            <span>لیست قیمت</span>
+            <SearchableSelect
+              value={selectedPriceListId || undefined}
+              onValueChange={(value) => {
+                setSelectedPriceListId(value);
+                setProducts([]);
+                setItems([createEmptyRow(0)]);
+                setProductsError("");
+                setFieldErrors((current) => ({
+                  ...current,
+                  selectedPriceListId: "",
+                }));
+              }}
+              options={priceListOptions.map((priceList) => ({
+                value: priceList.objectId,
+                label: priceListLabel(priceList),
+              }))}
+              placeholder="انتخاب لیست قیمت"
+              searchPlaceholder="جستجو در لیست قیمت"
+              emptyMessage="لیست قیمتی پیدا نشد"
+              invalid={Boolean(fieldErrors.selectedPriceListId)}
+            />
+            <FieldError message={fieldErrors.selectedPriceListId} />
+          </label>
         ) : null}
 
         <div className="mt-5 space-y-3">
@@ -1131,14 +1268,17 @@ export function OrderForm({
                       placeholder={
                         sepidarProductsOnly && !selectedCustomerId
                           ? "ابتدا مشتری را انتخاب کنید."
+                          : requiresPriceListSelection && !selectedPriceListId
+                            ? "ابتدا لیست قیمت را انتخاب کنید."
                           : "انتخاب کالا"
                       }
                       searchPlaceholder="جستجو در کالاها"
                       emptyMessage={
                         sepidarProductsOnly &&
+                        (!requiresPriceListSelection ||
+                          Boolean(selectedPriceListId)) &&
                         (selectedCustomer?.saleType?.sepidarSaleTypeId ||
-                          selectedCustomer?.priceListId ||
-                          (selectedCustomer?.priceListIds?.length ?? 0) > 0) &&
+                          hasGeneratedPriceList) &&
                         products.length === 0
                           ? "کالایی با موجودی قابل فروش پیدا نشد."
                           : "کالایی پیدا نشد"
@@ -1148,6 +1288,8 @@ export function OrderForm({
                         sepidarProductsOnly &&
                         (!selectedCustomerId ||
                           !hasAssignmentInventory(selectedCustomer) ||
+                          (requiresPriceListSelection &&
+                            !selectedPriceListId) ||
                           isLoadingAssignment ||
                           isLoadingProducts ||
                           Boolean(productsError))
@@ -1321,12 +1463,72 @@ export function OrderForm({
   );
 }
 
+function getCustomerPriceListOptions(
+  customer: Customer | null | undefined,
+  order?: Order | null,
+): OrderPriceListOption[] {
+  const byId = new Map<string, OrderPriceListOption>();
+
+  for (const priceList of customer?.priceLists ?? []) {
+    const id = priceList.objectId || priceList.id;
+    if (!id || priceList.isActive === false) continue;
+    byId.set(id, {
+      objectId: id,
+      id,
+      title: priceList.title || priceList.name || priceList.displayName || id,
+      name: priceList.name || priceList.title || priceList.displayName || id,
+      brandName: priceList.brandName ?? null,
+      isActive: priceList.isActive,
+    });
+  }
+
+  const fallbackIds =
+    customer?.priceListIds && customer.priceListIds.length > 0
+      ? customer.priceListIds
+      : customer?.priceListId
+        ? [customer.priceListId]
+        : order?.priceListId
+          ? [order.priceListId]
+          : [];
+
+  for (const id of fallbackIds) {
+    if (!id || byId.has(id)) continue;
+    byId.set(id, {
+      objectId: id,
+      id,
+      title:
+        customer?.priceListTitle ||
+        order?.priceListTitle ||
+        customer?.priceListBrand ||
+        order?.priceListBrand ||
+        id,
+      name:
+        customer?.priceListTitle ||
+        order?.priceListTitle ||
+        customer?.priceListBrand ||
+        order?.priceListBrand ||
+        id,
+      brandName: customer?.priceListBrand || order?.priceListBrand || null,
+      isActive: true,
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
+function priceListLabel(priceList: OrderPriceListOption): string {
+  return [priceList.title || priceList.name, priceList.brandName]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 function hasAssignmentInventory(customer: Customer | null | undefined): boolean {
   if (!customer) return false;
   return Boolean(
     (customer.saleType?.sepidarSaleTypeId ||
       customer.priceListId ||
-      customer.priceListIds.length > 0) &&
+      customer.priceListIds.length > 0 ||
+      customer.priceLists.length > 0) &&
       (customer.allowedStockObjectIds.length > 0 ||
         customer.allowedSepidarStockIds.length > 0 ||
         customer.allowedStocks.length > 0 ||
