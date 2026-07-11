@@ -535,11 +535,17 @@ export function OrderForm({
     [initialOrder, selectedCustomer],
   );
   const hasGeneratedPriceList = priceListOptions.length > 0;
+  const selectedPriceListOption =
+    priceListOptions.find((option) => option.objectId === selectedPriceListId) ??
+    priceListOptions[0] ??
+    null;
   const requiresPriceListSelection =
     sepidarProductsOnly && Boolean(selectedCustomerId) && hasGeneratedPriceList;
   const isNajaOrder = initialOrder?.orderType === "naja";
   const currentSaleTypeTitle =
-    selectedCustomer?.saleType?.title ?? initialOrder?.saleTypeTitle;
+    selectedPriceListOption
+      ? priceListLabel(selectedPriceListOption)
+      : selectedCustomer?.saleType?.title ?? initialOrder?.saleTypeTitle;
   const currentStockTitles = selectedCustomer
     ? getAllowedStockTitles(selectedCustomer)
     : initialOrder?.stockTitle
@@ -938,7 +944,7 @@ export function OrderForm({
               )}
               {assignedCustomersOnly ? (
                 <span>
-                  نوع فروش: {selectedCustomer.saleType?.title || "-"}
+                  نوع فروش: {currentSaleTypeTitle || "-"}
                 </span>
               ) : null}
             </div>
@@ -1178,9 +1184,9 @@ export function OrderForm({
           </p>
         ) : null}
 
-        {requiresPriceListSelection && priceListOptions.length > 1 ? (
+        {requiresPriceListSelection ? (
           <label className="mt-5 grid gap-2 text-sm font-medium text-[#334155]">
-            <span>لیست قیمت</span>
+            <span>نوع فروش</span>
             <SearchableSelect
               value={selectedPriceListId || undefined}
               onValueChange={(value) => {
@@ -1197,7 +1203,7 @@ export function OrderForm({
                 value: priceList.objectId,
                 label: priceListLabel(priceList),
               }))}
-              placeholder="انتخاب لیست قیمت"
+              placeholder="انتخاب نوع فروش"
               searchPlaceholder="جستجو در لیست قیمت"
               emptyMessage="لیست قیمتی پیدا نشد"
               invalid={Boolean(fieldErrors.selectedPriceListId)}
