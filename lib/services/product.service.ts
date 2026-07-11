@@ -110,7 +110,7 @@ export async function listOrderProductsForAssignment(context: {
     params.set("expertUserId", context.expertUserId);
   }
   const data = await httpClient.get<unknown>(
-    `/api/products/order-options?${params.toString()}`,
+    `/api/expert/available-products?${params.toString()}`,
   );
   const record = toRecord(data);
   return mapProductOrderOptionListDto(

@@ -35,7 +35,6 @@ import {
 } from "@/lib/services/expert-customer.service";
 import {
   listOrderProductsForAssignment,
-  listOrderProductsByPriceList,
   listOrderProductsBySaleType,
   listProducts,
 } from "@/lib/services/product.service";
@@ -335,13 +334,14 @@ export function OrderForm({
           expertUserId:
             initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         };
-        const data = priceListIds.length > 1 && context.customerObjectId
+        const hasGeneratedPriceList =
+          (priceListIds.length > 0 || Boolean(priceListId)) &&
+          Boolean(context.customerObjectId);
+        const data = hasGeneratedPriceList && context.customerObjectId
           ? await listOrderProductsForAssignment({
               customerObjectId: context.customerObjectId,
               expertUserId: context.expertUserId,
             })
-          : priceListId
-            ? await listOrderProductsByPriceList(priceListId, context)
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (!isMounted) return;
         const mergedProducts = mergeProducts(data, initialOrder);
@@ -683,7 +683,8 @@ export function OrderForm({
         priceListId: selectedCustomer?.priceListId ?? undefined,
         notes: notes.trim(),
         items: normalizedItems.map((item) => ({
-          productObjectId: item.productId,
+          productObjectId:
+            productsById[item.productId]?.productObjectId || item.productId,
           quantity: item.quantity,
           ...(sepidarProductsOnly
             ? {
@@ -1157,7 +1158,7 @@ export function OrderForm({
                   <p className="text-[11px] leading-5 text-[#64748B]">
                     {helperText}
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
                     <ReadonlyValueInput
                       label="قیمت واحد"
                       value={product ? formatCurrency(product.unitPrice) : "-"}
@@ -1173,8 +1174,12 @@ export function OrderForm({
                           ? `${formatNumber(editableAvailableQuantity)} ${
                               product.unit || ""
                             }`.trim()
-                          : "-"
+                        : "-"
                       }
+                    />
+                    <ReadonlyValueInput
+                      label="لیست قیمت"
+                      value={product?.priceListTitle || product?.priceListId || "-"}
                     />
                   </div>
                   <FieldError
@@ -1410,6 +1415,7 @@ function mergeProducts(products: Product[], order?: Order | null): Product[] {
 function createProductFromOrderItem(item: OrderItem): Product {
   return {
     objectId: item.productId,
+    productObjectId: item.productId,
     id: item.productSku,
     sku: item.productSku,
     barcode: null,
@@ -1448,6 +1454,8 @@ function productIdentityLabel(product: Product): string {
   return [
     product.sepidarCode || product.sku || product.objectId,
     product.name,
+    product.brandName || product.brand,
+    product.unitPrice ? formatCurrency(product.unitPrice) : "",
     product.priceListConflict ? "تداخل لیست قیمت" : "",
   ]
     .filter(Boolean)
@@ -1565,7 +1573,13 @@ function resolveProductObjectId(item: OrderItem, products: Product[]): string {
   const rawProductId = item.productId || "";
   const matchedProduct = products.find(
     (product) =>
+      (item.priceListItemId && product.priceListItemId === item.priceListItemId) ||
+      (item.priceListId &&
+        product.priceListId === item.priceListId &&
+        (product.productObjectId === rawProductId ||
+          product.objectId === rawProductId)) ||
       product.objectId === rawProductId ||
+      product.productObjectId === rawProductId ||
       product.id === rawProductId ||
       product.sku === rawProductId ||
       product.sku === item.productSku,

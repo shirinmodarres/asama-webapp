@@ -82,6 +82,7 @@ export function mapProductDto(dto: unknown): Product {
 
   return {
     objectId,
+    productObjectId: toNullableString(record.productObjectId) || objectId,
     id,
     sku,
     barcode: toNullableString(record.barcode ?? record.productBarcode),
@@ -104,6 +105,7 @@ export function mapProductDto(dto: unknown): Product {
         : toNumberValue(record.priceNoteItemId),
     priceListId: toNullableString(record.priceListId),
     priceListItemId: toNullableString(record.priceListItemId),
+    priceListTitle: toNullableString(record.priceListTitle),
     pricingSource: toNullableString(record.pricingSource),
     priceListConflict: record.priceListConflict === true,
     priceListConflicts: Array.isArray(record.priceListConflicts)
