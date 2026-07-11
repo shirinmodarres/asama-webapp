@@ -19,6 +19,9 @@ export interface CreateNajaOrderPayload {
     quantity: number;
     unitPrice?: number;
     priceNoteItemId?: number | null;
+    priceListId?: string | null;
+    priceListItemId?: string | null;
+    pricingSource?: string | null;
   }>;
   notes?: string;
 }

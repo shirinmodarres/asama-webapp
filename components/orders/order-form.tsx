@@ -34,6 +34,7 @@ import {
   listAssignedCustomersForExpert,
 } from "@/lib/services/expert-customer.service";
 import {
+  listOrderProductsForAssignment,
   listOrderProductsByPriceList,
   listOrderProductsBySaleType,
   listProducts,
@@ -80,6 +81,9 @@ export interface OrderFormSubmitPayload {
     quantity: number;
     unitPrice?: number;
     priceNoteItemId?: number | null;
+    priceListId?: string | null;
+    priceListItemId?: string | null;
+    pricingSource?: string | null;
   }>;
   saleTypeObjectId?: string;
   sepidarSaleTypeId?: number;
@@ -305,6 +309,7 @@ export function OrderForm({
         : customers.find((entry) => entry.objectId === selectedCustomerId);
       const saleTypeId =
         customer?.saleType?.sepidarSaleTypeId ?? initialOrder?.sepidarSaleTypeId;
+      const priceListIds = customer?.priceListIds ?? [];
       const priceListId =
         customer?.priceListId ?? initialOrder?.priceListId ?? undefined;
 
@@ -315,7 +320,7 @@ export function OrderForm({
         return;
       }
       if (
-        (!priceListId && !saleTypeId) ||
+        (!priceListId && priceListIds.length === 0 && !saleTypeId) ||
         (assignedCustomersOnly && !hasAssignmentInventory(customer))
       ) {
         keepOrderSnapshotProducts();
@@ -330,8 +335,13 @@ export function OrderForm({
           expertUserId:
             initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         };
-        const data = priceListId
-          ? await listOrderProductsByPriceList(priceListId, context)
+        const data = priceListIds.length > 1 && context.customerObjectId
+          ? await listOrderProductsForAssignment({
+              customerObjectId: context.customerObjectId,
+              expertUserId: context.expertUserId,
+            })
+          : priceListId
+            ? await listOrderProductsByPriceList(priceListId, context)
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (!isMounted) return;
         const mergedProducts = mergeProducts(data, initialOrder);
@@ -544,7 +554,9 @@ export function OrderForm({
         sepidarProductsOnly &&
         (productsById[item.productId]?.unitPrice ?? 0) <= 0
       ) {
-        errors.productId = "قیمت کالا برای این نوع فروش ثبت نشده است.";
+        errors.productId = productsById[item.productId]?.priceListConflict
+          ? "این کالا در چند لیست قیمت انتخابی وجود دارد."
+          : "قیمت کالا برای این نوع فروش ثبت نشده است.";
       }
       if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
         errors.quantity = POSITIVE_NUMBER_MESSAGE;
@@ -678,6 +690,12 @@ export function OrderForm({
                 unitPrice: productsById[item.productId]?.unitPrice ?? 0,
                 priceNoteItemId:
                   productsById[item.productId]?.priceNoteItemId ?? null,
+                priceListId:
+                  productsById[item.productId]?.priceListId ?? null,
+                priceListItemId:
+                  productsById[item.productId]?.priceListItemId ?? null,
+                pricingSource:
+                  productsById[item.productId]?.pricingSource ?? null,
               }
             : {}),
         })),
@@ -1041,7 +1059,9 @@ export function OrderForm({
         {!isLoadingProducts &&
         !productsError &&
         sepidarProductsOnly &&
-        selectedCustomer?.saleType?.sepidarSaleTypeId &&
+        (selectedCustomer?.saleType?.sepidarSaleTypeId ||
+          selectedCustomer?.priceListId ||
+          (selectedCustomer?.priceListIds?.length ?? 0) > 0) &&
         products.length === 0 ? (
           <p className="mt-5 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-sm text-[#8A5A00]">
             در انبارهای مجاز این کارشناس کالایی با موجودی قابل فروش پیدا نشد.
@@ -1115,7 +1135,9 @@ export function OrderForm({
                       searchPlaceholder="جستجو در کالاها"
                       emptyMessage={
                         sepidarProductsOnly &&
-                        selectedCustomer?.saleType?.sepidarSaleTypeId &&
+                        (selectedCustomer?.saleType?.sepidarSaleTypeId ||
+                          selectedCustomer?.priceListId ||
+                          (selectedCustomer?.priceListIds?.length ?? 0) > 0) &&
                         products.length === 0
                           ? "کالایی با موجودی قابل فروش پیدا نشد."
                           : "کالایی پیدا نشد"
@@ -1295,8 +1317,11 @@ export function OrderForm({
 }
 
 function hasAssignmentInventory(customer: Customer | null | undefined): boolean {
+  if (!customer) return false;
   return Boolean(
-    customer?.saleType?.sepidarSaleTypeId &&
+    (customer.saleType?.sepidarSaleTypeId ||
+      customer.priceListId ||
+      customer.priceListIds.length > 0) &&
       (customer.allowedStockObjectIds.length > 0 ||
         customer.allowedSepidarStockIds.length > 0 ||
         customer.allowedStocks.length > 0 ||
@@ -1398,6 +1423,11 @@ function createProductFromOrderItem(item: OrderItem): Product {
     unit: "عدد",
     unitPrice: item.unitPrice,
     priceNoteItemId: null,
+    priceListId: item.priceListId ?? null,
+    priceListItemId: item.priceListItemId ?? null,
+    pricingSource: item.pricingSource ?? null,
+    priceListConflict: false,
+    priceListConflicts: [],
     description: null,
     isSyncedFromSepidar: true,
     isActive: true,
@@ -1418,6 +1448,7 @@ function productIdentityLabel(product: Product): string {
   return [
     product.sepidarCode || product.sku || product.objectId,
     product.name,
+    product.priceListConflict ? "تداخل لیست قیمت" : "",
   ]
     .filter(Boolean)
     .join(" - ");
@@ -1489,9 +1520,11 @@ function createCustomerFromOrder(order: Order): Customer | null {
           }
         : null),
     priceListId: order.priceListId,
+    priceListIds: order.priceListId ? [order.priceListId] : [],
     priceListTitle: order.priceListTitle,
     priceListType: order.priceListType,
     priceListBrand: order.priceListBrand,
+    priceLists: [],
     allowedStockObjectIds: order.stockObjectId ? [order.stockObjectId] : [],
     allowedSepidarStockIds:
       order.sepidarStockId === null ? [] : [order.sepidarStockId],

@@ -18,6 +18,15 @@ export interface Product {
   unit: string;
   unitPrice: number;
   priceNoteItemId: number | null;
+  priceListId?: string | null;
+  priceListItemId?: string | null;
+  pricingSource?: string | null;
+  priceListConflict?: boolean;
+  priceListConflicts?: Array<{
+    priceListId: string | null;
+    priceListItemId: string | null;
+    unitPrice: number | null;
+  }>;
   description: string | null;
   isSyncedFromSepidar: boolean;
   isActive: boolean | null;

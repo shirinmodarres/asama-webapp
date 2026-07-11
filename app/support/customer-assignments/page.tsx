@@ -49,7 +49,7 @@ export default function SupportCustomerAssignmentsPage() {
   );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedPriceListId, setSelectedPriceListId] = useState("");
+  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>([]);
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -115,8 +115,8 @@ export default function SupportCustomerAssignmentsPage() {
     if (!selectedCustomerId) {
       nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
     }
-    if (!selectedPriceListId) {
-      nextErrors.selectedPriceListId = "لطفاً لیست قیمت را انتخاب کنید.";
+    if (selectedPriceListIds.length === 0) {
+      nextErrors.selectedPriceListIds = "لطفاً حداقل یک لیست قیمت را انتخاب کنید.";
     }
     if (selectedStockIds.length === 0) {
       nextErrors.selectedStockIds = "لطفاً حداقل یک انبار مجاز انتخاب کنید.";
@@ -132,7 +132,7 @@ export default function SupportCustomerAssignmentsPage() {
     const payload = {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
-      priceListId: selectedPriceListId,
+      priceListIds: selectedPriceListIds,
       allowedStockObjectIds: selectedStockIds,
     };
 
@@ -155,7 +155,7 @@ export default function SupportCustomerAssignmentsPage() {
       if (editingAssignmentId) {
         setEditingAssignmentId("");
         setSelectedExpertId("");
-        setSelectedPriceListId("");
+        setSelectedPriceListIds([]);
         setSelectedStockIds([]);
       }
       setSelectedCustomerId("");
@@ -242,7 +242,13 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId(assignment.objectId);
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
-    setSelectedPriceListId(assignment.priceListId ?? "");
+    setSelectedPriceListIds(
+      assignment.priceListIds.length
+        ? assignment.priceListIds
+        : assignment.priceListId
+          ? [assignment.priceListId]
+          : [],
+    );
     setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
     setError("");
@@ -253,7 +259,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId("");
     setSelectedExpertId("");
     setSelectedCustomerId("");
-    setSelectedPriceListId("");
+    setSelectedPriceListIds([]);
     setSelectedStockIds([]);
     setFieldErrors({});
   };
@@ -266,7 +272,7 @@ export default function SupportCustomerAssignmentsPage() {
     stockOptions.length === 0 ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    !selectedPriceListId ||
+    selectedPriceListIds.length === 0 ||
     selectedStockIds.length === 0;
 
   const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
@@ -290,6 +296,17 @@ export default function SupportCustomerAssignmentsPage() {
       key: "price-list",
       header: "لیست قیمت",
       render: (row) => {
+        if (row.priceLists.length) {
+          return row.priceLists
+            .map((priceList) =>
+              [
+                priceList.brandName,
+                priceList.name || priceList.displayName,
+                priceList.typeCode,
+              ].filter(Boolean).join(" - "),
+            )
+            .join("، ");
+        }
         if (row.priceListTitle) {
           return [
             row.priceListBrand,
@@ -438,28 +455,28 @@ export default function SupportCustomerAssignmentsPage() {
                 <FieldError message={fieldErrors.selectedCustomerId} />
               </label>
               <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>لیست قیمت</span>
-                <SearchableSelect
-                  value={selectedPriceListId || undefined}
-                  onValueChange={(value) => {
-                    setSelectedPriceListId(value);
+                <span>لیست‌های قیمت</span>
+                <SearchableMultiSelect
+                  values={selectedPriceListIds}
+                  onValuesChange={(values) => {
+                    setSelectedPriceListIds(values);
                     setFieldErrors((current) => ({
                       ...current,
-                      selectedPriceListId: "",
+                      selectedPriceListIds: "",
                     }));
                   }}
                   options={priceListOptions}
-                  placeholder="انتخاب لیست قیمت"
+                  placeholder="انتخاب لیست‌های قیمت"
                   searchPlaceholder="جستجو در لیست‌های قیمت"
                   emptyMessage={
                     priceLists.length === 0
                       ? "لیست قیمت فعالی پیدا نشد. ابتدا از بخش قیمت‌گذاری لیست تولید کنید."
                       : "لیست قیمتی با این جستجو پیدا نشد."
                   }
-                  invalid={Boolean(fieldErrors.selectedPriceListId)}
+                  invalid={Boolean(fieldErrors.selectedPriceListIds)}
                   className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedPriceListId} />
+                <FieldError message={fieldErrors.selectedPriceListIds} />
               </label>
               <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
                 <span>انبارهای مجاز</span>

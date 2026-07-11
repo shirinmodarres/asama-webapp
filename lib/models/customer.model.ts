@@ -1,4 +1,5 @@
 import type { SepidarStock } from "@/lib/models/stock.model";
+import type { PriceList } from "@/lib/models/pricing.model";
 
 export type CustomerStatus = "active" | "inactive";
 export type CustomerAddressStatus = "active" | "inactive";
@@ -37,9 +38,11 @@ export interface Customer {
     title: string | null;
   } | null;
   priceListId: string | null;
+  priceListIds: string[];
   priceListTitle: string | null;
   priceListType: string | null;
   priceListBrand: string | null;
+  priceLists: PriceList[];
   allowedStockObjectIds: string[];
   allowedSepidarStockIds: number[];
   allowedStocks: SepidarStock[];

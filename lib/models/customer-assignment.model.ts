@@ -11,6 +11,7 @@ export interface ExpertCustomerAssignment {
   customerObjectId: string;
   saleTypeObjectId: string | null;
   priceListId: string | null;
+  priceListIds: string[];
   priceListTitle: string | null;
   priceListType: string | null;
   priceListBrand: string | null;
@@ -18,6 +19,7 @@ export interface ExpertCustomerAssignment {
   customer: Customer | null;
   saleType: SepidarSaleType | null;
   priceList: PriceList | null;
+  priceLists: PriceList[];
   expertName: string;
   customerName: string;
   customerPhone: string;
@@ -37,6 +39,7 @@ export interface CreateExpertCustomerAssignmentPayload {
   customerObjectId: string;
   saleTypeObjectId?: string;
   priceListId?: string;
+  priceListIds?: string[];
   allowedStockObjectIds: string[];
   assignedByName: string;
 }
@@ -46,6 +49,7 @@ export interface UpdateExpertCustomerAssignmentPayload {
   customerObjectId: string;
   saleTypeObjectId?: string;
   priceListId?: string;
+  priceListIds?: string[];
   allowedStockObjectIds: string[];
   updatedByName: string;
 }
