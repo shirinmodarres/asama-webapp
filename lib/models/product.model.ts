@@ -4,6 +4,7 @@ export type ProductStatus = "active" | "inactive";
 
 export interface Product {
   objectId: string;
+  productObjectId?: string | null;
   id: string;
   sku: string;
   barcode: string | null;
@@ -18,6 +19,16 @@ export interface Product {
   unit: string;
   unitPrice: number;
   priceNoteItemId: number | null;
+  priceListId?: string | null;
+  priceListItemId?: string | null;
+  priceListTitle?: string | null;
+  pricingSource?: string | null;
+  priceListConflict?: boolean;
+  priceListConflicts?: Array<{
+    priceListId: string | null;
+    priceListItemId: string | null;
+    unitPrice: number | null;
+  }>;
   description: string | null;
   isSyncedFromSepidar: boolean;
   isActive: boolean | null;

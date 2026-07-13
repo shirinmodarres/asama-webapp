@@ -82,7 +82,7 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
 
   return (
     <div className="h-screen overflow-hidden ">
-      <div className="mx-auto flex h-screen w-full max-w-[1540px] min-w-0 flex-col gap-6 overflow-hidden px-4 py-5 xl:flex-row xl:px-6 xl:py-6">
+      <div className=" flex h-screen w-full min-w-0 flex-col gap-6 overflow-hidden px-4 py-5 xl:flex-row xl:px-6 xl:py-6">
         <Sidebar items={sidebarByRole[role]} />
 
         {isSidebarOpen ? (
@@ -102,14 +102,14 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
           </div>
         ) : null}
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <main className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden bg-transparent ">
           <Header
             title={title}
             role={role}
             user={currentUser}
             onMenuClick={() => setIsSidebarOpen(true)}
           />
-          <div className="mt-6 min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto overflow-x-hidden pb-8 pr-1">
+          <div className="mt-6 min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto overflow-x-auto pb-8 pr-1">
             {children}
           </div>
         </main>

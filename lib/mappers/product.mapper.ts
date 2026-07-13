@@ -82,6 +82,7 @@ export function mapProductDto(dto: unknown): Product {
 
   return {
     objectId,
+    productObjectId: toNullableString(record.productObjectId) || objectId,
     id,
     sku,
     barcode: toNullableString(record.barcode ?? record.productBarcode),
@@ -102,6 +103,24 @@ export function mapProductDto(dto: unknown): Product {
       record.priceNoteItemId === undefined || record.priceNoteItemId === null
         ? null
         : toNumberValue(record.priceNoteItemId),
+    priceListId: toNullableString(record.priceListId),
+    priceListItemId: toNullableString(record.priceListItemId),
+    priceListTitle: toNullableString(record.priceListTitle),
+    pricingSource: toNullableString(record.pricingSource),
+    priceListConflict: record.priceListConflict === true,
+    priceListConflicts: Array.isArray(record.priceListConflicts)
+      ? record.priceListConflicts.map((value) => {
+          const conflict = toRecord(value);
+          return {
+            priceListId: toNullableString(conflict.priceListId),
+            priceListItemId: toNullableString(conflict.priceListItemId),
+            unitPrice:
+              conflict.unitPrice === undefined || conflict.unitPrice === null
+                ? null
+                : toNumberValue(conflict.unitPrice),
+          };
+        })
+      : [],
     description: toNullableString(record.description),
     isSyncedFromSepidar:
       toBooleanValue(

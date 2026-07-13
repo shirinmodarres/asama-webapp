@@ -24,7 +24,7 @@ import {
 } from "@/lib/services/expert-customer.service";
 import { createNajaOrder } from "@/lib/services/naja.service";
 import {
-  listOrderProductsByPriceList,
+  listOrderProductsForAssignment,
   listOrderProductsBySaleType,
 } from "@/lib/services/product.service";
 import type { RoleKey } from "@/lib/types";
@@ -147,20 +147,22 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       setProductId("");
       setError("");
       const saleTypeId = selectedCustomer?.saleType?.sepidarSaleTypeId;
+      const priceListIds = selectedCustomer?.priceListIds ?? [];
       const priceListId = selectedCustomer?.priceListId;
-      if (!hasAssignmentInventory(selectedCustomer) || (!priceListId && !saleTypeId)) {
+      if (!hasAssignmentInventory(selectedCustomer) || (!priceListId && priceListIds.length === 0 && !saleTypeId)) {
         setIsLoadingProducts(false);
         return;
       }
 
       setIsLoadingProducts(true);
       try {
+        if (!selectedCustomer) return;
         const context = {
           customerObjectId: selectedCustomer.objectId,
           expertUserId: getStoredCurrentUser()?.objectId,
         };
-        const data = priceListId
-          ? await listOrderProductsByPriceList(priceListId, context)
+        const data = priceListIds.length > 0 || priceListId
+          ? await listOrderProductsForAssignment(context)
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (isMounted) {
           setProducts(data);
@@ -254,7 +256,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       nextErrors.quantity = "موجودی قابل فروش کافی نیست";
     }
     if (selectedProduct && selectedProduct.unitPrice <= 0) {
-      nextErrors.productId = "قیمت کالا برای این نوع فروش ثبت نشده است.";
+      nextErrors.productId = selectedProduct.priceListConflict
+        ? "این کالا در چند لیست قیمت انتخابی وجود دارد."
+        : "قیمت کالا برای این نوع فروش ثبت نشده است.";
     }
     if (!createdByName.trim()) {
       nextErrors.createdByName = "این فیلد الزامی است.";
@@ -281,10 +285,13 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         najaPurchaseDate: najaPurchaseDate || undefined,
         items: [
           {
-            productObjectId: productId,
+            productObjectId: selectedProduct.productObjectId || productId,
             quantity: requestedQuantity,
             unitPrice: selectedProduct.unitPrice,
             priceNoteItemId: selectedProduct.priceNoteItemId,
+            priceListId: selectedProduct.priceListId ?? null,
+            priceListItemId: selectedProduct.priceListItemId ?? null,
+            pricingSource: selectedProduct.pricingSource ?? null,
           },
         ],
       });
@@ -412,7 +419,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }
                   searchPlaceholder="جستجو در کالاها"
                   emptyMessage={
-                    selectedCustomer?.saleType?.sepidarSaleTypeId
+                    selectedCustomer?.saleType?.sepidarSaleTypeId ||
+                    selectedCustomer?.priceListId ||
+                    (selectedCustomer?.priceListIds?.length ?? 0) > 0
                       ? "کالایی با موجودی قابل فروش پیدا نشد."
                       : "ابتدا مرکز ناجا را انتخاب کنید."
                   }
@@ -426,7 +435,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   invalid={Boolean(fieldErrors.productId)}
                 />
                 <FieldError message={fieldErrors.productId} />
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
                   <ReadonlyValueInput
                     label="قیمت واحد"
                     value={
@@ -445,6 +454,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                           )} ${selectedProduct.unit || ""}`.trim()
                         : "-"
                     }
+                  />
+                  <ReadonlyValueInput
+                    label="لیست قیمت"
+                    value={selectedProduct?.priceListTitle || selectedProduct?.priceListId || "-"}
                   />
                 </div>
               </div>
@@ -633,8 +646,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 }
 
 function hasAssignmentInventory(customer: Customer | null | undefined): boolean {
+  if (!customer) return false;
   return Boolean(
-    customer?.saleType?.sepidarSaleTypeId &&
+    (customer.saleType?.sepidarSaleTypeId ||
+      customer.priceListId ||
+      customer.priceListIds.length > 0) &&
       (customer.allowedStockObjectIds.length > 0 ||
         customer.allowedSepidarStockIds.length > 0 ||
         customer.allowedStocks.length > 0),
@@ -656,6 +672,9 @@ function productIdentityLabel(product: Product): string {
   return [
     product.sepidarCode || product.sku || product.objectId,
     product.name,
+    product.brandName || product.brand,
+    product.unitPrice ? formatCurrency(product.unitPrice) : "",
+    product.priceListConflict ? "تداخل لیست قیمت" : "",
   ]
     .filter(Boolean)
     .join(" - ");

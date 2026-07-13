@@ -7,6 +7,7 @@ import {
   toStringValue,
 } from "@/lib/mappers/mapper-utils";
 import { mapSepidarStockDto } from "@/lib/mappers/stock.mapper";
+import { mapPriceListDto } from "@/lib/mappers/pricing.mapper";
 import type {
   Customer,
   CustomerAddress,
@@ -32,6 +33,10 @@ export function mapCustomerDto(dto: unknown): Customer {
     defaultAddressRecord === null || defaultAddressRecord === undefined
       ? addresses.find((address) => address.isDefault) ?? null
       : mapCustomerAddressDto(defaultAddressRecord, record);
+  const legacyPriceListId = toNullableString(record.priceListId);
+  const priceListIds = toArray(record.priceListIds)
+    .map(toStringValue)
+    .filter(Boolean);
 
   return {
     objectId: toStringValue(record.objectId),
@@ -43,10 +48,16 @@ export function mapCustomerDto(dto: unknown): Customer {
       record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
     ),
     saleType: mapCustomerSaleType(record.saleType),
-    priceListId: toNullableString(record.priceListId),
+    priceListId: legacyPriceListId,
+    priceListIds: priceListIds.length
+      ? priceListIds
+      : legacyPriceListId
+        ? [legacyPriceListId]
+        : [],
     priceListTitle: toNullableString(record.priceListTitle),
     priceListType: toNullableString(record.priceListType),
     priceListBrand: toNullableString(record.priceListBrand),
+    priceLists: toArray(record.priceLists).map(mapPriceListDto),
     allowedStockObjectIds: toArray(record.allowedStockObjectIds)
       .map(toStringValue)
       .filter(Boolean),

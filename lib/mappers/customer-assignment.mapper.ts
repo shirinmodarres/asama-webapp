@@ -35,6 +35,14 @@ export function mapExpertCustomerAssignmentDto(
   const priceList = Object.keys(priceListRecord).length
     ? mapPriceListDto(priceListRecord)
     : null;
+  const priceLists = toArray(record.priceLists)
+    .map(mapPriceListDto)
+    .filter((item) => item.objectId);
+  const legacyPriceListId =
+    toStringValue(record.priceListId ?? priceList?.objectId) || null;
+  const priceListIds = toArray(record.priceListIds)
+    .map(toStringValue)
+    .filter(Boolean);
   const status = record.status === "inactive" ? "inactive" : "active";
 
   return {
@@ -49,7 +57,12 @@ export function mapExpertCustomerAssignmentDto(
       record.customerObjectId ?? record.customerId ?? customer?.objectId,
     ),
     saleTypeObjectId: toStringValue(record.saleTypeObjectId ?? saleType?.objectId) || null,
-    priceListId: toStringValue(record.priceListId ?? priceList?.objectId) || null,
+    priceListId: legacyPriceListId,
+    priceListIds: priceListIds.length
+      ? priceListIds
+      : legacyPriceListId
+        ? [legacyPriceListId]
+        : [],
     priceListTitle:
       toStringValue(record.priceListTitle) || priceList?.name || null,
     priceListType:
@@ -60,6 +73,7 @@ export function mapExpertCustomerAssignmentDto(
     customer,
     saleType,
     priceList,
+    priceLists,
     expertName: toStringValue(record.expertName) || expert?.fullName || "",
     customerName:
       toStringValue(record.customerName) || customer?.fullName || "",
