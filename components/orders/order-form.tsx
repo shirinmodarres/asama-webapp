@@ -481,12 +481,22 @@ export function OrderForm({
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
         const uniqueAddresses = dedupeCustomerAddresses(normalizedAddresses);
         setAddresses(uniqueAddresses);
+        if (process.env.NODE_ENV === "development") {
+          console.log("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+            customerId: customer?.objectId ?? selectedCustomerId,
+            sepidarAddress: customer?.sepidarAddress ?? null,
+            sepidarAddresses: customer?.sepidarAddresses ?? [],
+            selectedAddressId:
+              customer?.sepidarAddress?.customerAddressId ??
+              customer?.sepidarAddress?.sepidarAddressId ??
+              null,
+          });
+        }
         if (!uniqueAddresses.length) {
           if (process.env.NODE_ENV === "development") {
             console.error("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
               customerId: customer?.objectId ?? selectedCustomerId,
-              sepidarCustomerCode:
-                customer?.sepidarCustomerCode || customer?.id || null,
+              sepidarAddress: customer?.sepidarAddress || null,
               sepidarAddresses: customer?.sepidarAddresses || [],
             });
           }
@@ -502,8 +512,12 @@ export function OrderForm({
           ) {
             return current;
           }
-          const mainAddress = resolveMainCustomerAddress(customer);
-          return mainAddress ? getCustomerAddressKey(mainAddress) : getCustomerAddressKey(uniqueAddresses[0]);
+          const mainAddress = customer?.sepidarAddress
+            ? normalizeOrderCustomerAddress(customer.sepidarAddress)
+            : resolveMainCustomerAddress(customer);
+          return mainAddress
+            ? getCustomerAddressKey(mainAddress)
+            : getCustomerAddressKey(uniqueAddresses[0]);
         });
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -793,13 +807,14 @@ export function OrderForm({
 
     if (selectedCustomerId && !selectedAddressId) {
       if (process.env.NODE_ENV === "development") {
-        console.error("[CUSTOMER_ADDRESS_DEBUG]", {
-          sepidarCode: selectedCustomer?.sepidarCustomerCode || selectedCustomer?.id || null,
+        console.error("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+          customerId: selectedCustomer?.objectId || selectedCustomerId,
+          sepidarAddress: selectedCustomer?.sepidarAddress || null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
-          selectedCustomerAddressId: selectedAddressId || null,
+          selectedAddressId: selectedAddressId || null,
         });
       }
-      if (!resolvedSepidarAddresses.length) {
+      if (!selectedCustomer?.sepidarAddress && !resolvedSepidarAddresses.length) {
         setFieldErrors({ selectedAddressId: "آدرس تحویل موجود نیست" });
         return;
       }
@@ -876,6 +891,28 @@ export function OrderForm({
             : {}),
         })),
       });
+      if (process.env.NODE_ENV === "development") {
+        console.log("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+          customerId: selectedCustomer?.objectId ?? selectedCustomerId ?? null,
+          sepidarAddress: selectedCustomer?.sepidarAddress ?? null,
+          sepidarAddresses: selectedCustomer?.sepidarAddresses ?? [],
+          finalDeliveryAddressPayload: {
+            customerAddressId:
+              selectedAddress?.customerAddressId ??
+              selectedAddress?.sepidarAddressId ??
+              null,
+            selectedCustomerAddressId:
+              selectedAddress?.customerAddressId ??
+              selectedAddress?.sepidarAddressId ??
+              null,
+            customerAddressText:
+              selectedAddress?.Address ??
+              selectedAddress?.address ??
+              selectedAddress?.fullAddress ??
+              null,
+          },
+        });
+      }
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     }
@@ -1036,11 +1073,6 @@ export function OrderForm({
             ) : null}
             {selectedAddress && !isNajaOrder ? (
               <div className="mt-2 space-y-1 text-[#6B7280]">
-                {selectedAddress.title ? (
-                  <p className="text-xs text-[#94A3B8]">
-                    {selectedAddress.title}
-                  </p>
-                ) : null}
                 {selectedAddress.isMain ? (
                   <p className="text-xs font-semibold text-[#2F6B3A]">
                     آدرس اصلی
@@ -1054,7 +1086,13 @@ export function OrderForm({
                   موبایل گیرنده:{" "}
                   {getReceiverPhone(selectedAddress, selectedCustomer)}
                 </p>
-                <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
+                <p>
+                  آدرس کامل:{" "}
+                  {selectedAddress.Address ||
+                    selectedAddress.address ||
+                    selectedAddress.fullAddress ||
+                    formatDeliveryAddress(selectedAddress)}
+                </p>
               </div>
             ) : !isNajaOrder && !isLoadingAddresses && !selectedAddress ? (
               <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
@@ -1843,6 +1881,8 @@ function normalizeOrderCustomerAddress(address: CustomerAddress): CustomerAddres
   const derivedAddressId = toNumericAddressId(address.objectId);
   return {
     ...address,
+    Address: address.Address ?? address.address ?? address.fullAddress ?? null,
+    ZipCode: address.ZipCode ?? address.zipCode ?? address.postalCode ?? null,
     customerAddressId:
       address.customerAddressId ??
       address.sepidarAddressId ??
@@ -1871,9 +1911,8 @@ function dedupeCustomerAddresses(addresses: CustomerAddress[]): CustomerAddress[
 
 function formatCustomerAddressLabel(address: CustomerAddress): string {
   return [
-    address.title,
-    address.address || address.fullAddress,
-    address.zipCode || address.postalCode,
+    address.Address || address.address || address.fullAddress,
+    address.ZipCode || address.zipCode || address.postalCode,
   ]
     .filter(Boolean)
     .join(" - ");
