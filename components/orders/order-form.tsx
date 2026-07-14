@@ -25,7 +25,6 @@ import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
 import {
-  listCustomerAddresses,
   listCustomers,
 } from "@/lib/services/customer.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -480,9 +479,7 @@ export function OrderForm({
       setError("");
 
       try {
-        const data = getResolvedSepidarAddresses(customer).length
-          ? getResolvedSepidarAddresses(customer)
-          : await listCustomerAddresses(selectedCustomerId);
+        const data = getResolvedSepidarAddresses(customer);
         if (!isMounted) return;
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
         setAddresses(normalizedAddresses);
@@ -785,15 +782,15 @@ export function OrderForm({
     }
 
     if (selectedCustomerId && !selectedAddressId) {
-      if (process.env.NODE_ENV === "development") {
+      if (!hasValidCustomerAddress(selectedCustomer)) {
         console.error("[CUSTOMER_ADDRESS_DEBUG]", {
-          sepidarCode: selectedCustomer?.sepidarCustomerCode || selectedCustomer?.id || null,
+          customerId: selectedCustomer?.objectId || null,
+          sepidarCustomerCode: selectedCustomer?.sepidarCustomerCode || null,
           sepidarAddress: selectedCustomer?.sepidarAddress || null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
-          selectedCustomerAddressId: selectedAddressId || null,
+          resolvedAddresses: resolvedSepidarAddresses,
+          selectedAddressId: selectedAddressId || null,
         });
-      }
-      if (!hasValidCustomerAddress(selectedCustomer)) {
         setFieldErrors({ selectedAddressId: "این مشتری آدرس فعالی ندارد." });
         return;
       }
