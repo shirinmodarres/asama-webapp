@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { JalaliDateInput } from "@/components/shared/jalali-date-input";
@@ -24,10 +23,7 @@ import {
 import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
-import {
-  listCustomerAddresses,
-  listCustomers,
-} from "@/lib/services/customer.service";
+import { listCustomers } from "@/lib/services/customer.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   getAssignedCustomerForExpert,
@@ -480,23 +476,34 @@ export function OrderForm({
       setError("");
 
       try {
-        const data = getResolvedSepidarAddresses(customer).length
-          ? getResolvedSepidarAddresses(customer)
-          : await listCustomerAddresses(selectedCustomerId);
+        const data = getResolvedSepidarAddresses(customer);
         if (!isMounted) return;
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
-        setAddresses(normalizedAddresses);
+        const uniqueAddresses = dedupeCustomerAddresses(normalizedAddresses);
+        setAddresses(uniqueAddresses);
+        if (!uniqueAddresses.length) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+              customerId: customer?.objectId ?? selectedCustomerId,
+              sepidarCustomerCode:
+                customer?.sepidarCustomerCode || customer?.id || null,
+              sepidarAddresses: customer?.sepidarAddresses || [],
+            });
+          }
+          setSelectedAddressId("");
+          return;
+        }
         setSelectedAddressId((current) => {
           if (
             current &&
-            normalizedAddresses.some(
+            uniqueAddresses.some(
               (address) => getCustomerAddressKey(address) === current,
             )
           ) {
             return current;
           }
           const mainAddress = resolveMainCustomerAddress(customer);
-          return mainAddress ? getCustomerAddressKey(mainAddress) : "";
+          return mainAddress ? getCustomerAddressKey(mainAddress) : getCustomerAddressKey(uniqueAddresses[0]);
         });
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -788,20 +795,25 @@ export function OrderForm({
       if (process.env.NODE_ENV === "development") {
         console.error("[CUSTOMER_ADDRESS_DEBUG]", {
           sepidarCode: selectedCustomer?.sepidarCustomerCode || selectedCustomer?.id || null,
-          sepidarAddress: selectedCustomer?.sepidarAddress || null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
           selectedCustomerAddressId: selectedAddressId || null,
         });
       }
-      if (!hasValidCustomerAddress(selectedCustomer)) {
-        setFieldErrors({ selectedAddressId: "این مشتری آدرس فعالی ندارد." });
+      if (!resolvedSepidarAddresses.length) {
+        setFieldErrors({ selectedAddressId: "آدرس تحویل موجود نیست" });
         return;
       }
       if (resolvedSepidarAddresses.length > 1 && !resolvedMainAddress) {
         setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
         return;
       }
-      setSelectedAddressId(String(resolvedMainAddress?.customerAddressId ?? resolvedMainAddress?.sepidarAddressId ?? ""));
+      setSelectedAddressId(
+        String(
+          resolvedMainAddress?.customerAddressId ??
+            resolvedMainAddress?.sepidarAddressId ??
+            "",
+        ),
+      );
       return;
     }
 
@@ -812,14 +824,10 @@ export function OrderForm({
         customerAddressId:
           selectedAddress?.customerAddressId ??
           selectedAddress?.sepidarAddressId ??
-          resolvedMainAddress?.customerAddressId ??
-          resolvedMainAddress?.sepidarAddressId ??
           undefined,
         selectedCustomerAddressId:
           selectedAddress?.customerAddressId ??
           selectedAddress?.sepidarAddressId ??
-          resolvedMainAddress?.customerAddressId ??
-          resolvedMainAddress?.sepidarAddressId ??
           undefined,
         customerAddressTitle: selectedAddress?.title ?? resolvedMainAddress?.title ?? null,
         customerAddressText:
@@ -1047,22 +1055,12 @@ export function OrderForm({
                 </p>
                 <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
               </div>
-            ) : !isNajaOrder &&
-              !isLoadingAddresses &&
-              !hasValidCustomerAddress(selectedCustomer) ? (
-                <></>
-              // <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
-              //   <span>این مشتری آدرس فعالی ندارد.</span>
-              //   <Button asChild size="sm" variant="outline">
-              //     <Link
-              //       href={`/expert/customers/${selectedCustomer.objectId}/edit`}
-              //     >
-              //       افزودن آدرس
-              //     </Link>
-              //   </Button>
-              // </div>
+            ) : !isNajaOrder && !isLoadingAddresses && !selectedAddress ? (
+              <div className="mt-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
+                آدرس تحویل موجود نیست
+              </div>
             ) : null}
-            {!isNajaOrder && addresses.length > 1 && !selectedAddress?.isMain ? (
+            {!isNajaOrder && addresses.length > 1 ? (
               <div className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
                 <span>آدرس تحویل</span>
                 <SearchableSelect
@@ -1081,7 +1079,7 @@ export function OrderForm({
                   }))}
                   placeholder="انتخاب آدرس"
                   searchPlaceholder="جستجو در آدرس‌ها"
-                  emptyMessage="آدرسی پیدا نشد"
+                  emptyMessage="آدرس تحویل موجود نیست"
                   disabled={!selectedCustomerId || isLoadingAddresses}
                   invalid={Boolean(fieldErrors.selectedAddressId)}
                 />
@@ -1823,15 +1821,9 @@ function getCustomerAddressKey(address: CustomerAddress): string {
   );
 }
 
-function hasValidCustomerAddress(customer: Customer | null | undefined): boolean {
-  return Boolean(resolveMainCustomerAddress(customer) || getResolvedSepidarAddresses(customer).length);
-}
-
 function getResolvedSepidarAddresses(customer: Customer | null | undefined): CustomerAddress[] {
   if (!customer) return [];
-  const primaryAddresses = customer.sepidarAddresses ?? [];
-  const fallbackAddress = customer.sepidarAddress ? [customer.sepidarAddress] : [];
-  return [...primaryAddresses, ...fallbackAddress]
+  return (customer.sepidarAddresses ?? [])
     .map(normalizeOrderCustomerAddress)
     .filter((address) => Boolean(address.customerAddressId ?? address.sepidarAddressId));
 }
@@ -1843,12 +1835,6 @@ function resolveMainCustomerAddress(customer: Customer | null | undefined): Cust
     (address) => address.isMain && (address.customerAddressId ?? address.sepidarAddressId),
   );
   if (mainAddress) return mainAddress;
-  if (
-    customer?.sepidarAddress &&
-    (customer.sepidarAddress.customerAddressId ?? customer.sepidarAddress.sepidarAddressId)
-  ) {
-    return normalizeOrderCustomerAddress(customer.sepidarAddress);
-  }
   return addresses[0] ?? null;
 }
 
@@ -1870,6 +1856,16 @@ function normalizeOrderCustomerAddress(address: CustomerAddress): CustomerAddres
     cityRef: address.cityRef ?? null,
     pathRef: address.pathRef ?? null,
   };
+}
+
+function dedupeCustomerAddresses(addresses: CustomerAddress[]): CustomerAddress[] {
+  const seen = new Set<string>();
+  return addresses.filter((address) => {
+    const key = getCustomerAddressKey(address);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function formatCustomerAddressLabel(address: CustomerAddress): string {
