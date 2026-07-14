@@ -480,12 +480,9 @@ export function OrderForm({
       setError("");
 
       try {
-        const data =
-          customer?.sepidarAddresses?.length
-            ? customer.sepidarAddresses
-            : customer?.sepidarAddress
-              ? [customer.sepidarAddress]
-              : await listCustomerAddresses(selectedCustomerId);
+        const data = getResolvedSepidarAddresses(customer).length
+          ? getResolvedSepidarAddresses(customer)
+          : await listCustomerAddresses(selectedCustomerId);
         if (!isMounted) return;
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
         setAddresses(normalizedAddresses);
@@ -498,15 +495,8 @@ export function OrderForm({
           ) {
             return current;
           }
-          const mainAddress =
-            normalizedAddresses.find((address) => address.isMain) ?? null;
-          if (mainAddress) return getCustomerAddressKey(mainAddress);
-          const fallbackAddress =
-            customer?.sepidarAddress ??
-            normalizedAddresses[0] ??
-            customer?.defaultAddress ??
-            null;
-          return fallbackAddress ? getCustomerAddressKey(normalizeOrderCustomerAddress(fallbackAddress)) : "";
+          const mainAddress = resolveMainCustomerAddress(customer);
+          return mainAddress ? getCustomerAddressKey(mainAddress) : "";
         });
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -554,6 +544,14 @@ export function OrderForm({
   const selectedCustomer =
     (assignedCustomersOnly ? selectedAssignment : null) ??
     customers.find((customer) => customer.objectId === selectedCustomerId);
+  const resolvedSepidarAddresses = useMemo(
+    () => getResolvedSepidarAddresses(selectedCustomer),
+    [selectedCustomer],
+  );
+  const resolvedMainAddress = useMemo(
+    () => resolveMainCustomerAddress(selectedCustomer),
+    [selectedCustomer],
+  );
   const selectedAddress = addresses.find(
     (address) => getCustomerAddressKey(address) === selectedAddressId,
   );
@@ -786,8 +784,24 @@ export function OrderForm({
       return;
     }
 
-    if (selectedCustomerId && addresses.length > 1 && !selectedAddressId) {
-      setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
+    if (selectedCustomerId && !selectedAddressId) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("[CUSTOMER_ADDRESS_DEBUG]", {
+          sepidarCode: selectedCustomer?.sepidarCustomerCode || selectedCustomer?.id || null,
+          sepidarAddress: selectedCustomer?.sepidarAddress || null,
+          sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
+          selectedCustomerAddressId: selectedAddressId || null,
+        });
+      }
+      if (!hasValidCustomerAddress(selectedCustomer)) {
+        setFieldErrors({ selectedAddressId: "این مشتری آدرس فعالی ندارد." });
+        return;
+      }
+      if (resolvedSepidarAddresses.length > 1 && !resolvedMainAddress) {
+        setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
+        return;
+      }
+      setSelectedAddressId(String(resolvedMainAddress?.customerAddressId ?? resolvedMainAddress?.sepidarAddressId ?? ""));
       return;
     }
 
@@ -795,18 +809,29 @@ export function OrderForm({
       await onSubmit({
         customerName: selectedCustomerId ? undefined : customerName.trim(),
         customerObjectId: selectedCustomerId || undefined,
-        customerAddressId: selectedAddress?.customerAddressId ?? selectedAddress?.sepidarAddressId ?? undefined,
+        customerAddressId:
+          selectedAddress?.customerAddressId ??
+          selectedAddress?.sepidarAddressId ??
+          resolvedMainAddress?.customerAddressId ??
+          resolvedMainAddress?.sepidarAddressId ??
+          undefined,
         selectedCustomerAddressId:
           selectedAddress?.customerAddressId ??
           selectedAddress?.sepidarAddressId ??
+          resolvedMainAddress?.customerAddressId ??
+          resolvedMainAddress?.sepidarAddressId ??
           undefined,
-        customerAddressTitle: selectedAddress?.title ?? null,
+        customerAddressTitle: selectedAddress?.title ?? resolvedMainAddress?.title ?? null,
         customerAddressText:
-          selectedAddress?.address ?? selectedAddress?.fullAddress ?? null,
-        customerAddressZipCode: selectedAddress?.zipCode ?? selectedAddress?.postalCode ?? null,
-        customerAddressCityRef: selectedAddress?.cityRef ?? null,
-        customerAddressPathRef: selectedAddress?.pathRef ?? null,
-        customerAddressIsMain: selectedAddress?.isMain ?? false,
+          selectedAddress?.address ?? selectedAddress?.fullAddress ?? resolvedMainAddress?.address ?? resolvedMainAddress?.fullAddress ?? null,
+        customerAddressZipCode:
+          selectedAddress?.zipCode ?? selectedAddress?.postalCode ?? resolvedMainAddress?.zipCode ?? resolvedMainAddress?.postalCode ?? null,
+        customerAddressCityRef:
+          selectedAddress?.cityRef ?? resolvedMainAddress?.cityRef ?? null,
+        customerAddressPathRef:
+          selectedAddress?.pathRef ?? resolvedMainAddress?.pathRef ?? null,
+        customerAddressIsMain:
+          selectedAddress?.isMain ?? resolvedMainAddress?.isMain ?? false,
         ...(initialOrder?.orderType === "naja"
           ? {
               recipientFirstName: recipientFirstName.trim(),
@@ -1022,7 +1047,9 @@ export function OrderForm({
                 </p>
                 <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
               </div>
-            ) : !isNajaOrder && addresses.length === 0 && !isLoadingAddresses ? (
+            ) : !isNajaOrder &&
+              !isLoadingAddresses &&
+              !hasValidCustomerAddress(selectedCustomer) ? (
               <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
                 <span>این مشتری آدرس فعالی ندارد.</span>
                 <Button asChild size="sm" variant="outline">
@@ -1793,6 +1820,35 @@ function getCustomerAddressKey(address: CustomerAddress): string {
       address.sepidarAddressId ??
       address.objectId,
   );
+}
+
+function hasValidCustomerAddress(customer: Customer | null | undefined): boolean {
+  return Boolean(resolveMainCustomerAddress(customer) || getResolvedSepidarAddresses(customer).length);
+}
+
+function getResolvedSepidarAddresses(customer: Customer | null | undefined): CustomerAddress[] {
+  if (!customer) return [];
+  const primaryAddresses = customer.sepidarAddresses ?? [];
+  const fallbackAddress = customer.sepidarAddress ? [customer.sepidarAddress] : [];
+  return [...primaryAddresses, ...fallbackAddress]
+    .map(normalizeOrderCustomerAddress)
+    .filter((address) => Boolean(address.customerAddressId ?? address.sepidarAddressId));
+}
+
+function resolveMainCustomerAddress(customer: Customer | null | undefined): CustomerAddress | null {
+  const addresses = getResolvedSepidarAddresses(customer);
+  if (!addresses.length) return null;
+  const mainAddress = addresses.find(
+    (address) => address.isMain && (address.customerAddressId ?? address.sepidarAddressId),
+  );
+  if (mainAddress) return mainAddress;
+  if (
+    customer?.sepidarAddress &&
+    (customer.sepidarAddress.customerAddressId ?? customer.sepidarAddress.sepidarAddressId)
+  ) {
+    return normalizeOrderCustomerAddress(customer.sepidarAddress);
+  }
+  return addresses[0] ?? null;
 }
 
 function normalizeOrderCustomerAddress(address: CustomerAddress): CustomerAddress {
