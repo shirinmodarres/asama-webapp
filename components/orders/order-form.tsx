@@ -795,7 +795,6 @@ export function OrderForm({
       await onSubmit({
         customerName: selectedCustomerId ? undefined : customerName.trim(),
         customerObjectId: selectedCustomerId || undefined,
-        customerAddressObjectId: selectedAddressId || undefined,
         customerAddressId: selectedAddress?.customerAddressId ?? selectedAddress?.sepidarAddressId ?? undefined,
         selectedCustomerAddressId:
           selectedAddress?.customerAddressId ??
