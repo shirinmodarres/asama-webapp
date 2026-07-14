@@ -483,6 +483,7 @@ export function OrderForm({
         setAddresses(uniqueAddresses);
         if (process.env.NODE_ENV === "development") {
           console.log("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+            selectedCustomer: customer ?? null,
             customerId: customer?.objectId ?? selectedCustomerId,
             sepidarAddress: customer?.sepidarAddress ?? null,
             sepidarAddresses: customer?.sepidarAddresses ?? [],
@@ -495,6 +496,7 @@ export function OrderForm({
         if (!uniqueAddresses.length) {
           if (process.env.NODE_ENV === "development") {
             console.error("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+              selectedCustomer: customer ?? null,
               customerId: customer?.objectId ?? selectedCustomerId,
               sepidarAddress: customer?.sepidarAddress || null,
               sepidarAddresses: customer?.sepidarAddresses || [],
@@ -808,6 +810,7 @@ export function OrderForm({
     if (selectedCustomerId && !selectedAddressId) {
       if (process.env.NODE_ENV === "development") {
         console.error("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+          selectedCustomer: selectedCustomer ?? null,
           customerId: selectedCustomer?.objectId || selectedCustomerId,
           sepidarAddress: selectedCustomer?.sepidarAddress || null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
@@ -893,6 +896,7 @@ export function OrderForm({
       });
       if (process.env.NODE_ENV === "development") {
         console.log("[CUSTOMER_DELIVERY_ADDRESS_DEBUG]", {
+          selectedCustomer: selectedCustomer ?? null,
           customerId: selectedCustomer?.objectId ?? selectedCustomerId ?? null,
           sepidarAddress: selectedCustomer?.sepidarAddress ?? null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses ?? [],
@@ -1039,7 +1043,6 @@ export function OrderForm({
                 <span className="sm:col-span-2">
                   آدرس مرکز:{" "}
                   {selectedCustomer.sepidarAddress?.Address ||
-                    selectedCustomer.sepidarAddress?.address ||
                     selectedCustomer.defaultAddress?.fullAddress ||
                     "-"}
                 </span>
@@ -1073,11 +1076,6 @@ export function OrderForm({
             ) : null}
             {selectedAddress && !isNajaOrder ? (
               <div className="mt-2 space-y-1 text-[#6B7280]">
-                {selectedAddress.isMain ? (
-                  <p className="text-xs font-semibold text-[#2F6B3A]">
-                    آدرس اصلی
-                  </p>
-                ) : null}
                 <p>
                   گیرنده بار:{" "}
                   {getReceiverName(selectedAddress, selectedCustomer) || "-"}
@@ -1088,10 +1086,7 @@ export function OrderForm({
                 </p>
                 <p>
                   آدرس کامل:{" "}
-                  {selectedAddress.Address ||
-                    selectedAddress.address ||
-                    selectedAddress.fullAddress ||
-                    formatDeliveryAddress(selectedAddress)}
+                  {selectedAddress.Address || formatDeliveryAddress(selectedAddress)}
                 </p>
               </div>
             ) : !isNajaOrder && !isLoadingAddresses && !selectedAddress ? (
