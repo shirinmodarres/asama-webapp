@@ -23,7 +23,7 @@ import {
 import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
-import { listCustomers } from "@/lib/services/customer.service";
+import { listCustomerAddresses, listCustomers } from "@/lib/services/customer.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   getAssignedCustomerForExpert,
@@ -476,7 +476,7 @@ export function OrderForm({
       setError("");
 
       try {
-        const data = getResolvedSepidarAddresses(customer);
+        const data = await listCustomerAddresses(selectedCustomerId);
         if (!isMounted) return;
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
         const uniqueAddresses = dedupeCustomerAddresses(normalizedAddresses);
@@ -516,7 +516,7 @@ export function OrderForm({
           }
           const mainAddress = customer?.sepidarAddress
             ? normalizeOrderCustomerAddress(customer.sepidarAddress)
-            : resolveMainCustomerAddress(customer);
+            : resolveMainCustomerAddress({ ...customer, sepidarAddresses: uniqueAddresses } as Customer);
           return mainAddress
             ? getCustomerAddressKey(mainAddress)
             : getCustomerAddressKey(uniqueAddresses[0]);
@@ -567,10 +567,6 @@ export function OrderForm({
   const selectedCustomer =
     (assignedCustomersOnly ? selectedAssignment : null) ??
     customers.find((customer) => customer.objectId === selectedCustomerId);
-  const resolvedSepidarAddresses = useMemo(
-    () => getResolvedSepidarAddresses(selectedCustomer),
-    [selectedCustomer],
-  );
   const resolvedMainAddress = useMemo(
     () => resolveMainCustomerAddress(selectedCustomer),
     [selectedCustomer],
@@ -817,11 +813,11 @@ export function OrderForm({
           selectedAddressId: selectedAddressId || null,
         });
       }
-      if (!selectedCustomer?.sepidarAddress && !resolvedSepidarAddresses.length) {
+      if (!selectedCustomer?.sepidarAddress && !selectedCustomer?.sepidarAddresses?.length) {
         setFieldErrors({ selectedAddressId: "آدرس تحویل موجود نیست" });
         return;
       }
-      if (resolvedSepidarAddresses.length > 1 && !resolvedMainAddress) {
+      if (selectedCustomer?.sepidarAddresses?.length > 1 && !resolvedMainAddress) {
         setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
         return;
       }
@@ -849,9 +845,9 @@ export function OrderForm({
           undefined,
         customerAddressTitle: selectedAddress?.title ?? resolvedMainAddress?.title ?? null,
         customerAddressText:
-          selectedAddress?.address ?? selectedAddress?.fullAddress ?? resolvedMainAddress?.address ?? resolvedMainAddress?.fullAddress ?? null,
+          selectedAddress?.Address ?? selectedAddress?.address ?? selectedAddress?.fullAddress ?? resolvedMainAddress?.Address ?? resolvedMainAddress?.address ?? resolvedMainAddress?.fullAddress ?? null,
         customerAddressZipCode:
-          selectedAddress?.zipCode ?? selectedAddress?.postalCode ?? resolvedMainAddress?.zipCode ?? resolvedMainAddress?.postalCode ?? null,
+          selectedAddress?.ZipCode ?? selectedAddress?.zipCode ?? selectedAddress?.postalCode ?? resolvedMainAddress?.ZipCode ?? resolvedMainAddress?.zipCode ?? resolvedMainAddress?.postalCode ?? null,
         customerAddressCityRef:
           selectedAddress?.cityRef ?? resolvedMainAddress?.cityRef ?? null,
         customerAddressPathRef:
