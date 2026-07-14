@@ -66,6 +66,8 @@ export interface Customer {
 export interface CustomerFilters {
   search?: string;
   status?: CustomerStatus;
+  limit?: number;
+  offset?: number;
 }
 
 export interface CustomerPayload {

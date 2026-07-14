@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, UserMinus, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -30,10 +30,10 @@ import {
   createExpertCustomerAssignment,
   deactivateExpertCustomerAssignment,
   listExpertCustomerAssignments,
-  listSepidarCustomers,
   listSupportExperts,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
+import { listCustomers } from "@/lib/services/customer.service";
 import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -41,7 +41,6 @@ import { listSepidarStocks } from "@/lib/services/stock.service";
 
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
@@ -49,6 +48,9 @@ export default function SupportCustomerAssignmentsPage() {
   );
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedCustomerOption, setSelectedCustomerOption] = useState<
+    { value: string; label: string } | null
+  >(null);
   const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>([]);
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,16 +62,14 @@ export default function SupportCustomerAssignmentsPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [expertData, customerData, priceListData, stockData, assignmentData] =
+    const [expertData, priceListData, stockData, assignmentData] =
       await Promise.all([
         listSupportExperts(),
-        listSepidarCustomers(),
         listGeneratedPriceLists({ activeOnly: true }),
         listSepidarStocks(),
         listExpertCustomerAssignments(),
       ]);
     setExperts(expertData);
-    setCustomers(customerData);
     setPriceLists(priceListData);
     setStocks(stockData);
     setAssignments(assignmentData);
@@ -81,17 +81,15 @@ export default function SupportCustomerAssignmentsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const [expertData, customerData, priceListData, stockData, assignmentData] =
+        const [expertData, priceListData, stockData, assignmentData] =
           await Promise.all([
             listSupportExperts(),
-            listSepidarCustomers(),
             listGeneratedPriceLists({ activeOnly: true }),
             listSepidarStocks(),
             listExpertCustomerAssignments(),
           ]);
         if (!isMounted) return;
         setExperts(expertData);
-        setCustomers(customerData);
         setPriceLists(priceListData);
         setStocks(stockData);
         setAssignments(assignmentData);
@@ -192,16 +190,6 @@ export default function SupportCustomerAssignmentsPage() {
         })),
     [experts],
   );
-  const customerOptions = useMemo(
-    () =>
-      customers
-      .filter((customer) => customer.status === "active")
-      .map((customer) => ({
-        value: customer.objectId,
-        label: formatCustomerOptionLabel(customer),
-      })),
-    [customers],
-  );
   const priceListOptions = useMemo(
     () =>
       priceLists.map((priceList) => ({
@@ -223,6 +211,27 @@ export default function SupportCustomerAssignmentsPage() {
     [stocks],
   );
 
+  const loadCustomerOptions = useCallback(async (query: string) => {
+    const customers = await listCustomers({
+      search: query || undefined,
+      status: "active",
+      limit: 25,
+      offset: 0,
+    });
+    return customers.map((customer) => ({
+      value: customer.objectId,
+      label: formatCustomerOptionLabel(customer),
+      searchText: [
+        customer.fullName,
+        customer.sepidarCustomerCode,
+        customer.sepidarCustomerId,
+        customer.id,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }));
+  }, []);
+
   const deactivateAssignment = async (assignmentId: string) => {
     setDeactivatingId(assignmentId);
     setError("");
@@ -242,6 +251,14 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId(assignment.objectId);
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
+    setSelectedCustomerOption(
+      assignment.customer
+        ? {
+            value: assignment.customer.objectId,
+            label: formatCustomerOptionLabel(assignment.customer),
+          }
+        : null,
+    );
     setSelectedPriceListIds(
       assignment.priceListIds.length
         ? assignment.priceListIds
@@ -259,6 +276,7 @@ export default function SupportCustomerAssignmentsPage() {
     setEditingAssignmentId("");
     setSelectedExpertId("");
     setSelectedCustomerId("");
+    setSelectedCustomerOption(null);
     setSelectedPriceListIds([]);
     setSelectedStockIds([]);
     setFieldErrors({});
@@ -267,7 +285,6 @@ export default function SupportCustomerAssignmentsPage() {
   const isSubmitDisabled =
     isSubmitting ||
     expertOptions.length === 0 ||
-    customerOptions.length === 0 ||
     priceListOptions.length === 0 ||
     stockOptions.length === 0 ||
     !selectedExpertId ||
@@ -445,7 +462,10 @@ export default function SupportCustomerAssignmentsPage() {
                       selectedCustomerId: "",
                     }));
                   }}
-                  options={customerOptions}
+                  onOptionChange={setSelectedCustomerOption}
+                  selectedOption={selectedCustomerOption}
+                  loadOptions={loadCustomerOptions}
+                  options={selectedCustomerOption ? [selectedCustomerOption] : []}
                   placeholder="انتخاب مشتری"
                   searchPlaceholder="جستجو در مشتریان"
                   emptyMessage="مشتری‌ای پیدا نشد"

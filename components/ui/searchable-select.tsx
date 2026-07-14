@@ -16,7 +16,10 @@ export interface SearchableSelectOption {
 interface SearchableSelectProps {
   value?: string;
   onValueChange: (value: string) => void;
+  onOptionChange?: (option: SearchableSelectOption | null) => void;
   options: SearchableSelectOption[];
+  selectedOption?: SearchableSelectOption | null;
+  loadOptions?: (query: string) => Promise<SearchableSelectOption[]>;
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
@@ -31,7 +34,10 @@ interface SearchableSelectProps {
 export function SearchableSelect({
   value,
   onValueChange,
+  onOptionChange,
   options,
+  selectedOption,
+  loadOptions,
   placeholder = "انتخاب کنید",
   searchPlaceholder = "جستجو...",
   emptyMessage = "موردی یافت نشد",
@@ -44,16 +50,24 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [remoteOptions, setRemoteOptions] = useState<SearchableSelectOption[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOptionFromList =
+    options.find((option) => option.value === value) ||
+    remoteOptions.find((option) => option.value === value) ||
+    selectedOption ||
+    null;
 
   const closeMenu = ({ restoreFocus = false } = {}) => {
     setOpen(false);
     setQuery("");
+    setRemoteOptions([]);
+    setIsLoadingOptions(false);
     if (restoreFocus) {
       triggerRef.current?.focus({ preventScroll: true });
     }
@@ -80,6 +94,30 @@ export function SearchableSelect({
       return normalizedSearchable.includes(normalizedQuery);
     });
   }, [normalizeSearch, options, query]);
+
+  useEffect(() => {
+    if (!open || !loadOptions) return;
+
+    let active = true;
+    void (async () => {
+      setIsLoadingOptions(true);
+      try {
+        const items = await loadOptions(query);
+        if (!active) return;
+        setRemoteOptions(items);
+      } catch {
+        if (!active) return;
+        setRemoteOptions([]);
+      } finally {
+        if (!active) return;
+        setIsLoadingOptions(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [loadOptions, open, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -166,18 +204,19 @@ export function SearchableSelect({
             return nextOpen;
           });
           setQuery("");
+          setRemoteOptions([]);
         }}
         className={cn(
           "relative flex h-11 w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-[14px] border border-[#D7DEE6] bg-white px-3.5 text-xs text-[#102034] shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition-all outline-none hover:border-[#C4CFDB] focus:border-[#1F3A5F] focus:ring-4 focus:ring-[#1F3A5F]/8 disabled:cursor-not-allowed disabled:opacity-50",
           invalid &&
             "border-red-400 focus:border-red-500 focus:ring-red-200",
-          !selectedOption && "text-[#94A3B8]",
+          !selectedOptionFromList && "text-[#94A3B8]",
           triggerClassName,
         )}
         data-invalid={invalid || undefined}
       >
         <span className="min-w-0 flex-1 truncate text-right">
-          {selectedOption?.label ?? placeholder}
+          {selectedOptionFromList?.label ?? placeholder}
         </span>
         <ChevronDown
           className={cn(
@@ -214,7 +253,67 @@ export function SearchableSelect({
               </div>
 
               <div className="mt-2 max-h-64 overflow-y-auto">
-                {filteredOptions.length > 0 ? (
+                {loadOptions ? (
+                  isLoadingOptions ? (
+                    <div className="px-3 py-4 text-xs text-[#6B7280]">
+                      در حال جستجو...
+                    </div>
+                  ) : remoteOptions.length > 0 ? (
+                    <div className="space-y-1">
+                      {remoteOptions.map((option) => {
+                        const isSelected = option.value === value;
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              onValueChange(option.value);
+                              onOptionChange?.(option);
+                              closeMenu({ restoreFocus: true });
+                            }}
+                            className={cn(
+                              "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-right text-xs transition-colors",
+                              isSelected
+                                ? "bg-[#F3F7FB] text-[#1F3A5F]"
+                                : "text-[#334155] hover:bg-[#EFF4F8]",
+                            )}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate">
+                                {highlightMatches
+                                  ? renderHighlightedText(
+                                      option.label,
+                                      query,
+                                      normalizeSearch,
+                                    )
+                                  : option.label}
+                              </span>
+                              {option.description ? (
+                                <span className="mt-1 block truncate text-[11px] text-[#64748B]">
+                                  {highlightMatches
+                                    ? renderHighlightedText(
+                                        option.description,
+                                        query,
+                                        normalizeSearch,
+                                      )
+                                    : option.description}
+                                </span>
+                              ) : null}
+                            </span>
+                            {isSelected ? (
+                              <Check className="size-4 shrink-0 text-[#1F3A5F]" />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="px-3 py-4 text-xs text-[#6B7280]">
+                      {emptyMessage}
+                    </div>
+                  )
+                ) : filteredOptions.length > 0 ? (
                   <div className="space-y-1">
                     {filteredOptions.map((option) => {
                       const isSelected = option.value === value;
@@ -225,6 +324,7 @@ export function SearchableSelect({
                           type="button"
                           onClick={() => {
                             onValueChange(option.value);
+                            onOptionChange?.(option);
                             closeMenu({ restoreFocus: true });
                           }}
                           className={cn(

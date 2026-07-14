@@ -21,7 +21,15 @@ export async function listCustomers(
   filters?: CustomerFilters,
 ): Promise<Customer[]> {
   const data = await httpClient.get<unknown>(buildCustomersPath(filters));
-  return mapCustomerListDto(data);
+  const record = isRecord(data) ? data : null;
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(record?.items)
+      ? record?.items
+      : Array.isArray(record?.customers)
+        ? record?.customers
+        : [];
+  return mapCustomerListDto(items);
 }
 
 export async function getCustomer(objectId: string): Promise<Customer> {
@@ -101,6 +109,8 @@ function buildCustomersPath(filters?: CustomerFilters): string {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
   if (filters.status) params.set("status", filters.status);
+  if (typeof filters.limit === "number") params.set("limit", String(filters.limit));
+  if (typeof filters.offset === "number") params.set("offset", String(filters.offset));
 
   const query = params.toString();
   return query ? `/api/customers?${query}` : "/api/customers";
@@ -120,6 +130,10 @@ function normalizeCustomerPayload(
       ? normalizeAddressPayload(payload.defaultAddress)
       : payload.defaultAddress,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function normalizeAddressPayload(
