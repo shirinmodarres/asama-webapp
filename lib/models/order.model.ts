@@ -36,6 +36,14 @@ export interface Order {
   sepidarCustomerId: number | string | null;
   sepidarCustomerCode: string | null;
   customerAddressObjectId: string | null;
+  customerAddressId: number | null;
+  selectedCustomerAddressId: number | null;
+  customerAddressTitle: string | null;
+  customerAddressText: string | null;
+  customerAddressZipCode: string | null;
+  customerAddressCityRef: number | null;
+  customerAddressPathRef: number | null;
+  customerAddressIsMain: boolean | null;
   saleTypeObjectId: string | null;
   sepidarSaleTypeId: number | null;
   saleTypeTitle: string | null;

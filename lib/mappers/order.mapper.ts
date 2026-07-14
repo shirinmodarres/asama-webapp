@@ -77,6 +77,33 @@ export function mapOrderDto(dto: unknown): Order {
     customerAddressObjectId: toNullableString(
       record.customerAddressObjectId ?? addressRecord.objectId,
     ),
+    customerAddressId:
+      record.customerAddressId === undefined || record.customerAddressId === null
+        ? null
+        : toNumberValue(record.customerAddressId),
+    selectedCustomerAddressId:
+      record.selectedCustomerAddressId === undefined ||
+      record.selectedCustomerAddressId === null
+        ? null
+        : toNumberValue(record.selectedCustomerAddressId),
+    customerAddressTitle: toNullableString(record.customerAddressTitle),
+    customerAddressText: toNullableString(record.customerAddressText),
+    customerAddressZipCode: toNullableString(record.customerAddressZipCode),
+    customerAddressCityRef:
+      record.customerAddressCityRef === undefined ||
+      record.customerAddressCityRef === null
+        ? null
+        : toNumberValue(record.customerAddressCityRef),
+    customerAddressPathRef:
+      record.customerAddressPathRef === undefined ||
+      record.customerAddressPathRef === null
+        ? null
+        : toNumberValue(record.customerAddressPathRef),
+    customerAddressIsMain:
+      record.customerAddressIsMain === undefined ||
+      record.customerAddressIsMain === null
+        ? null
+        : toBooleanValue(record.customerAddressIsMain),
     saleTypeObjectId: toNullableString(
       record.saleTypeObjectId ?? saleTypeRecord.objectId,
     ),

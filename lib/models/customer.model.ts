@@ -8,16 +8,23 @@ export type ReceiverType = "self" | "other";
 export interface CustomerAddress {
   objectId: string;
   id: string;
+  customerAddressId?: number | null;
   customerId: string;
   title: string;
+  sepidarAddressId?: number | null;
+  isMain?: boolean;
   receiverType: ReceiverType;
   receiverFullName: string;
   receiverPhone: string | null;
+  address?: string | null;
   province: string;
   city: string;
   county: string | null;
   fullAddress: string;
   postalCode: string | null;
+  zipCode?: string | null;
+  cityRef?: number | null;
+  pathRef?: number | null;
   plaque: string | null;
   unit: string | null;
   isDefault: boolean;
@@ -59,6 +66,8 @@ export interface Customer {
   statusLabel: string;
   defaultAddress: CustomerAddress | null;
   addresses: CustomerAddress[];
+  sepidarAddress: CustomerAddress | null;
+  sepidarAddresses: CustomerAddress[];
   createdAt: string;
   updatedAt: string;
 }

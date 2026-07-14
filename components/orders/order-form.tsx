@@ -78,6 +78,14 @@ export interface OrderFormSubmitPayload {
   customerName?: string;
   customerObjectId?: string;
   customerAddressObjectId?: string;
+  customerAddressId?: number | string;
+  selectedCustomerAddressId?: number | string;
+  customerAddressTitle?: string | null;
+  customerAddressText?: string | null;
+  customerAddressZipCode?: string | null;
+  customerAddressCityRef?: number | null;
+  customerAddressPathRef?: number | null;
+  customerAddressIsMain?: boolean;
   recipientFirstName?: string;
   recipientLastName?: string;
   recipientNationalId?: string;
@@ -169,7 +177,11 @@ export function OrderForm({
     initialOrder?.priceListId ?? "",
   );
   const [selectedAddressId, setSelectedAddressId] = useState(
-    initialOrder?.customerAddressObjectId ?? "",
+    initialOrder?.selectedCustomerAddressId
+      ? String(initialOrder.selectedCustomerAddressId)
+      : initialOrder?.customerAddressId
+        ? String(initialOrder.customerAddressId)
+        : initialOrder?.customerAddressObjectId ?? "",
   );
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -468,18 +480,33 @@ export function OrderForm({
       setError("");
 
       try {
-        const data = await listCustomerAddresses(selectedCustomerId);
+        const data =
+          customer?.sepidarAddresses?.length
+            ? customer.sepidarAddresses
+            : customer?.sepidarAddress
+              ? [customer.sepidarAddress]
+              : await listCustomerAddresses(selectedCustomerId);
         if (!isMounted) return;
-        setAddresses(data);
+        const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
+        setAddresses(normalizedAddresses);
         setSelectedAddressId((current) => {
-          if (current && data.some((address) => address.objectId === current)) {
+          if (
+            current &&
+            normalizedAddresses.some(
+              (address) => getCustomerAddressKey(address) === current,
+            )
+          ) {
             return current;
           }
-          const defaultAddress =
-            data.find((address) => address.isDefault) ??
+          const mainAddress =
+            normalizedAddresses.find((address) => address.isMain) ?? null;
+          if (mainAddress) return getCustomerAddressKey(mainAddress);
+          const fallbackAddress =
+            customer?.sepidarAddress ??
+            normalizedAddresses[0] ??
             customer?.defaultAddress ??
-            data[0];
-          return defaultAddress?.objectId ?? "";
+            null;
+          return fallbackAddress ? getCustomerAddressKey(normalizeOrderCustomerAddress(fallbackAddress)) : "";
         });
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -528,7 +555,7 @@ export function OrderForm({
     (assignedCustomersOnly ? selectedAssignment : null) ??
     customers.find((customer) => customer.objectId === selectedCustomerId);
   const selectedAddress = addresses.find(
-    (address) => address.objectId === selectedAddressId,
+    (address) => getCustomerAddressKey(address) === selectedAddressId,
   );
   const priceListOptions = useMemo(
     () => getCustomerPriceListOptions(selectedCustomer, initialOrder),
@@ -759,7 +786,7 @@ export function OrderForm({
       return;
     }
 
-    if (selectedCustomerId && addresses.length > 0 && !selectedAddressId) {
+    if (selectedCustomerId && addresses.length > 1 && !selectedAddressId) {
       setFieldErrors({ selectedAddressId: "لطفاً آدرس تحویل را انتخاب کنید." });
       return;
     }
@@ -769,6 +796,18 @@ export function OrderForm({
         customerName: selectedCustomerId ? undefined : customerName.trim(),
         customerObjectId: selectedCustomerId || undefined,
         customerAddressObjectId: selectedAddressId || undefined,
+        customerAddressId: selectedAddress?.customerAddressId ?? selectedAddress?.sepidarAddressId ?? undefined,
+        selectedCustomerAddressId:
+          selectedAddress?.customerAddressId ??
+          selectedAddress?.sepidarAddressId ??
+          undefined,
+        customerAddressTitle: selectedAddress?.title ?? null,
+        customerAddressText:
+          selectedAddress?.address ?? selectedAddress?.fullAddress ?? null,
+        customerAddressZipCode: selectedAddress?.zipCode ?? selectedAddress?.postalCode ?? null,
+        customerAddressCityRef: selectedAddress?.cityRef ?? null,
+        customerAddressPathRef: selectedAddress?.pathRef ?? null,
+        customerAddressIsMain: selectedAddress?.isMain ?? false,
         ...(initialOrder?.orderType === "naja"
           ? {
               recipientFirstName: recipientFirstName.trim(),
@@ -969,6 +1008,11 @@ export function OrderForm({
                     {selectedAddress.title}
                   </p>
                 ) : null}
+                {selectedAddress.isMain ? (
+                  <p className="text-xs font-semibold text-[#2F6B3A]">
+                    آدرس اصلی
+                  </p>
+                ) : null}
                 <p>
                   گیرنده بار:{" "}
                   {getReceiverName(selectedAddress, selectedCustomer) || "-"}
@@ -989,6 +1033,32 @@ export function OrderForm({
                     افزودن آدرس
                   </Link>
                 </Button>
+              </div>
+            ) : null}
+            {!isNajaOrder && addresses.length > 1 && !selectedAddress?.isMain ? (
+              <div className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
+                <span>آدرس تحویل</span>
+                <SearchableSelect
+                  value={selectedAddressId || undefined}
+                  onValueChange={(value) => {
+                    setSelectedAddressId(value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedAddressId: "",
+                    }));
+                  }}
+                  options={addresses.map((address) => ({
+                    value: getCustomerAddressKey(address),
+                    label: formatCustomerAddressLabel(address),
+                    description: formatCustomerAddressDescription(address),
+                  }))}
+                  placeholder="انتخاب آدرس"
+                  searchPlaceholder="جستجو در آدرس‌ها"
+                  emptyMessage="آدرسی پیدا نشد"
+                  disabled={!selectedCustomerId || isLoadingAddresses}
+                  invalid={Boolean(fieldErrors.selectedAddressId)}
+                />
+                <FieldError message={fieldErrors.selectedAddressId} />
               </div>
             ) : null}
           </div>
@@ -1718,6 +1788,60 @@ function mergeCustomers(customers: Customer[], order?: Order | null): Customer[]
   return fallbackCustomer ? [fallbackCustomer, ...customers] : customers;
 }
 
+function getCustomerAddressKey(address: CustomerAddress): string {
+  return String(
+    address.customerAddressId ??
+      address.sepidarAddressId ??
+      address.objectId,
+  );
+}
+
+function normalizeOrderCustomerAddress(address: CustomerAddress): CustomerAddress {
+  const derivedAddressId = toNumericAddressId(address.objectId);
+  return {
+    ...address,
+    customerAddressId:
+      address.customerAddressId ??
+      address.sepidarAddressId ??
+      derivedAddressId,
+    sepidarAddressId:
+      address.sepidarAddressId ??
+      address.customerAddressId ??
+      derivedAddressId,
+    isMain: Boolean(address.isMain),
+    address: address.address ?? address.fullAddress ?? null,
+    zipCode: address.zipCode ?? address.postalCode ?? null,
+    cityRef: address.cityRef ?? null,
+    pathRef: address.pathRef ?? null,
+  };
+}
+
+function formatCustomerAddressLabel(address: CustomerAddress): string {
+  return [
+    address.title,
+    address.address || address.fullAddress,
+    address.zipCode || address.postalCode,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
+function formatCustomerAddressDescription(address: CustomerAddress): string {
+  return [
+    address.isMain ? "اصلی" : "",
+    address.cityRef ? `CityRef: ${address.cityRef}` : "",
+    address.pathRef ? `PathRef: ${address.pathRef}` : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+}
+
+function toNumericAddressId(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
 function createCustomerFromOrder(order: Order): Customer | null {
   if (!order.customerObjectId) return null;
   return {
@@ -1762,6 +1886,8 @@ function createCustomerFromOrder(order: Order): Customer | null {
     statusLabel: "فعال",
     defaultAddress: null,
     addresses: [],
+    sepidarAddress: null,
+    sepidarAddresses: [],
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
   };
