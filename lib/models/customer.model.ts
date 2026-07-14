@@ -11,6 +11,8 @@ export interface CustomerAddress {
   customerAddressId?: number | null;
   customerId: string;
   title: string;
+  Address?: string | null;
+  ZipCode?: string | null;
   sepidarAddressId?: number | null;
   isMain?: boolean;
   receiverType: ReceiverType;
@@ -58,8 +60,6 @@ export interface Customer {
   fullName: string;
   phone: string;
   mobile: string | null;
-  address: string | null;
-  postalCode: string | null;
   nationalId: string | null;
   assignedExpertName: string | null;
   status: CustomerStatus;

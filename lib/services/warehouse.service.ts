@@ -288,7 +288,8 @@ export async function getExitSlipPdfData(
       mobile: pdfData.customer.mobile || slip.customerMobile,
       phone: pdfData.customer.phone || slip.customerPhone,
       address:
-        pdfData.customer.address ||
+        pdfData.customer.sepidarAddress?.Address ||
+        pdfData.customer.sepidarAddress?.address ||
         slip.customerAddress ||
         slip.deliveryAddress ||
         slip.deliveryFullAddress,

@@ -67,9 +67,11 @@ export function resolveExitSlipPdfCustomer(
       data.customer.mobile ||
       data.customer.phone,
     address:
+      order?.customerAddressText ||
       order?.customerAddress ||
       order?.deliveryFullAddress ||
-      data.customer.address ||
+      data.customer.sepidarAddress?.Address ||
+      data.customer.sepidarAddress?.address ||
       data.deliveryAddress.formatted ||
       data.deliveryAddress.fullAddress,
   };

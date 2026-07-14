@@ -377,6 +377,14 @@ export function mapExitSlipListDto(dto: unknown): ExitSlip[] {
 export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
   const record = toRecord(dto);
   const customer = toRecord(record.customer);
+  const customerWithSepidarAddress = customer as {
+    sepidarAddress?: {
+      Address?: string | null;
+      address?: string | null;
+      ZipCode?: string | null;
+      zipCode?: string | null;
+    } | null;
+  };
   const recipient = toRecord(record.recipient);
   const orderRecord = toRecord(record.order);
   const order = Object.keys(orderRecord).length ? mapOrderDto(record.order) : null;
@@ -413,12 +421,14 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
         customer.phone ?? record.customerPhone ?? orderRecord.customerPhone,
       ),
       address: toNullableString(
-        customer.address ??
+        customerWithSepidarAddress.sepidarAddress?.Address ??
+          customerWithSepidarAddress.sepidarAddress?.address ??
           record.customerAddress ??
           orderRecord.customerAddress ??
           orderRecord.customerAddressSnapshot ??
           orderRecord.deliveryFullAddress,
       ),
+      sepidarAddress: toRecord(customerWithSepidarAddress.sepidarAddress),
     },
     recipient: {
       firstName: toNullableString(

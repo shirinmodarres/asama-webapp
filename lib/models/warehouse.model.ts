@@ -201,6 +201,12 @@ export interface ExitSlipPdfData {
     mobile: string | null;
     phone: string | null;
     address: string | null;
+    sepidarAddress?: {
+      Address?: string | null;
+      address?: string | null;
+      ZipCode?: string | null;
+      zipCode?: string | null;
+    } | null;
   };
   recipient: {
     firstName: string | null;

@@ -375,7 +375,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   <span>نوع فروش: {selectedCustomer.saleType?.title || "-"}</span>
                   <span className="sm:col-span-3">
                     آدرس مرکز:{" "}
-                    {selectedCustomer.address ||
+                    {selectedCustomer.sepidarAddress?.Address ||
+                      selectedCustomer.sepidarAddress?.address ||
                       selectedCustomer.defaultAddress?.fullAddress ||
                       "-"}
                   </span>

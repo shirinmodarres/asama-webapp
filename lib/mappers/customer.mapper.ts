@@ -87,10 +87,6 @@ export function mapCustomerDto(dto: unknown): Customer {
     mobile: toNullableString(record.mobile)
       ? normalizePhone(toStringValue(record.mobile))
       : null,
-    address: toNullableString(record.address),
-    postalCode: toNullableString(record.postalCode)
-      ? normalizeDigits(toStringValue(record.postalCode))
-      : null,
     nationalId: record.nationalId
       ? normalizeDigits(toStringValue(record.nationalId))
       : null,

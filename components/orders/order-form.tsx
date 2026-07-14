@@ -1001,7 +1001,8 @@ export function OrderForm({
               {isNajaOrder ? (
                 <span className="sm:col-span-2">
                   آدرس مرکز:{" "}
-                  {selectedCustomer.address ||
+                  {selectedCustomer.sepidarAddress?.Address ||
+                    selectedCustomer.sepidarAddress?.address ||
                     selectedCustomer.defaultAddress?.fullAddress ||
                     "-"}
                 </span>
@@ -1930,8 +1931,6 @@ function createCustomerFromOrder(order: Order): Customer | null {
     fullName: order.customerName ?? "",
     phone: order.customerPhone ?? order.customerMobile ?? "",
     mobile: order.customerMobile,
-    address: order.customerAddress,
-    postalCode: null,
     nationalId: order.customerNationalId,
     assignedExpertName: order.createdByName ?? null,
     status: "active",
