@@ -25,6 +25,7 @@ import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
 import {
+  listCustomerAddresses,
   listCustomers,
 } from "@/lib/services/customer.service";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -479,7 +480,9 @@ export function OrderForm({
       setError("");
 
       try {
-        const data = getResolvedSepidarAddresses(customer);
+        const data = getResolvedSepidarAddresses(customer).length
+          ? getResolvedSepidarAddresses(customer)
+          : await listCustomerAddresses(selectedCustomerId);
         if (!isMounted) return;
         const normalizedAddresses = data.map(normalizeOrderCustomerAddress);
         setAddresses(normalizedAddresses);
@@ -782,15 +785,15 @@ export function OrderForm({
     }
 
     if (selectedCustomerId && !selectedAddressId) {
-      if (!hasValidCustomerAddress(selectedCustomer)) {
+      if (process.env.NODE_ENV === "development") {
         console.error("[CUSTOMER_ADDRESS_DEBUG]", {
-          customerId: selectedCustomer?.objectId || null,
-          sepidarCustomerCode: selectedCustomer?.sepidarCustomerCode || null,
+          sepidarCode: selectedCustomer?.sepidarCustomerCode || selectedCustomer?.id || null,
           sepidarAddress: selectedCustomer?.sepidarAddress || null,
           sepidarAddresses: selectedCustomer?.sepidarAddresses || [],
-          resolvedAddresses: resolvedSepidarAddresses,
-          selectedAddressId: selectedAddressId || null,
+          selectedCustomerAddressId: selectedAddressId || null,
         });
+      }
+      if (!hasValidCustomerAddress(selectedCustomer)) {
         setFieldErrors({ selectedAddressId: "این مشتری آدرس فعالی ندارد." });
         return;
       }
@@ -1047,16 +1050,17 @@ export function OrderForm({
             ) : !isNajaOrder &&
               !isLoadingAddresses &&
               !hasValidCustomerAddress(selectedCustomer) ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
-                <span>این مشتری آدرس فعالی ندارد.</span>
-                <Button asChild size="sm" variant="outline">
-                  <Link
-                    href={`/expert/customers/${selectedCustomer.objectId}/edit`}
-                  >
-                    افزودن آدرس
-                  </Link>
-                </Button>
-              </div>
+                <></>
+              // <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#F3D9A4] bg-[#FFF8E6] p-3 text-[#8A5A00]">
+              //   <span>این مشتری آدرس فعالی ندارد.</span>
+              //   <Button asChild size="sm" variant="outline">
+              //     <Link
+              //       href={`/expert/customers/${selectedCustomer.objectId}/edit`}
+              //     >
+              //       افزودن آدرس
+              //     </Link>
+              //   </Button>
+              // </div>
             ) : null}
             {!isNajaOrder && addresses.length > 1 && !selectedAddress?.isMain ? (
               <div className="mt-4 grid gap-2 text-sm font-medium text-[#334155]">
