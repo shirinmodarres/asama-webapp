@@ -199,7 +199,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         label: [
           customer.sepidarCustomerCode || customer.id,
           customer.fullName,
-          customer.saleType?.title ? `نوع فروش: ${customer.saleType.title}` : "",
+          customer.saleType?.title ? `لیست قیمت: ${customer.saleType.title}` : "",
         ]
           .filter(Boolean)
           .join(" - "),
@@ -258,7 +258,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     if (selectedProduct && selectedProduct.unitPrice <= 0) {
       nextErrors.productId = selectedProduct.priceListConflict
         ? "این کالا در چند لیست قیمت انتخابی وجود دارد."
-        : "قیمت کالا برای این نوع فروش ثبت نشده است.";
+        : "قیمت کالا برای این لیست قیمت ثبت نشده است.";
     }
     if (!createdByName.trim()) {
       nextErrors.createdByName = "این فیلد الزامی است.";
@@ -372,7 +372,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                       ? formatFaDigits(selectedCustomer.sepidarCustomerCode)
                       : "-"}
                   </span>
-                  <span>نوع فروش: {selectedCustomer.saleType?.title || "-"}</span>
+                  <span>لیست قیمت: {selectedCustomer.saleType?.title || "-"}</span>
                   <span className="sm:col-span-3">
                     آدرس مرکز:{" "}
                     {selectedCustomer.sepidarAddress?.Address ||

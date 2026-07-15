@@ -459,7 +459,7 @@ export default function ManagerOrderReviewPage() {
                     }
                   />
                   <InfoItem
-                    label="نوع فروش"
+                    label="لیست قیمت"
                     value={order.saleTypeTitle || order.saleType?.title || "-"}
                   />
                   <InfoItem
