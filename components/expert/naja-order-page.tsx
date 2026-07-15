@@ -372,7 +372,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                       ? formatFaDigits(selectedCustomer.sepidarCustomerCode)
                       : "-"}
                   </span>
-                  <span>لیست قیمت: {selectedCustomer.saleType?.title || "-"}</span>
+                  <span>
+                    لیست قیمت: {selectedCustomer.priceListTitle || selectedCustomer.saleType?.title || "-"}
+                  </span>
                   <span className="sm:col-span-3">
                     آدرس مرکز:{" "}
                     {selectedCustomer.sepidarAddress?.Address ||

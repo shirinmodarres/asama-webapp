@@ -415,7 +415,7 @@ export default function ExitSlipCreatePage() {
               />
               <InfoItem
                 label="لیست قیمت"
-                value={order.saleTypeTitle || order.saleType?.title || "-"}
+                value={order.priceListTitle || order.saleTypeTitle || order.saleType?.title || "-"}
               />
             </div>
             {!order.stockTitle && !order.warehouseName ? (

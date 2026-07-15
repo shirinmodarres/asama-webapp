@@ -158,6 +158,7 @@ function mapNajaRialReportRow(dto: unknown): NajaRialReportRow {
       record.sepidarSaleTypeId === null || record.sepidarSaleTypeId === undefined
         ? null
         : toNumberValue(record.sepidarSaleTypeId),
+    priceListTitle: nullableString(record.priceListTitle),
     saleTypeTitle: nullableString(record.saleTypeTitle),
   };
 }

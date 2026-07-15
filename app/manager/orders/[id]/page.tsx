@@ -460,7 +460,7 @@ export default function ManagerOrderReviewPage() {
                   />
                   <InfoItem
                     label="لیست قیمت"
-                    value={order.saleTypeTitle || order.saleType?.title || "-"}
+                    value={order.priceListTitle || order.saleTypeTitle || order.saleType?.title || "-"}
                   />
                   <InfoItem
                     label="نام و نام خانوادگی تحویل‌گیرنده"

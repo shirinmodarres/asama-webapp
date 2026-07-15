@@ -589,7 +589,10 @@ export function OrderForm({
   const currentSaleTypeTitle =
     selectedPriceListOption
       ? priceListLabel(selectedPriceListOption)
-      : selectedCustomer?.saleType?.title ?? initialOrder?.saleTypeTitle;
+      : selectedCustomer?.priceListTitle ??
+        initialOrder?.priceListTitle ??
+        selectedCustomer?.saleType?.title ??
+        initialOrder?.saleTypeTitle;
   const currentStockTitles = selectedCustomer
     ? getAllowedStockTitles(selectedCustomer)
     : initialOrder?.stockTitle
