@@ -80,6 +80,7 @@ export interface NajaRialReportRow {
   stockTitle: string | null;
   saleTypeObjectId: string | null;
   sepidarSaleTypeId: number | null;
+  priceListTitle: string | null;
   saleTypeTitle: string | null;
 }
 

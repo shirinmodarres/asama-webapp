@@ -38,6 +38,7 @@ export interface InternalInvoice {
   customerPhone: string | null;
   customerAddress: string | null;
   stockTitle: string | null;
+  priceListTitle: string | null;
   saleTypeTitle: string | null;
   recipientFirstName: string | null;
   recipientLastName: string | null;

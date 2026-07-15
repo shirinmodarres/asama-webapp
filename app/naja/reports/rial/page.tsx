@@ -202,7 +202,7 @@ export default function NajaRialReportPage() {
     {
       key: "saleType",
       header: "لیست قیمت",
-      render: (row) => row.saleTypeTitle || "-",
+      render: (row) => row.priceListTitle || row.saleTypeTitle || "-",
     },
   ];
 
