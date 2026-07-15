@@ -201,7 +201,7 @@ export default function NajaRialReportPage() {
     },
     {
       key: "saleType",
-      header: "نوع فروش",
+      header: "لیست قیمت",
       render: (row) => row.saleTypeTitle || "-",
     },
   ];
@@ -263,7 +263,7 @@ export default function NajaRialReportPage() {
 
         <div className="mt-3 grid gap-3 lg:grid-cols-4 lg:items-end">
           <SelectFilter
-            label="نوع فروش"
+            label="لیست قیمت"
             value={filters.saleTypeObjectId || "all"}
             options={[{ value: "all", label: "همه نوع‌ها" }, ...saleTypeOptions]}
             onChange={(value) =>

@@ -191,7 +191,7 @@ export default function NajaOrderDetailsPage() {
                 }
               />
               <InfoItem
-                label="نوع فروش"
+                label="لیست قیمت"
                 value={order.saleTypeTitle || order.saleType?.title || "-"}
               />
               <InfoItem label="کد ملی" value={order.customerNationalId ? formatFaDigits(order.customerNationalId) : "-"} />

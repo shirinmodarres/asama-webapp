@@ -48,7 +48,7 @@ export function OrderSummaryCard({
         <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
         <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
         <SummaryRow label="مبلغ تقریبی" value={formatCurrency(totalAmount)} />
-        <SummaryRow label="نوع فروش" value={saleTypeTitle || "-"} />
+        <SummaryRow label="لیست قیمت" value={saleTypeTitle || "-"} />
         <SummaryRow
           label="انبارهای مجاز"
           value={stockTitles.length ? stockTitles.join("، ") : "-"}
