@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { JalaliDateInput } from "@/components/shared/jalali-date-input";
+import { isoToJalaliDisplay } from "@/lib/utils/jalali-date";
 
 export interface DateRangeValue {
   from?: string | null;
@@ -67,22 +68,18 @@ export function DateRangeFilter({
       {isOpen ? (
         <div className="absolute top-full right-0 z-[120] mt-2 w-[280px] rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
           <div className="grid gap-3">
-            <label className="grid gap-2 text-xs font-medium text-[#334155]">
-              <span>از تاریخ</span>
-              <Input
-                type="date"
-                value={draftFrom}
-                onChange={(event) => setDraftFrom(event.target.value)}
-              />
-            </label>
-            <label className="grid gap-2 text-xs font-medium text-[#334155]">
-              <span>تا تاریخ</span>
-              <Input
-                type="date"
-                value={draftTo}
-                onChange={(event) => setDraftTo(event.target.value)}
-              />
-            </label>
+            <JalaliDateInput
+              label="از تاریخ"
+              value={draftFrom}
+              onChange={setDraftFrom}
+              placeholder="انتخاب تاریخ"
+            />
+            <JalaliDateInput
+              label="تا تاریخ"
+              value={draftTo}
+              onChange={setDraftTo}
+              placeholder="انتخاب تاریخ"
+            />
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-2">
@@ -133,11 +130,5 @@ function formatRangeLabel(
 }
 
 function formatFaDate(value: string): string {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("fa-IR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  return isoToJalaliDisplay(value) || value;
 }
