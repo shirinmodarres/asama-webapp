@@ -62,9 +62,25 @@ export interface WarehouseInboundReceipt {
   supplierName: string | null;
   receiptDate: string | null;
   notes: string | null;
+  items: WarehouseInboundReceiptItemGroup[];
   units: WarehouseItemUnit[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WarehouseInboundReceiptItemUnit {
+  productIdentifier: string;
+  serialNumber: string;
+  trackingCode: string;
+}
+
+export interface WarehouseInboundReceiptItemGroup {
+  productObjectId: string;
+  sepidarItemId: number | null;
+  productSku: string;
+  productName: string;
+  quantity: number;
+  units: WarehouseInboundReceiptItemUnit[];
 }
 
 export interface WarehouseInventoryUnitRow {
@@ -234,12 +250,20 @@ export interface ExitSlipPdfData {
 }
 
 export interface CreateInboundReceiptPayload {
-  productObjectId: string;
+  productObjectId?: string;
   stockObjectId?: string;
   units: Array<{
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;
+  }>;
+  items?: Array<{
+    productObjectId: string;
+    units: Array<{
+      productIdentifier: string;
+      serialNumber: string;
+      trackingCode: string;
+    }>;
   }>;
   notes?: string;
   createdByName?: string;

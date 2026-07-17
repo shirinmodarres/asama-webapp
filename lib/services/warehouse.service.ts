@@ -341,6 +341,19 @@ export async function confirmExitSlipDelivery(
 function normalizeInboundPayload(
   payload: CreateInboundReceiptPayload,
 ): CreateInboundReceiptPayload {
+  const items = Array.isArray(payload.items)
+    ? payload.items
+        .map((item) => ({
+          productObjectId: String(item.productObjectId).trim(),
+          units: item.units.map((unit) => ({
+            productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
+            serialNumber: normalizeDigits(unit.serialNumber.trim()),
+            trackingCode: normalizeDigits(unit.trackingCode.trim()),
+          })),
+        }))
+        .filter((item) => item.productObjectId && item.units.length > 0)
+    : undefined;
+
   return {
     ...payload,
     units: payload.units.map((unit) => ({
@@ -348,6 +361,7 @@ function normalizeInboundPayload(
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
     })),
+    items,
   };
 }
 

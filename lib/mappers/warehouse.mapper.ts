@@ -12,6 +12,7 @@ import type {
   ExitSlipItemGroup,
   ExitSlipItemUnit,
   ExitSlipPdfData,
+  WarehouseInboundReceiptItemGroup,
   ProductWarehouseInventory,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
@@ -205,6 +206,30 @@ function groupUnitsByProduct(units: WarehouseItemUnit[]): ExitSlipItemGroup[] {
   return Array.from(groups.values());
 }
 
+function mapWarehouseInboundReceiptItemGroupDto(
+  dto: unknown,
+): WarehouseInboundReceiptItemGroup {
+  const record = toRecord(dto);
+  return {
+    productObjectId: toStringValue(record.productObjectId),
+    sepidarItemId:
+      record.sepidarItemId === undefined || record.sepidarItemId === null
+        ? null
+        : toNumberValue(record.sepidarItemId),
+    productSku: normalizeDigits(toStringValue(record.productSku)),
+    productName: toStringValue(record.productName),
+    quantity: toNumberValue(record.quantity),
+    units: toArray(record.units).map((unitDto) => {
+      const unit = toRecord(unitDto);
+      return {
+        productIdentifier: normalizeDigits(toStringValue(unit.productIdentifier)),
+        serialNumber: normalizeDigits(toStringValue(unit.serialNumber)),
+        trackingCode: normalizeDigits(toStringValue(unit.trackingCode)),
+      };
+    }),
+  };
+}
+
 export function mapWarehouseInboundReceiptDto(
   dto: unknown,
 ): WarehouseInboundReceipt {
@@ -240,6 +265,9 @@ export function mapWarehouseInboundReceiptDto(
     supplierName: toNullableString(record.supplierName),
     receiptDate: toNullableString(record.receiptDate),
     notes: toNullableString(record.notes),
+    items: toArray(record.items).length
+      ? toArray(record.items).map(mapWarehouseInboundReceiptItemGroupDto)
+      : groupUnitsByProduct(record.units ? mapWarehouseItemUnitListDto(record.units) : []),
     units: mapWarehouseItemUnitListDto(record.units),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
