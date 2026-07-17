@@ -89,11 +89,10 @@ export default function WarehouseInboundPage() {
   const productOptions = useMemo(
     () =>
       products.map((product) => {
-        const brand = product.brandName || product.brand || "-";
         return {
           value: product.objectId,
-          label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)} - ${formatFaDigits(brand)}`,
-          description: brand,
+          label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
+          description: "",
           searchText: [product.name, product.sku, product.sepidarCode, product.brandName, product.brand]
             .filter(Boolean)
             .join(" "),

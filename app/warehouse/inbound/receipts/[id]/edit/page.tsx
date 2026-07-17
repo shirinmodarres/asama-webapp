@@ -164,25 +164,16 @@ export default function WarehouseInboundReceiptEditPage() {
         : products;
 
     return optionProducts.map((product) => {
-      const brandLabel = product.brandName || product.brand || "-";
-      const brandSearch = product.brandName || product.brand || "";
       return {
         value: product.objectId,
-        label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)} - ${formatFaDigits(brandLabel)}`,
-        description: [
-          brandLabel,
-          product.model ? `مدل ${formatFaDigits(product.model)}` : "",
-          product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
-        ]
-          .filter(Boolean)
-          .join(" • "),
+        label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
+        description: "",
         searchText: [
           product.name,
           product.sku,
           product.sepidarCode,
           product.model,
           product.barcode,
-          brandSearch,
         ]
           .filter(Boolean)
           .join(" "),

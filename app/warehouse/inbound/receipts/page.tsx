@@ -56,7 +56,10 @@ export default function WarehouseInboundReceiptsPage() {
           !query ||
           receipt.receiptCode.toLowerCase().includes(query) ||
           receipt.productName.toLowerCase().includes(query) ||
-          receipt.productSku.toLowerCase().includes(query),
+          receipt.productSku.toLowerCase().includes(query) ||
+          receipt.items.some((item) =>
+            [item.productName, item.productSku].join(" ").toLowerCase().includes(query),
+          ),
       )
       .filter((receipt) =>
         isWithinDateRange(receipt.createdAt, dateFrom, dateTo),
@@ -76,7 +79,22 @@ export default function WarehouseInboundReceiptsPage() {
         </span>
       ),
     },
-    { key: "productName", header: "کالا", render: (row) => row.productName },
+    {
+      key: "productName",
+      header: "کالا",
+      render: (row) => (
+        <div className="space-y-2">
+          {getReceiptDisplayItems(row).map((item) => (
+            <div key={`${row.objectId || row.id}-${item.productObjectId || item.productSku}`} className="rounded-lg border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2">
+              <div className="font-medium text-[#102034]">{item.productName || "-"}</div>
+              <div className="mt-1 text-xs text-[#64748B]">
+                {item.productSku ? formatFaDigits(item.productSku) : "-"} · {formatNumber(item.quantity)} عدد
+              </div>
+            </div>
+          ))}
+        </div>
+      ),
+    },
     {
       key: "stockTitle",
       header: "انبار",
@@ -178,6 +196,27 @@ export default function WarehouseInboundReceiptsPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function getReceiptDisplayItems(receipt: WarehouseInboundReceipt) {
+  if (Array.isArray(receipt.items) && receipt.items.length > 0) return receipt.items;
+
+  const groups = new Map<string, { productObjectId: string; productSku: string; productName: string; quantity: number }>();
+  receipt.units.forEach((unit) => {
+    const key = unit.productObjectId || unit.productSku || unit.productName;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.quantity += 1;
+      return;
+    }
+    groups.set(key, {
+      productObjectId: unit.productObjectId,
+      productSku: unit.productSku,
+      productName: unit.productName,
+      quantity: 1,
+    });
+  });
+  return Array.from(groups.values());
 }
 
 function isWithinDateRange(
