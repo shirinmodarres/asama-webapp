@@ -11,6 +11,7 @@ interface SlipDetailsCardProps {
   createdAt: string;
   deliveredAt?: string;
   notes: string;
+  hideDeliveryInfo?: boolean;
 }
 
 export function SlipDetailsCard({
@@ -21,6 +22,7 @@ export function SlipDetailsCard({
   createdAt,
   deliveredAt,
   notes,
+  hideDeliveryInfo = false,
 }: SlipDetailsCardProps) {
   return (
     <Card className="p-5">
@@ -30,7 +32,7 @@ export function SlipDetailsCard({
             اطلاعات حواله
           </h3>
           <p className="mt-1 text-sm text-[#6B7280]">
-            جزئیات عملیات خروج و تحویل
+            {hideDeliveryInfo ? "جزئیات عملیات خروج" : "جزئیات عملیات خروج و تحویل"}
           </p>
         </div>
         <span className="flex size-11 items-center justify-center rounded-[14px] border border-[#DDE7F0] bg-[#F5F8FB] text-[#1F3A5F]">
@@ -43,10 +45,12 @@ export function SlipDetailsCard({
         <Item label="تاریخ خروج" value={formatDate(exitDate)} />
         <Item label="مسئول ثبت" value={createdBy} />
         <Item label="زمان ثبت" value={formatDateTime(createdAt)} />
-        <Item
-          label="زمان تحویل"
-          value={deliveredAt ? formatDateTime(deliveredAt) : "-"}
-        />
+        {!hideDeliveryInfo ? (
+          <Item
+            label="زمان تحویل"
+            value={deliveredAt ? formatDateTime(deliveredAt) : "-"}
+          />
+        ) : null}
       </dl>
       <div className="mt-4 rounded-2xl border border-[#E8EEF4] bg-[#FBFCFD] p-4 text-sm leading-7 text-[#475569]">
         {notes || "توضیحی ثبت نشده است."}

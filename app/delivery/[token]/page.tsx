@@ -135,22 +135,24 @@ export default function DeliveryConfirmationPage() {
             ) : null}
             {error ? <InlineErrorMessage message={error} /> : null}
 
-            <Card className="p-5">
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <InfoItem
-                  label="کد سفارش"
-                  value={formatFaDigits(delivery.orderCode)}
-                />
-                <InfoItem
-                  label="شماره حواله"
-                  value={formatFaDigits(delivery.slipCode)}
-                />
-                <StatusInfoItem
-                  label="وضعیت تحویل"
-                  confirmed={delivery.deliveryConfirmed}
-                />
-              </dl>
-            </Card>
+            {isNajaOrder ? null : (
+              <Card className="p-5">
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  <InfoItem
+                    label="کد سفارش"
+                    value={formatFaDigits(delivery.orderCode)}
+                  />
+                  <InfoItem
+                    label="شماره حواله"
+                    value={formatFaDigits(delivery.slipCode)}
+                  />
+                  <StatusInfoItem
+                    label="وضعیت تحویل"
+                    confirmed={delivery.deliveryConfirmed}
+                  />
+                </dl>
+              </Card>
+            )}
 
             <Card className="p-5">
               <h2 className="text-base font-semibold text-[#1F3A5F]">
@@ -289,51 +291,53 @@ export default function DeliveryConfirmationPage() {
               </Card>
             ) : null}
 
-            <Card className="p-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                  <span>شماره موبایل</span>
-                  <Input
-                    value={phone}
-                    onChange={(event) => {
-                      setPhone(event.target.value);
-                      setFieldErrors((current) => ({ ...current, phone: "" }));
-                    }}
-                    inputMode="tel"
-                    aria-invalid={Boolean(fieldErrors.phone)}
-                  />
-                  <FieldError message={fieldErrors.phone} />
-                </label>
-                <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                  <span>کد تأیید دریافت</span>
-                  <Input
-                    value={deliveryCode}
-                    onChange={(event) => {
-                      setDeliveryCode(event.target.value);
-                      setFieldErrors((current) => ({
-                        ...current,
-                        deliveryCode: "",
-                      }));
-                    }}
-                    inputMode="numeric"
-                    aria-invalid={Boolean(fieldErrors.deliveryCode)}
-                  />
-                  <FieldError message={fieldErrors.deliveryCode} />
-                </label>
-              </div>
-              <Button
-                type="button"
-                className="mt-4"
-                onClick={submitConfirmation}
-                disabled={isSubmitting || delivery.deliveryConfirmed}
-              >
-                {delivery.deliveryConfirmed
-                  ? "دریافت بار تأیید شده است"
-                  : isSubmitting
-                    ? "در حال ثبت..."
-                    : "تأیید دریافت بار"}
-              </Button>
-            </Card>
+            {isNajaOrder ? null : (
+              <Card className="p-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                    <span>شماره موبایل</span>
+                    <Input
+                      value={phone}
+                      onChange={(event) => {
+                        setPhone(event.target.value);
+                        setFieldErrors((current) => ({ ...current, phone: "" }));
+                      }}
+                      inputMode="tel"
+                      aria-invalid={Boolean(fieldErrors.phone)}
+                    />
+                    <FieldError message={fieldErrors.phone} />
+                  </label>
+                  <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                    <span>کد تأیید دریافت</span>
+                    <Input
+                      value={deliveryCode}
+                      onChange={(event) => {
+                        setDeliveryCode(event.target.value);
+                        setFieldErrors((current) => ({
+                          ...current,
+                          deliveryCode: "",
+                        }));
+                      }}
+                      inputMode="numeric"
+                      aria-invalid={Boolean(fieldErrors.deliveryCode)}
+                    />
+                    <FieldError message={fieldErrors.deliveryCode} />
+                  </label>
+                </div>
+                <Button
+                  type="button"
+                  className="mt-4"
+                  onClick={submitConfirmation}
+                  disabled={isSubmitting || delivery.deliveryConfirmed}
+                >
+                  {delivery.deliveryConfirmed
+                    ? "دریافت بار تأیید شده است"
+                    : isSubmitting
+                      ? "در حال ثبت..."
+                      : "تأیید دریافت بار"}
+                </Button>
+              </Card>
+            )}
           </>
         )}
       </div>

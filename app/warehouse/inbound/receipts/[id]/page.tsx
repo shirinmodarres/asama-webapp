@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -14,6 +14,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type {
   WarehouseInboundReceipt,
+  WarehouseInboundReceiptItemGroup,
   WarehouseItemUnit,
 } from "@/lib/models/warehouse.model";
 import { getInboundReceipt } from "@/lib/services/warehouse.service";
@@ -46,25 +47,7 @@ export default function WarehouseInboundReceiptDetailPage() {
       isMounted = false;
     };
   }, [params.id]);
-
-  const columns: DataTableColumn<WarehouseItemUnit>[] = [
-    {
-      key: "productIdentifier",
-      header: "شناسه محصول",
-      render: (row) => row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
-    },
-    {
-      key: "serialNumber",
-      header: "سریال محصول",
-      render: (row) => row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
-    },
-    {
-      key: "trackingCode",
-      header: "کد رهگیری",
-      render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-",
-    },
-    { key: "status", header: "وضعیت", render: (row) => row.statusLabel || row.status },
-  ];
+  const groupedItems = useMemo(() => groupReceiptItems(receipt), [receipt]);
 
   return (
     <DashboardLayout role="warehouse" title="جزئیات رسید">
@@ -92,8 +75,7 @@ export default function WarehouseInboundReceiptDetailPage() {
           <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <InfoItem label="شماره رسید" value={formatFaDigits(receipt.receiptCode)} />
-              <InfoItem label="کالا" value={receipt.productName || "-"} />
-              <InfoItem label="شناسه کالا" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
+              <InfoItem label="تعداد کالاها" value={formatNumber(groupedItems.length)} />
               <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
               <InfoItem label="تعداد" value={formatNumber(receipt.quantity)} />
               <InfoItem label="ثبت کننده" value={receipt.createdByName || "-"} />
@@ -102,15 +84,89 @@ export default function WarehouseInboundReceiptDetailPage() {
             </dl>
           </section>
 
-          <DataTable
-            columns={columns}
-            rows={receipt.units}
-            rowKey={(row) => row.objectId || row.id}
-          />
+          <div className="space-y-4">
+            {groupedItems.map((item: WarehouseInboundReceiptItemGroup, index: number) => (
+              <section
+                key={`${item.productObjectId || item.productSku || index}`}
+                className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-[#1F3A5F]">
+                      {item.productName || "-"}
+                    </h3>
+                    <p className="mt-1 text-sm text-[#64748B]">
+                      {item.productSku ? formatFaDigits(item.productSku) : "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2 text-sm text-[#102034]">
+                    {formatNumber(item.quantity)} عدد
+                  </div>
+                </div>
+
+                <DataTable
+                  columns={columns}
+                  rows={item.units as WarehouseItemUnit[]}
+                  rowKey={(row) => row.objectId || row.id}
+                />
+              </section>
+            ))}
+          </div>
         </div>
       )}
     </DashboardLayout>
   );
+}
+
+const columns: DataTableColumn<WarehouseItemUnit>[] = [
+  {
+    key: "productIdentifier",
+    header: "شناسه محصول",
+    render: (row) => row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
+  },
+  {
+    key: "serialNumber",
+    header: "سریال محصول",
+    render: (row) => row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
+  },
+  {
+    key: "trackingCode",
+    header: "کد رهگیری",
+    render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-",
+  },
+  { key: "status", header: "وضعیت", render: (row) => row.statusLabel || row.status },
+];
+
+function groupReceiptItems(
+  receipt: WarehouseInboundReceipt | null,
+): WarehouseInboundReceiptItemGroup[] {
+  if (!receipt) return [];
+  if (Array.isArray(receipt.items) && receipt.items.length > 0) return receipt.items;
+
+  const groups = new Map<string, WarehouseInboundReceiptItemGroup>();
+  receipt.units.forEach((unit) => {
+    const key = unit.productObjectId || unit.productSku || unit.productName;
+    const existing = groups.get(key);
+    const itemUnit = {
+      productIdentifier: unit.productIdentifier,
+      serialNumber: unit.serialNumber,
+      trackingCode: unit.trackingCode,
+    };
+    if (existing) {
+      existing.units.push(itemUnit);
+      existing.quantity = existing.units.length;
+      return;
+    }
+    groups.set(key, {
+      productObjectId: unit.productObjectId,
+      sepidarItemId: unit.sepidarItemId,
+      productSku: unit.productSku,
+      productName: unit.productName,
+      quantity: 1,
+      units: [itemUnit],
+    });
+  });
+  return Array.from(groups.values());
 }
 
 function InfoItem({

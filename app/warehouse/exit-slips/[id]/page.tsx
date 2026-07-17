@@ -120,7 +120,8 @@ export default function ExitSlipDetailsPage() {
             exitDate={slip.exitDate}
             createdBy={slip.issuedByName}
             createdAt={slip.createdAt}
-            deliveredAt={slip.deliveryConfirmedAt ?? undefined}
+            deliveredAt={isNajaOrder ? undefined : slip.deliveryConfirmedAt ?? undefined}
+            hideDeliveryInfo={isNajaOrder}
             notes={slip.notes ?? ""}
           />
           <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
@@ -135,47 +136,49 @@ export default function ExitSlipDetailsPage() {
               </Button>
             </div>
           </section>
-          <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-[#1F3A5F]">
-              وضعیت تحویل
-            </h3>
-            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-              <InfoItem
-                label="کد تحویل"
-                value={
-                  slip.deliveryCode ? formatFaDigits(slip.deliveryCode) : "-"
-                }
-              />
-              <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
-                <dt className="text-xs text-[#6B7280]">لینک تأیید دریافت</dt>
-                <dd className="mt-2 flex items-center justify-between gap-3 text-sm font-medium text-[#1F3A5F]">
-                  <span className="max-w-[220px] truncate text-left" dir="ltr">
-                    {deliveryLink || "-"}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={copyDeliveryLink}
-                    disabled={!deliveryLink}
-                    aria-label="کپی لینک تأیید دریافت"
-                    title="کپی لینک تأیید دریافت"
-                    className="size-8"
-                  >
-                    <Copy className="size-4" />
-                  </Button>
-                </dd>
-              </div>
-              <InfoItem
-                label="وضعیت"
-                value={slip.deliveryConfirmed ? "تأیید شده" : "در انتظار تأیید"}
-              />
-              <InfoItem
-                label="تعداد کالا"
-                value={formatNumber(totalQuantity)}
-              />
-            </dl>
-          </section>
+          {!isNajaOrder ? (
+            <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-[#1F3A5F]">
+                وضعیت تحویل
+              </h3>
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                <InfoItem
+                  label="کد تحویل"
+                  value={
+                    slip.deliveryCode ? formatFaDigits(slip.deliveryCode) : "-"
+                  }
+                />
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
+                  <dt className="text-xs text-[#6B7280]">لینک تأیید دریافت</dt>
+                  <dd className="mt-2 flex items-center justify-between gap-3 text-sm font-medium text-[#1F3A5F]">
+                    <span className="max-w-[220px] truncate text-left" dir="ltr">
+                      {deliveryLink || "-"}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={copyDeliveryLink}
+                      disabled={!deliveryLink}
+                      aria-label="کپی لینک تأیید دریافت"
+                      title="کپی لینک تأیید دریافت"
+                      className="size-8"
+                    >
+                      <Copy className="size-4" />
+                    </Button>
+                  </dd>
+                </div>
+                <InfoItem
+                  label="وضعیت"
+                  value={slip.deliveryConfirmed ? "تأیید شده" : "در انتظار تأیید"}
+                />
+                <InfoItem
+                  label="تعداد کالا"
+                  value={formatNumber(totalQuantity)}
+                />
+              </dl>
+            </section>
+          ) : null}
           <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <h3 className="text-base font-semibold text-[#1F3A5F]">
               اطلاعات مرکز / مشتری سپیدار

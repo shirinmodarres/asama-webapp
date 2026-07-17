@@ -12,6 +12,7 @@ import type {
   ExitSlipItemGroup,
   ExitSlipItemUnit,
   ExitSlipPdfData,
+  WarehouseInboundReceiptItemGroup,
   ProductWarehouseInventory,
   WarehouseInboundReceipt,
   WarehouseItemUnit,
@@ -205,6 +206,65 @@ function groupUnitsByProduct(units: WarehouseItemUnit[]): ExitSlipItemGroup[] {
   return Array.from(groups.values());
 }
 
+function groupUnitsByProductForReceipt(
+  units: WarehouseItemUnit[],
+): WarehouseInboundReceiptItemGroup[] {
+  const groups = new Map<string, WarehouseInboundReceiptItemGroup>();
+
+  for (const unit of units) {
+    const key =
+      unit.productObjectId ||
+      (unit.productSku ? `sku:${unit.productSku}` : `unknown:${unit.productName}`);
+    const existing = groups.get(key);
+    const itemUnit = {
+      productIdentifier: unit.productIdentifier,
+      serialNumber: unit.serialNumber,
+      trackingCode: unit.trackingCode,
+    };
+
+    if (existing) {
+      existing.units.push(itemUnit);
+      existing.quantity = existing.units.length;
+      continue;
+    }
+
+    groups.set(key, {
+      productObjectId: unit.productObjectId,
+      sepidarItemId: unit.sepidarItemId ?? null,
+      productSku: unit.productSku,
+      productName: unit.productName,
+      quantity: 1,
+      units: [itemUnit],
+    });
+  }
+
+  return Array.from(groups.values());
+}
+
+function mapWarehouseInboundReceiptItemGroupDto(
+  dto: unknown,
+): WarehouseInboundReceiptItemGroup {
+  const record = toRecord(dto);
+  return {
+    productObjectId: toStringValue(record.productObjectId),
+    sepidarItemId:
+      record.sepidarItemId === undefined || record.sepidarItemId === null
+        ? null
+        : toNumberValue(record.sepidarItemId),
+    productSku: normalizeDigits(toStringValue(record.productSku)),
+    productName: toStringValue(record.productName),
+    quantity: toNumberValue(record.quantity),
+    units: toArray(record.units).map((unitDto) => {
+      const unit = toRecord(unitDto);
+      return {
+        productIdentifier: normalizeDigits(toStringValue(unit.productIdentifier)),
+        serialNumber: normalizeDigits(toStringValue(unit.serialNumber)),
+        trackingCode: normalizeDigits(toStringValue(unit.trackingCode)),
+      };
+    }),
+  };
+}
+
 export function mapWarehouseInboundReceiptDto(
   dto: unknown,
 ): WarehouseInboundReceipt {
@@ -240,6 +300,11 @@ export function mapWarehouseInboundReceiptDto(
     supplierName: toNullableString(record.supplierName),
     receiptDate: toNullableString(record.receiptDate),
     notes: toNullableString(record.notes),
+    items: toArray(record.items).length
+      ? toArray(record.items).map(mapWarehouseInboundReceiptItemGroupDto)
+      : groupUnitsByProductForReceipt(
+          record.units ? mapWarehouseItemUnitListDto(record.units) : [],
+        ),
     units: mapWarehouseItemUnitListDto(record.units),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),

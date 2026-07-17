@@ -1,34 +1,18 @@
 "use client";
 
-import {
-  type ChangeEvent,
-  type KeyboardEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { PackageSearch, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, PackageSearch, Trash2, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, getErrorMessage } from "@/lib/api/api-error";
+import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
@@ -37,50 +21,38 @@ import { listProducts } from "@/lib/services/product.service";
 import { listStocks } from "@/lib/services/stock.service";
 import { createInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
-import {
-  buildDuplicateRowErrors,
-  buildImportPreviewRows,
-  buildLocalUnitRowErrors,
-  countImportRows,
-  extractDuplicateDetails,
-  hasUnitRowErrors,
-  isEmptyImportRow,
-  parseInboundImportFile,
-  type DraftUnit,
-  type ImportPreviewRow,
-  type UnitRowErrors,
-} from "./import-helpers";
+import { parseInboundImportFile, isEmptyImportRow } from "./import-helpers";
+
+interface ReceiptUnitDraft {
+  rowId: string;
+  productIdentifier: string;
+  serialNumber: string;
+  trackingCode: string;
+}
+
+interface ReceiptGroupDraft {
+  rowId: string;
+  productObjectId: string;
+  units: ReceiptUnitDraft[];
+}
 
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
+  const [groups, setGroups] = useState<ReceiptGroupDraft[]>([]);
   const [selectedStockId, setSelectedStockId] = useState("");
-  const [productIdentifier, setProductIdentifier] = useState("");
-  const [serialNumber, setSerialNumber] = useState("");
-  const [trackingCode, setTrackingCode] = useState("");
-  const [units, setUnits] = useState<DraftUnit[]>([]);
-  const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const [isImporting, setIsImporting] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [importError, setImportError] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [unitRowErrors, setUnitRowErrors] = useState<UnitRowErrors>({});
-  const [importPreviewRows, setImportPreviewRows] = useState<ImportPreviewRow[]>([]);
-  const [importAcceptedCount, setImportAcceptedCount] = useState(0);
   const [message, setMessage] = useState("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const productIdentifierRef = useRef<HTMLInputElement | null>(null);
-  const serialNumberRef = useRef<HTMLInputElement | null>(null);
-  const trackingCodeRef = useRef<HTMLInputElement | null>(null);
-  const notesRef = useRef<HTMLTextAreaElement | null>(null);
+  const [groupErrors, setGroupErrors] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState("");
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     let isMounted = true;
-
-    async function loadProducts() {
+    async function load() {
       setIsLoading(true);
       setError("");
       try {
@@ -89,356 +61,205 @@ export default function WarehouseInboundPage() {
           listStocks(),
         ]);
         if (!isMounted) return;
-        setProducts(productData.filter((product) => product.isSyncedFromSepidar));
+        const allowedProducts = productData.filter((product) => product.isSyncedFromSepidar);
+        setProducts(allowedProducts);
         setStocks(stockData.filter((stock) => stock.isActive));
-        setSelectedStockId((current) => current || stockData.find((stock) => stock.isZagros)?.objectId || stockData[0]?.objectId || "");
+        setSelectedStockId(
+          stockData.find((stock) => stock.isZagros)?.objectId ||
+            stockData[0]?.objectId ||
+            "",
+        );
+        if (allowedProducts[0]) {
+          setGroups([
+            createEmptyGroup(allowedProducts[0].objectId),
+          ]);
+        }
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
         if (isMounted) setIsLoading(false);
       }
     }
-
-    loadProducts();
+    load();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const selectedProduct = products.find(
-    (product) => product.objectId === selectedProductId,
+  const productOptions = useMemo(
+    () =>
+      products.map((product) => {
+        return {
+          value: product.objectId,
+          label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
+          description: "",
+          searchText: [product.name, product.sku, product.sepidarCode, product.brandName, product.brand]
+            .filter(Boolean)
+            .join(" "),
+        };
+      }),
+    [products],
   );
 
-  useEffect(() => {
-    if (!selectedProductId) return;
-    productIdentifierRef.current?.focus();
-  }, [selectedProductId]);
-  const columns: DataTableColumn<DraftUnit>[] = [
-    {
-      key: "row",
-      header: "ردیف",
-      render: (row) => formatNumber(units.indexOf(row) + 1),
-    },
-    {
-      key: "productIdentifier",
-      header: "شناسه محصول",
-      render: (row) => (
-        <div className="min-w-52">
-          <span>{row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-"}</span>
-          <FieldError
-            message={unitRowErrors[row.rowId]?.productIdentifier}
-            className="mt-1 leading-5"
-          />
-        </div>
+  const stockOptions = useMemo(
+    () =>
+      stocks.map((stock) => ({
+        value: stock.objectId,
+        label: `${stock.code ? `${formatFaDigits(stock.code)} - ` : ""}${stock.title}`,
+        description: stock.isZagros ? "انبار زاگرس" : "",
+        searchText: [stock.code, stock.title].filter(Boolean).join(" "),
+      })),
+    [stocks],
+  );
+
+  const totalUnits = groups.reduce((sum, group) => sum + group.units.length, 0);
+
+  const addGroup = () => {
+    const defaultProductId = products[0]?.objectId || "";
+    setGroups((current) => [...current, createEmptyGroup(defaultProductId)]);
+  };
+
+  const removeGroup = (rowId: string) => {
+    setGroups((current) => {
+      const next = current.filter((group) => group.rowId !== rowId);
+      return next.length ? next : [createEmptyGroup(products[0]?.objectId || "")];
+    });
+    setGroupErrors((current) => {
+      const next = { ...current };
+      delete next[rowId];
+      return next;
+    });
+  };
+
+  const updateGroupProduct = (rowId: string, productObjectId: string) => {
+    setGroups((current) =>
+      current.map((group) =>
+        group.rowId === rowId ? { ...group, productObjectId } : group,
       ),
-    },
-    {
-      key: "serialNumber",
-      header: "سریال محصول",
-      render: (row) => (
-        <div className="min-w-52">
-          <span>{formatFaDigits(row.serialNumber)}</span>
-          <FieldError
-            message={unitRowErrors[row.rowId]?.serialNumber}
-            className="mt-1 leading-5"
-          />
-        </div>
-      ),
-    },
-    {
-      key: "trackingCode",
-      header: "کد رهگیری",
-      render: (row) => (
-        <div className="min-w-52">
-          <span>{formatFaDigits(row.trackingCode)}</span>
-          <FieldError
-            message={unitRowErrors[row.rowId]?.trackingCode}
-            className="mt-1 leading-5"
-          />
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          aria-label="حذف"
-          onClick={() =>
-            removeUnitRow(row.rowId)
+    );
+  };
+
+  const updateGroupQuantity = (rowId: string, quantity: number) => {
+    setGroups((current) =>
+      current.map((group) => {
+        if (group.rowId !== rowId) return group;
+        const nextUnits = [...group.units];
+        if (quantity > nextUnits.length) {
+          while (nextUnits.length < quantity) {
+            nextUnits.push(createEmptyUnit());
           }
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      ),
-    },
-  ];
+        } else if (quantity < nextUnits.length) {
+          nextUnits.length = Math.max(0, quantity);
+        }
+        return { ...group, units: nextUnits };
+      }),
+    );
+  };
 
-  const importColumns: DataTableColumn<ImportPreviewRow>[] = [
-    {
-      key: "row",
-      header: "ردیف اکسل",
-      render: (row) => formatNumber(row.excelRowNumber),
-    },
-    {
-      key: "productIdentifier",
-      header: "شناسه محصول",
-      render: (row) =>
-        row.productIdentifier ? formatFaDigits(row.productIdentifier) : "-",
-    },
-    {
-      key: "serialNumber",
-      header: "سریال محصول",
-      render: (row) => row.serialNumber ? formatFaDigits(row.serialNumber) : "-",
-    },
-    {
-      key: "trackingCode",
-      header: "کد رهگیری",
-      render: (row) => row.trackingCode ? formatFaDigits(row.trackingCode) : "-",
-    },
-    {
-      key: "status",
-      header: "وضعیت",
-      render: (row) => (
-        <div className="min-w-56">
-          {row.messages.length ? (
-            <div className="space-y-1">
-              {row.messages.map((message) => (
-                <p key={message} className="text-xs leading-5 text-[#B42318]">
-                  {message}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <span className="text-xs font-semibold text-[#2F6B3A]">معتبر</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          aria-label="حذف"
-          onClick={() => removeImportPreviewRow(row.rowId)}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      ),
-    },
-  ];
-
-  const focusField = (
-    field: "productIdentifier" | "serialNumber" | "trackingCode" | "notes",
+  const updateUnit = (
+    rowId: string,
+    unitId: string,
+    patch: Partial<Pick<ReceiptUnitDraft, "productIdentifier" | "serialNumber" | "trackingCode">>,
   ) => {
-    const refs = {
-      productIdentifier: productIdentifierRef,
-      serialNumber: serialNumberRef,
-      trackingCode: trackingCodeRef,
-      notes: notesRef,
-    };
-    window.setTimeout(() => refs[field].current?.focus(), 0);
+    setGroups((current) =>
+      current.map((group) =>
+        group.rowId !== rowId
+          ? group
+          : {
+              ...group,
+              units: group.units.map((unit) =>
+                unit.rowId === unitId ? { ...unit, ...patch } : unit,
+              ),
+            },
+      ),
+    );
   };
 
-  const addUnit = () => {
+  const importUnitsForGroup = async (rowId: string, file: File) => {
+    setIsImporting(rowId);
     setError("");
-    setMessage("");
-    setFieldErrors({});
-
-    if (!selectedProductId) {
-      setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
-      focusField("productIdentifier");
-      return;
-    }
-
-    const nextUnit = {
-      rowId: `${Date.now()}-${units.length}`,
-      productIdentifier: normalizeDigits(productIdentifier.trim()),
-      serialNumber: normalizeDigits(serialNumber.trim()),
-      trackingCode: normalizeDigits(trackingCode.trim()),
-    };
-
-    if (!nextUnit.productIdentifier || !nextUnit.trackingCode) {
-      setFieldErrors({
-        productIdentifier: nextUnit.productIdentifier
-          ? ""
-          : "این فیلد الزامی است.",
-        trackingCode: nextUnit.trackingCode ? "" : "این فیلد الزامی است.",
-      });
-      if (!nextUnit.productIdentifier) focusField("productIdentifier");
-      else focusField("trackingCode");
-      return;
-    }
-
-    if (
-      nextUnit.serialNumber &&
-      units.some((unit) => unit.serialNumber === nextUnit.serialNumber)
-    ) {
-      setFieldErrors({
-        serialNumber: "سریال کالا قبلاً ثبت شده است.",
-      });
-      focusField("serialNumber");
-      return;
-    }
-
-    if (
-      units.some((unit) => unit.trackingCode === nextUnit.trackingCode)
-    ) {
-      setFieldErrors({
-        trackingCode: "کد رهگیری قبلاً ثبت شده است.",
-      });
-      focusField("trackingCode");
-      return;
-    }
-
-    const nextUnits = [...units, nextUnit];
-    setUnits(nextUnits);
-    setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-    setImportPreviewRows((current) => buildImportPreviewRows(current, nextUnits));
-    setProductIdentifier("");
-    setSerialNumber("");
-    setTrackingCode("");
-    focusField("productIdentifier");
-  };
-
-  const handleScanFieldEnter = (
-    event: KeyboardEvent<HTMLInputElement>,
-    nextField: "serialNumber" | "trackingCode" | "add",
-  ) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-
-    if (nextField === "serialNumber") {
-      focusField("serialNumber");
-      return;
-    }
-    if (nextField === "trackingCode") {
-      focusField("trackingCode");
-      return;
-    }
-    addUnit();
-  };
-
-  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    setError("");
-    setMessage("");
-    setImportError("");
-    setImportAcceptedCount(0);
-    setFieldErrors({});
-
-    if (!selectedProductId || !selectedStockId) {
-      setFieldErrors({
-        selectedProductId: selectedProductId ? "" : "لطفاً یک گزینه انتخاب کنید.",
-        selectedStockId: selectedStockId ? "" : "لطفاً انبار مقصد را انتخاب کنید.",
-      });
-      setImportError("برای ایمپورت اکسل ابتدا کالا و انبار مقصد را انتخاب کنید.");
-      return;
-    }
-
-    setIsImporting(true);
     try {
       const importedRows = await parseInboundImportFile(file);
-      const importBatchId = `${Date.now()}`;
-      const nonEmptyRows = importedRows.filter((row) => !isEmptyImportRow(row));
-      const importedUnits = nonEmptyRows.map((row, index) => ({
-        rowId: `import-${importBatchId}-${index}`,
-        productIdentifier: normalizeDigits(row.productIdentifier.trim()),
-        serialNumber: normalizeDigits(row.serialNumber.trim()),
-        trackingCode: normalizeDigits(row.trackingCode.trim()),
-      }));
-      const previewRows: ImportPreviewRow[] = importedRows.map((row, index) => {
-        const matchingNonEmptyIndex = nonEmptyRows.indexOf(row);
-        return {
-          ...row,
-          rowId: `preview-${importBatchId}-${index}`,
-          unitRowId:
-            matchingNonEmptyIndex >= 0
-              ? importedUnits[matchingNonEmptyIndex]?.rowId
-              : undefined,
-          messages: [],
-        };
-      });
-      const candidateUnits = [...units, ...importedUnits];
-      const candidatePreviewRows = buildImportPreviewRows(
-        previewRows,
-        candidateUnits,
+      const normalized = importedRows
+        .filter((row) => !isEmptyImportRow(row))
+        .map((row, index) => ({
+          rowId: `${rowId}-${Date.now()}-${index}`,
+          productIdentifier: normalizeDigits(row.productIdentifier.trim()),
+          serialNumber: normalizeDigits(row.serialNumber.trim()),
+          trackingCode: normalizeDigits(row.trackingCode.trim()),
+        }));
+      setGroups((current) =>
+        current.map((group) =>
+          group.rowId === rowId ? { ...group, units: normalized } : group,
+        ),
       );
-      const validImportedUnitIds = new Set(
-        candidatePreviewRows
-          .filter((row) => row.unitRowId && row.messages.length === 0)
-          .map((row) => row.unitRowId),
-      );
-      const acceptedUnits = importedUnits.filter((unit) =>
-        validImportedUnitIds.has(unit.rowId),
-      );
-      const rejectedPreviewRows = candidatePreviewRows.filter(
-        (row) => !row.unitRowId || row.messages.length > 0,
-      );
-      const nextUnits = [...units, ...acceptedUnits];
-
-      setUnits(nextUnits);
-      setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-      setImportPreviewRows(rejectedPreviewRows);
-      setImportAcceptedCount(acceptedUnits.length);
-      if (acceptedUnits.length > 0) {
-        setMessage(`${formatNumber(acceptedUnits.length)} ردیف از اکسل به لیست اضافه شد.`);
-      }
-      if (!importedRows.length) {
-        setImportError("ردیفی برای ایمپورت پیدا نشد.");
-      }
+      setMessage(`${formatNumber(normalized.length)} ردیف برای این کالا از فایل اضافه شد.`);
     } catch (loadError) {
-      setImportError(getErrorMessage(loadError));
+      setError(getErrorMessage(loadError));
     } finally {
-      setIsImporting(false);
+      setIsImporting(null);
     }
   };
+
+  const validateGroup = (group: ReceiptGroupDraft) => {
+    const errors: string[] = [];
+    if (!group.productObjectId) errors.push("کالا انتخاب نشده است.");
+    if (group.units.length === 0) errors.push("حداقل یک ردیف برای این کالا ثبت کنید.");
+
+    const serials = new Set<string>();
+    const tracking = new Set<string>();
+    group.units.forEach((unit) => {
+      const identifier = normalizeDigits(unit.productIdentifier.trim());
+      const serial = normalizeDigits(unit.serialNumber.trim());
+      const track = normalizeDigits(unit.trackingCode.trim());
+      if (!identifier) errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
+      if (!track) errors.push("کد رهگیری برای یکی از ردیف‌ها خالی است.");
+      if (serial && serials.has(serial)) errors.push("سریال کالا در این کالا تکراری است.");
+      if (track && tracking.has(track)) errors.push("کد رهگیری در این کالا تکراری است.");
+      if (serial) serials.add(serial);
+      if (track) tracking.add(track);
+    });
+    return errors;
+  };
+
+  const canSubmit = groups.length > 0 && groups.every((group) => validateGroup(group).length === 0);
 
   const submitReceipt = async () => {
     setError("");
     setMessage("");
-    setFieldErrors({});
-    setUnitRowErrors({});
+    setGroupErrors({});
 
-    if (!selectedProductId) {
-      setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
-      return;
-    }
     if (!selectedStockId) {
-      setFieldErrors({ selectedStockId: "لطفاً انبار مقصد را انتخاب کنید." });
+      setError("لطفاً انبار مقصد را انتخاب کنید.");
       return;
     }
-    if (units.length === 0) {
+    if (!groups.length) {
       setError("حداقل یک کالا برای ثبت ورود اضافه کنید.");
       return;
     }
-    const localErrors = buildLocalUnitRowErrors(units);
-    if (hasUnitRowErrors(localErrors)) {
-      setUnitRowErrors(localErrors);
-      setImportPreviewRows((current) => buildImportPreviewRows(current, units));
-      setError("ردیف‌های دارای خطا را اصلاح یا حذف کنید.");
+
+    const nextGroupErrors: Record<string, string> = {};
+    groups.forEach((group) => {
+      const errors = validateGroup(group);
+      if (errors.length) nextGroupErrors[group.rowId] = errors[0];
+    });
+    setGroupErrors(nextGroupErrors);
+    if (Object.keys(nextGroupErrors).length > 0) {
+      setError("ردیف‌های دارای خطا را اصلاح کنید.");
       return;
     }
 
     setIsSubmitting(true);
     try {
       const receipt = await createInboundReceipt({
-        productObjectId: selectedProductId,
         stockObjectId: selectedStockId,
-        units: units.map(({ productIdentifier, serialNumber, trackingCode }) => ({
-          productIdentifier,
-          serialNumber,
-          trackingCode,
+        items: groups.map((group) => ({
+          productObjectId: group.productObjectId,
+          units: group.units.map((unit) => ({
+            productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
+            serialNumber: normalizeDigits(unit.serialNumber.trim()),
+            trackingCode: normalizeDigits(unit.trackingCode.trim()),
+          })),
         })),
         notes: notes.trim() || undefined,
         createdByName: getStoredCurrentUser()?.fullName ?? undefined,
@@ -446,115 +267,15 @@ export default function WarehouseInboundPage() {
       setMessage(
         `رسید ورود ${formatFaDigits(receipt.receiptCode)} در ${receipt.stockTitle || "انبار انتخاب‌شده"} ثبت شد.`,
       );
-      setUnits([]);
-      setImportPreviewRows([]);
-      setImportAcceptedCount(0);
-      setImportError("");
+      setGroups(groups.map((group) => createEmptyGroup(group.productObjectId)));
       setNotes("");
-      const refreshedProducts = await listProducts("warehouse");
-      setProducts(refreshedProducts.filter((product) => product.isSyncedFromSepidar));
     } catch (submitError) {
-      if (
-        submitError instanceof ApiError &&
-        submitError.code === "DUPLICATE_WAREHOUSE_UNIT"
-      ) {
-        const duplicates = extractDuplicateDetails(submitError.details);
-        if (duplicates.length) {
-          const duplicateErrors = buildDuplicateRowErrors(duplicates, units);
-          setUnitRowErrors(duplicateErrors);
-          setImportPreviewRows((current) =>
-            buildImportPreviewRows(current, units, duplicateErrors),
-          );
-          setError("سریال یا کد رهگیری تکراری است. ردیف‌های مشخص‌شده را اصلاح یا حذف کنید.");
-        } else {
-          setError("سریال یا کد رهگیری تکراری است.");
-        }
-      } else if (
-        submitError instanceof ApiError &&
-        ["DUPLICATE_SERIAL_NUMBER", "SERIAL_DUPLICATE"].includes(submitError.code)
-      ) {
-        setError("سریال کالا قبلاً ثبت شده است.");
-      } else if (
-        submitError instanceof ApiError &&
-        ["DUPLICATE_TRACKING_CODE", "TRACKING_CODE_DUPLICATE"].includes(submitError.code)
-      ) {
-        setError("کد رهگیری قبلاً ثبت شده است.");
-      } else if (
-        submitError instanceof ApiError &&
-        submitError.code === "ZAGROS_STOCK_NOT_CONFIGURED"
-      ) {
-        setError("انبار زاگرس در تنظیمات موجودی پیدا نشد.");
-      } else {
-        setError(getErrorMessage(submitError));
-      }
+      setError(getErrorMessage(submitError));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const removeUnitRow = (rowId: string) => {
-    setUnits((current) => {
-      const nextUnits = current.filter((unit) => unit.rowId !== rowId);
-      setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-      setImportPreviewRows((previewRows) =>
-        previewRows.filter((row) => row.unitRowId !== rowId),
-      );
-      return nextUnits;
-    });
-  };
-
-  const removeImportPreviewRow = (previewRowId: string) => {
-    const target = importPreviewRows.find((row) => row.rowId === previewRowId);
-    const nextPreviewRows = importPreviewRows.filter(
-      (row) => row.rowId !== previewRowId,
-    );
-    const nextUnits = target?.unitRowId
-      ? units.filter((unit) => unit.rowId !== target.unitRowId)
-      : units;
-
-    setUnits(nextUnits);
-    setUnitRowErrors(buildLocalUnitRowErrors(nextUnits));
-    setImportPreviewRows(nextPreviewRows);
-    if (nextPreviewRows.length === 0) setImportAcceptedCount(0);
-  };
-
-  const productOptions = useMemo(
-    () =>
-      products.map((product) => {
-        const brandLabel = product.brandName || product.brand || "-";
-        const brandSearch = product.brandName || product.brand || "";
-        return {
-          value: product.objectId,
-          label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)} - ${formatFaDigits(brandLabel)}`,
-          description: [
-            brandLabel,
-            product.model ? `مدل ${formatFaDigits(product.model)}` : "",
-            product.barcode ? `بارکد ${formatFaDigits(product.barcode)}` : "",
-          ]
-            .filter(Boolean)
-            .join(" • "),
-          searchText: [
-            product.name,
-            product.sku,
-            product.sepidarCode,
-            product.model,
-            product.barcode,
-            brandSearch,
-          ]
-            .filter(Boolean)
-            .join(" "),
-        };
-      }),
-    [products],
-  );
-  const stockOptions = useMemo(
-    () =>
-      stocks.map((stock) => ({
-        value: stock.objectId,
-        label: `${stock.code ? formatFaDigits(stock.code) + " - " : ""}${stock.title}`,
-      })),
-    [stocks],
-  );
   return (
     <DashboardLayout role="warehouse" title="ورود کالا">
       {isLoading ? (
@@ -563,244 +284,243 @@ export default function WarehouseInboundPage() {
         <PageErrorMessage title="دریافت کالاها انجام نشد" message={error} />
       ) : (
         <div className="space-y-5">
-          {message ? (
-            <div className="asama-banner px-4 py-3 text-sm">{message}</div>
-          ) : null}
+          {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
           {error ? <InlineErrorMessage message={error} /> : null}
 
           <Card className="p-5">
             <div className="mb-4 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A]">
-              ورود کالا در انبار انتخاب‌شده از فهرست انبارهای سپیدار ثبت می‌شود.
+              هر رسید می‌تواند چند کالا داشته باشد. برای هر کالا سریال و کد رهگیری جداگانه ثبت می‌شود.
             </div>
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_180px]">
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>کالا</span>
-                <div className="relative">
-                  <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
-                  <SearchableSelect
-                    value={selectedProductId || undefined}
-                    onValueChange={(value) => {
-                      setSelectedProductId(value);
-                      setUnits([]);
-                      setUnitRowErrors({});
-                      setImportPreviewRows([]);
-                      setImportAcceptedCount(0);
-                      setImportError("");
-                      setFieldErrors((current) => ({
-                        ...current,
-                        selectedProductId: "",
-                      }));
-                    }}
-                    options={productOptions}
-                    placeholder="انتخاب کالا"
-                    searchPlaceholder="جستجو در کالاها"
-                    emptyMessage="کالایی پیدا نشد"
-                    triggerClassName="pr-10"
-                    invalid={Boolean(fieldErrors.selectedProductId)}
-                    normalizeSearch
-                    highlightMatches
-                  />
-                  <FieldError message={fieldErrors.selectedProductId} />
-                </div>
-              </label>
 
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_180px]">
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>انبار مقصد</span>
                 <SearchableSelect
                   value={selectedStockId || undefined}
-                  onValueChange={(value) => {
-                    setSelectedStockId(value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      selectedStockId: "",
-                    }));
-                  }}
+                  onValueChange={(value) => setSelectedStockId(value)}
                   options={stockOptions}
                   placeholder="انتخاب انبار"
                   searchPlaceholder="جستجو در انبارها"
                   emptyMessage="انباری پیدا نشد"
-                  invalid={Boolean(fieldErrors.selectedStockId)}
                   normalizeSearch
                 />
-                <FieldError message={fieldErrors.selectedStockId} />
               </label>
-
               <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm">
-                <p className="text-[#6B7280]">تعداد ثبت‌شده برای این کالا</p>
-                <p className="mt-1 text-lg font-semibold text-[#102034]">
-                  {formatNumber(units.length)}
-                </p>
+                <p className="text-[#6B7280]">تعداد کالاهای ثبت‌شده</p>
+                <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(groups.length)}</p>
+              </div>
+              <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm">
+                <p className="text-[#6B7280]">تعداد واحدها</p>
+                <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(totalUnits)}</p>
               </div>
             </div>
-
-            {selectedProduct ? (
-              <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-                <InfoItem label="نام کالا" value={selectedProduct.name} />
-                <InfoItem label="شناسه/کد" value={formatFaDigits(selectedProduct.sku)} />
-                <InfoItem label="برند" value={selectedProduct.brandName || selectedProduct.brand || "-"} />
-                <InfoItem label="مدل" value={selectedProduct.model || "-"} />
-              </dl>
-            ) : null}
           </Card>
 
-          <Card className="p-5">
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>شناسه محصول</span>
-                <Input
-                  ref={productIdentifierRef}
-                  value={productIdentifier}
-                  onChange={(event) => {
-                    setProductIdentifier(event.target.value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      productIdentifier: "",
-                    }));
-                  }}
-                  onKeyDown={(event) =>
-                    handleScanFieldEnter(event, "serialNumber")
-                  }
-                  aria-invalid={Boolean(fieldErrors.productIdentifier)}
-                />
-                <FieldError message={fieldErrors.productIdentifier} />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>سریال محصول</span>
-                <Input
-                  ref={serialNumberRef}
-                  value={serialNumber}
-                  onChange={(event) => {
-                    setSerialNumber(event.target.value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      serialNumber: "",
-                    }));
-                  }}
-                  onKeyDown={(event) =>
-                    handleScanFieldEnter(event, "trackingCode")
-                  }
-                  aria-invalid={Boolean(fieldErrors.serialNumber)}
-                />
-                <FieldError message={fieldErrors.serialNumber} />
-              </label>
-              <label className="grid gap-2 text-sm font-medium text-[#334155]">
-                <span>کد رهگیری</span>
-                <Input
-                  ref={trackingCodeRef}
-                  value={trackingCode}
-                  onChange={(event) => {
-                    setTrackingCode(event.target.value);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      trackingCode: "",
-                    }));
-                  }}
-                  onKeyDown={(event) => {
-                    handleScanFieldEnter(event, "add");
-                  }}
-                  aria-invalid={Boolean(fieldErrors.trackingCode)}
-                />
-                <FieldError message={fieldErrors.trackingCode} />
-              </label>
-            </div>
-            <p className="mt-3 text-xs leading-6 text-[#6B7280]">
-              شناسه کالا می‌تواند تکراری باشد، اما سریال کالا و کد رهگیری نباید
-              تکراری باشند.
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
-              className="hidden"
-              onChange={handleImportFile}
-            />
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button type="button" onClick={addUnit}>
-                افزودن به لیست
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!selectedProductId || !selectedStockId || isImporting}
-              >
-                <Upload className="size-4" />
-                {isImporting ? "در حال ایمپورت..." : "ایمپورت اکسل"}
-              </Button>
-            </div>
-            {importError ? (
-              <InlineErrorMessage message={importError} />
-            ) : null}
-          </Card>
+          <div className="space-y-4">
+            {groups.map((group, groupIndex) => {
+              const product = products.find((item) => item.objectId === group.productObjectId);
+              const progress = countCompletedUnits(group.units);
+              return (
+                <Card key={group.rowId} className="p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-[#102034]">
+                        کالای {formatNumber(groupIndex + 1)}
+                      </h3>
+                      <p className="mt-1 text-sm text-[#64748B]">
+                        {progress} از {group.units.length} مورد تکمیل شده
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label="حذف کالا"
+                        onClick={() => removeGroup(group.rowId)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
 
-          <Dialog
-            open={importPreviewRows.length > 0}
-            onOpenChange={(open) => {
-              if (!open) {
-                setImportPreviewRows([]);
-                setImportAcceptedCount(0);
-              }
-            }}
-          >
-            <DialogContent className="max-w-5xl">
-              <DialogHeader>
-                <DialogTitle>بررسی ردیف‌های ایمپورت</DialogTitle>
-                <DialogDescription>
-                  ردیف‌های معتبر به لیست اصلی اضافه شده‌اند. ردیف‌های زیر به
-                  دلیل خطا اضافه نشده‌اند.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-3 sm:grid-cols-4">
-                <ImportSummaryItem
-                  label="اضافه‌شده"
-                  value={importAcceptedCount}
-                />
-                <ImportSummaryItem
-                  label="سریال تکراری"
-                  value={countImportRows(importPreviewRows, "serial")}
-                />
-                <ImportSummaryItem
-                  label="کد رهگیری تکراری"
-                  value={countImportRows(importPreviewRows, "tracking")}
-                />
-                <ImportSummaryItem
-                  label="ردیف خالی"
-                  value={countImportRows(importPreviewRows, "empty")}
-                />
-              </div>
-              <DataTable
-                columns={importColumns}
-                rows={importPreviewRows}
-                rowKey={(row) => row.rowId}
-              />
-            </DialogContent>
-          </Dialog>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+                      <span>کالا</span>
+                      <div className="relative">
+                        <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                        <SearchableSelect
+                          value={group.productObjectId || undefined}
+                          onValueChange={(value) => updateGroupProduct(group.rowId, value)}
+                          options={productOptions}
+                          placeholder="انتخاب کالا"
+                          searchPlaceholder="جستجو در کالاها"
+                          emptyMessage="کالایی پیدا نشد"
+                          triggerClassName="pr-10"
+                          normalizeSearch
+                        />
+                      </div>
+                      {groupErrors[group.rowId] ? (
+                        <p className="text-xs leading-6 text-[#B45309]">{groupErrors[group.rowId]}</p>
+                      ) : null}
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                      <span>تعداد</span>
+                      <Input
+                        inputMode="numeric"
+                        value={group.units.length}
+                        onChange={(event) => {
+                          const quantity = Math.max(0, Number(normalizeDigits(event.target.value)) || 0);
+                          updateGroupQuantity(group.rowId, quantity);
+                        }}
+                      />
+                    </label>
+                    <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                      <span>بارگذاری از فایل</span>
+                      <div className="flex gap-2">
+                        <input
+                          ref={(element) => {
+                            fileInputs.current[group.rowId] = element;
+                          }}
+                          type="file"
+                          accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
+                          className="hidden"
+                          onChange={async (event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (file) await importUnitsForGroup(group.rowId, file);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputs.current[group.rowId]?.click()}
+                          disabled={!group.productObjectId || isImporting === group.rowId}
+                        >
+                          <Upload className="size-4" />
+                          {isImporting === group.rowId ? "در حال ایمپورت..." : "ایمپورت فایل"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => updateGroupQuantity(group.rowId, group.units.length + 1)}
+                          disabled={!group.productObjectId}
+                        >
+                          <Plus className="size-4" />
+                          افزودن ردیف
+                        </Button>
+                      </div>
+                    </label>
+                  </div>
 
-          {units.length > 0 ? (
-            <DataTable
-              columns={columns}
-              rows={units}
-              rowKey={(row) => row.rowId}
-            />
-          ) : null}
+                  {product ? (
+                    <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <InfoItem label="نام کالا" value={product.name} />
+                      <InfoItem label="کد کالا" value={formatFaDigits(product.sku || product.sepidarCode || "-")} />
+                      <InfoItem label="برند" value={product.brandName || product.brand || "-"} />
+                    </dl>
+                  ) : null}
+
+                  <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                    <table className="min-w-full border-collapse text-right text-sm">
+                      <thead>
+                        <tr className="bg-[#F8FBFD] text-[#1F3A5F]">
+                          <th className="px-3 py-2 font-semibold">ردیف</th>
+                          <th className="px-3 py-2 font-semibold">شناسه محصول</th>
+                          <th className="px-3 py-2 font-semibold">سریال</th>
+                          <th className="px-3 py-2 font-semibold">کد رهگیری</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.units.map((unit, index) => (
+                          <tr key={unit.rowId} className="border-t border-[#E5E7EB]">
+                            <td className="px-3 py-2">{formatNumber(index + 1)}</td>
+                            <td className="px-3 py-2">
+                              <Input
+                                value={unit.productIdentifier}
+                                onChange={(event) =>
+                                  updateUnit(group.rowId, unit.rowId, {
+                                    productIdentifier: event.target.value,
+                                  })
+                                }
+                                placeholder="شناسه محصول"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <Input
+                                value={unit.serialNumber}
+                                onChange={(event) =>
+                                  updateUnit(group.rowId, unit.rowId, {
+                                    serialNumber: event.target.value,
+                                  })
+                                }
+                                placeholder="سریال"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={unit.trackingCode}
+                                  onChange={(event) =>
+                                    updateUnit(group.rowId, unit.rowId, {
+                                      trackingCode: event.target.value,
+                                    })
+                                  }
+                                  placeholder="کد رهگیری"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  aria-label="حذف ردیف"
+                                  onClick={() =>
+                                    setGroups((current) =>
+                                      current.map((currentGroup) =>
+                                        currentGroup.rowId !== group.rowId
+                                          ? currentGroup
+                                          : {
+                                              ...currentGroup,
+                                              units: currentGroup.units.filter(
+                                                (entry) => entry.rowId !== unit.rowId,
+                                              ),
+                                            },
+                                      ),
+                                    )
+                                  }
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button type="button" variant="outline" onClick={addGroup}>
+              <Plus className="size-4" />
+              افزودن کالای جدید
+            </Button>
+            <Button
+              type="button"
+              onClick={submitReceipt}
+              disabled={isSubmitting || !canSubmit}
+            >
+              {isSubmitting ? "در حال ثبت..." : "ثبت ورود کالا"}
+            </Button>
+          </div>
 
           <Card className="p-5">
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>توضیحات</span>
-              <Textarea
-                ref={notesRef}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-              />
+              <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
             </label>
-            <Button
-              type="button"
-              className="mt-4"
-              onClick={submitReceipt}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "در حال ثبت..." : "ثبت ورود کالا"}
-            </Button>
             <p className="mt-3 text-xs text-[#6B7280]">
               آخرین بروزرسانی کالاها: {formatDateTime(new Date().toISOString())}
             </p>
@@ -811,22 +531,38 @@ export default function WarehouseInboundPage() {
   );
 }
 
+function createEmptyUnit(): ReceiptUnitDraft {
+  return {
+    rowId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    productIdentifier: "",
+    serialNumber: "",
+    trackingCode: "",
+  };
+}
+
+function createEmptyGroup(productObjectId: string): ReceiptGroupDraft {
+  return {
+    rowId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    productObjectId,
+    units: [createEmptyUnit()],
+  };
+}
+
+function countCompletedUnits(units: ReceiptUnitDraft[]): number {
+  return units.filter((unit) =>
+    Boolean(
+      normalizeDigits(unit.productIdentifier.trim()) &&
+        normalizeDigits(unit.serialNumber.trim()) &&
+        normalizeDigits(unit.trackingCode.trim()),
+    ),
+  ).length;
+}
+
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
       <dt className="text-xs text-[#6B7280]">{label}</dt>
       <dd className="mt-1 text-sm font-semibold text-[#1F3A5F]">{value}</dd>
-    </div>
-  );
-}
-
-function ImportSummaryItem({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
-      <dt className="text-xs text-[#6B7280]">{label}</dt>
-      <dd className="mt-1 text-lg font-semibold text-[#1F3A5F]">
-        {formatNumber(value)}
-      </dd>
     </div>
   );
 }
