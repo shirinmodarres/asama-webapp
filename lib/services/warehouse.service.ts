@@ -356,11 +356,11 @@ function normalizeInboundPayload(
 
   return {
     ...payload,
-    units: payload.units.map((unit) => ({
+    units: payload.units?.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
-    })),
+    })) || [],
     items,
   };
 }
