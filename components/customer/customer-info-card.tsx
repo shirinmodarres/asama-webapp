@@ -4,6 +4,7 @@ import { formatDeliveryAddress } from "@/lib/utils/address-format";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface CustomerInfoCardProps {
+  hideDeliveryInfo?: boolean;
   order: Pick<
     Order,
     | "customerName"
@@ -22,20 +23,19 @@ interface CustomerInfoCardProps {
   >;
 }
 
-export function CustomerInfoCard({ order }: CustomerInfoCardProps) {
+export function CustomerInfoCard({ order, hideDeliveryInfo = false }: CustomerInfoCardProps) {
   const hasCustomerData = Boolean(
     order.customerName ||
       order.customerPhone ||
       order.customerNationalId ||
-      order.deliveryFullAddress ||
-      order.receiverFullName ||
-      order.receiverPhone,
+      (!hideDeliveryInfo &&
+        (order.deliveryFullAddress || order.receiverFullName || order.receiverPhone)),
   );
 
   return (
     <Card className="p-5">
       <h3 className="text-base font-semibold text-[#1F3A5F]">
-        اطلاعات مشتری و تحویل
+        {hideDeliveryInfo ? "اطلاعات مشتری" : "اطلاعات مشتری و تحویل"}
       </h3>
       {!hasCustomerData ? (
         <p className="mt-4 rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm text-[#6B7280]">
@@ -48,13 +48,17 @@ export function CustomerInfoCard({ order }: CustomerInfoCardProps) {
           {order.customerNationalId ? (
             <InfoItem label="کد ملی" value={formatFaDigits(order.customerNationalId)} />
           ) : null}
-          <InfoItem
-            label="آدرس تحویل"
-            value={formatDeliveryAddress(order)}
-            className="sm:col-span-2"
-          />
-          <InfoItem label="گیرنده بار" value={order.receiverFullName || "-"} />
-          <InfoItem label="موبایل گیرنده" value={order.receiverPhone ? formatFaDigits(order.receiverPhone) : "-"} />
+          {!hideDeliveryInfo ? (
+            <>
+              <InfoItem
+                label="آدرس تحویل"
+                value={formatDeliveryAddress(order)}
+                className="sm:col-span-2"
+              />
+              <InfoItem label="گیرنده بار" value={order.receiverFullName || "-"} />
+              <InfoItem label="موبایل گیرنده" value={order.receiverPhone ? formatFaDigits(order.receiverPhone) : "-"} />
+            </>
+          ) : null}
         </dl>
       )}
     </Card>

@@ -397,7 +397,10 @@ export default function ExitSlipCreatePage() {
           ) : null}
           {error ? <InlineErrorMessage message={error} /> : null}
 
-          <CustomerInfoCard order={order} />
+          <CustomerInfoCard
+            order={order}
+            hideDeliveryInfo={order.orderType === "naja"}
+          />
 
           <Card className="p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
