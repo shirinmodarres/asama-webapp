@@ -60,7 +60,6 @@ export function mapProductDto(dto: unknown): Product {
     ? inventoryReservedStock
     : toNumberValue(record.reservedStock);
   const backendAvailableQuantity =
-    record.availableQuantity ??
     record.availableSalesQuantity ??
     record.availableStock;
   const availableStock =
