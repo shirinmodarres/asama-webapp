@@ -644,8 +644,8 @@ function findDuplicateUnitField(
 function duplicateMessage(
   field: "newSerialNumber" | "newTrackingCode",
 ): string {
-  if (field === "newSerialNumber") return "سریال کالا قبلاً ثبت شده است.";
-  return "کد رهگیری قبلاً ثبت شده است.";
+  if (field === "newSerialNumber") return "این سریال قبلاً ثبت شده است.";
+  return "این کد رهگیری قبلاً ثبت شده است.";
 }
 
 function formatInboundSubmitError(error: unknown): string {

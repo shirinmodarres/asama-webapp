@@ -483,15 +483,20 @@ function normalizeHeader(value: string): string {
 
 function duplicateMessage(duplicate: DuplicateWarehouseUnitDetail): string {
   const fieldLabel =
-    duplicate.field === "serialNumber" ? "این سریال" : "این کد رهگیری";
+    duplicate.field === "serialNumber" ? "سریال" : "کد رهگیری";
   const productName = duplicate.existingProductName || "کالا";
+  const duplicateValue = duplicate.value ? ` (${formatFaDigits(duplicate.value)})` : "";
+  const rowNumber =
+    Number.isFinite(duplicate.inputRowIndex) && duplicate.inputRowIndex >= 0
+      ? `، ردیف ${formatFaDigits(String(duplicate.inputRowIndex + 1))}`
+      : "";
   const receiptCode = duplicate.existingReceiptCode
     ? formatFaDigits(duplicate.existingReceiptCode)
     : "-";
   const stockTitle = duplicate.existingStockTitle
     ? ` در ${duplicate.existingStockTitle}`
     : "";
-  return `${fieldLabel} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode} ثبت شده است.`;
+  return `${fieldLabel}${duplicateValue} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode}${rowNumber} ثبت شده است.`;
 }
 
 function toNullableString(value: unknown): string | null {
