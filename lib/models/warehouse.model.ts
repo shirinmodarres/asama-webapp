@@ -69,6 +69,7 @@ export interface WarehouseInboundReceipt {
 }
 
 export interface WarehouseInboundReceiptItemUnit {
+  productObjectId?: string;
   productIdentifier: string;
   serialNumber: string;
   trackingCode: string;
@@ -253,6 +254,7 @@ export interface CreateInboundReceiptPayload {
   productObjectId?: string;
   stockObjectId?: string;
   units?: Array<{
+    productObjectId?: string;
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;
@@ -260,6 +262,7 @@ export interface CreateInboundReceiptPayload {
   items?: Array<{
     productObjectId: string;
     units: Array<{
+      productObjectId?: string;
       productIdentifier: string;
       serialNumber: string;
       trackingCode: string;
@@ -277,6 +280,7 @@ export interface UpdateInboundReceiptPayload {
   notes?: string | null;
   units: Array<{
     objectId?: string;
+    productObjectId?: string;
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;

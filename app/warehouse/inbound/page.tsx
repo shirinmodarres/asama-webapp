@@ -21,7 +21,11 @@ import { listProducts } from "@/lib/services/product.service";
 import { listStocks } from "@/lib/services/stock.service";
 import { createInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
-import { parseInboundImportFile, isEmptyImportRow } from "./import-helpers";
+import {
+  extractDuplicateDetails,
+  isEmptyImportRow,
+  parseInboundImportFile,
+} from "./import-helpers";
 
 interface ReceiptUnitDraft {
   rowId: string;
@@ -256,6 +260,7 @@ export default function WarehouseInboundPage() {
         items: groups.map((group) => ({
           productObjectId: group.productObjectId,
           units: group.units.map((unit) => ({
+            productObjectId: group.productObjectId,
             productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
             serialNumber: normalizeDigits(unit.serialNumber.trim()),
             trackingCode: normalizeDigits(unit.trackingCode.trim()),
@@ -270,7 +275,7 @@ export default function WarehouseInboundPage() {
       setGroups(groups.map((group) => createEmptyGroup(group.productObjectId)));
       setNotes("");
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      setError(formatInboundSubmitError(submitError));
     } finally {
       setIsSubmitting(false);
     }
@@ -565,4 +570,26 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-sm font-semibold text-[#1F3A5F]">{value}</dd>
     </div>
   );
+}
+
+function formatInboundSubmitError(error: unknown): string {
+  const baseMessage = getErrorMessage(error);
+  const details = error && typeof error === "object"
+    ? extractDuplicateDetails((error as { details?: unknown }).details)
+    : [];
+  if (!details.length) return baseMessage;
+  return `${baseMessage}\n${details
+    .map((duplicate) => {
+      const fieldLabel = duplicate.field === "serialNumber" ? "سریال" : "کد رهگیری";
+      const productName = duplicate.existingProductName || "کالا";
+      const stockTitle = duplicate.existingStockTitle ? ` در ${duplicate.existingStockTitle}` : "";
+      const receiptCode = duplicate.existingReceiptCode ? formatFaDigits(duplicate.existingReceiptCode) : "-";
+      const value = duplicate.value ? ` (${formatFaDigits(duplicate.value)})` : "";
+      const rowLabel =
+        Number.isInteger(duplicate.inputRowIndex)
+          ? `، ردیف ${formatFaDigits(String(duplicate.inputRowIndex + 1))}`
+          : "";
+      return `${fieldLabel}${value} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode}${rowLabel} ثبت شده است.`;
+    })
+    .join("\n")}`;
 }

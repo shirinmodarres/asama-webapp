@@ -485,13 +485,18 @@ function duplicateMessage(duplicate: DuplicateWarehouseUnitDetail): string {
   const fieldLabel =
     duplicate.field === "serialNumber" ? "این سریال" : "این کد رهگیری";
   const productName = duplicate.existingProductName || "کالا";
+  const duplicateValue = duplicate.value ? ` (${formatFaDigits(duplicate.value)})` : "";
   const receiptCode = duplicate.existingReceiptCode
     ? formatFaDigits(duplicate.existingReceiptCode)
     : "-";
   const stockTitle = duplicate.existingStockTitle
     ? ` در ${duplicate.existingStockTitle}`
     : "";
-  return `${fieldLabel} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode} ثبت شده است.`;
+  const rowInfo =
+    Number.isInteger(duplicate.inputRowIndex) && duplicate.inputRowIndex >= 0
+      ? ` ردیف ${formatFaDigits(String(duplicate.inputRowIndex + 1))}`
+      : "";
+  return `${fieldLabel}${duplicateValue} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode}${rowInfo} ثبت شده است.`;
 }
 
 function toNullableString(value: unknown): string | null {

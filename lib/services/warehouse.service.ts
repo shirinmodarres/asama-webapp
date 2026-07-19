@@ -346,6 +346,7 @@ function normalizeInboundPayload(
         .map((item) => ({
           productObjectId: String(item.productObjectId).trim(),
           units: item.units.map((unit) => ({
+            productObjectId: String(unit.productObjectId || item.productObjectId || "").trim(),
             productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
             serialNumber: normalizeDigits(unit.serialNumber.trim()),
             trackingCode: normalizeDigits(unit.trackingCode.trim()),
@@ -358,6 +359,7 @@ function normalizeInboundPayload(
     ...payload,
     units: payload.units?.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
+      productObjectId: unit.productObjectId ? String(unit.productObjectId).trim() : payload.productObjectId,
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
     })) || [],
@@ -374,6 +376,7 @@ function normalizeUpdateInboundPayload(
     sepidarItemId: payload.sepidarItemId,
     units: payload.units.map((unit) => ({
       objectId: unit.objectId,
+      productObjectId: unit.productObjectId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),

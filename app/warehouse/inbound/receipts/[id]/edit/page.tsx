@@ -303,7 +303,12 @@ export default function WarehouseInboundReceiptEditPage() {
     }
     const duplicateField = findDuplicateUnitField(units, unit);
     if (duplicateField) {
-      setFieldErrors({ [duplicateField]: duplicateMessage(duplicateField) });
+      setFieldErrors({
+        [duplicateField]: duplicateMessage(
+          duplicateField,
+          duplicateField === "newSerialNumber" ? unit.serialNumber : unit.trackingCode,
+        ),
+      });
       return;
     }
     setUnits((current) => [...current, unit]);
@@ -643,9 +648,11 @@ function findDuplicateUnitField(
 
 function duplicateMessage(
   field: "newSerialNumber" | "newTrackingCode",
+  value?: string,
 ): string {
-  if (field === "newSerialNumber") return "سریال کالا قبلاً ثبت شده است.";
-  return "کد رهگیری قبلاً ثبت شده است.";
+  const prefix = field === "newSerialNumber" ? "سریال کالا" : "کد رهگیری";
+  const suffix = value ? ` (${formatFaDigits(value)})` : "";
+  return `${prefix}${suffix} قبلاً ثبت شده است.`;
 }
 
 function formatInboundSubmitError(error: unknown): string {
