@@ -97,6 +97,7 @@ export interface WarehouseInventoryUnitRow {
   realQuantity: number;
   salesQuantity: number;
   reservedQuantity: number;
+  availableForSale: number;
   availableSalesQuantity: number;
   units: WarehouseItemUnit[];
 }

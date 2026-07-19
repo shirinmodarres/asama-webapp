@@ -36,6 +36,7 @@ export interface ProductStockInventory {
   salesQuantity: number;
   useFullRealQuantityForSales: boolean;
   reservedQuantity: number;
+  availableForSale: number;
   availableSalesQuantity: number;
   createdAt: string | null;
   updatedAt: string | null;

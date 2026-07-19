@@ -70,7 +70,7 @@ export async function listOrderProductsBySaleType(
     products.map((product) => ({
       code: product.sepidarCode || product.sku,
       name: product.name,
-      availableSalesQuantity: product.availableSalesQuantity,
+      availableForSale: product.availableForSale,
     })),
   );
   return products;

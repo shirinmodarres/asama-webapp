@@ -87,7 +87,12 @@ export function mapProductStockInventoryDto(
       record.useFullRealQuantityForSales,
     ),
     reservedQuantity: toNumberValue(record.reservedQuantity),
-    availableSalesQuantity: toNumberValue(record.availableSalesQuantity),
+    availableForSale: toNumberValue(
+      record.availableForSale ?? record.availableSalesQuantity,
+    ),
+    availableSalesQuantity: toNumberValue(
+      record.availableForSale ?? record.availableSalesQuantity,
+    ),
     createdAt: toNullableString(record.createdAt),
     updatedAt: toNullableString(record.updatedAt),
   };

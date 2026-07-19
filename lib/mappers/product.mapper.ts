@@ -60,6 +60,7 @@ export function mapProductDto(dto: unknown): Product {
     ? inventoryReservedStock
     : toNumberValue(record.reservedStock);
   const backendAvailableQuantity =
+    record.availableForSale ??
     record.availableQuantity ??
     record.availableSalesQuantity ??
     record.availableStock;
@@ -150,6 +151,7 @@ export function mapProductDto(dto: unknown): Product {
     warehouseStock,
     reservedStock,
     availableStock,
+    availableForSale: availableStock,
     availableSalesQuantity: availableStock,
     hasAvailableSalesQuantity: false,
     inventorySource: toStringValue(record.inventorySource),
@@ -202,12 +204,13 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
       record,
     );
   }
-  const availableSalesQuantity = toNumberValue(
-    record.availableSalesQuantity,
+  const availableForSale = toNumberValue(
+    record.availableForSale ?? record.availableSalesQuantity,
   );
   return {
     ...product,
-    availableSalesQuantity,
+    availableForSale,
+    availableSalesQuantity: availableForSale,
     hasAvailableSalesQuantity,
     inventorySource: "order_options",
     availableStocks: Array.isArray(record.availableStocks)
@@ -226,8 +229,11 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
             reservedQuantity: toNumberValue(stock.reservedQuantity),
             useFullRealQuantityForSales:
               stock.useFullRealQuantityForSales === true,
+            availableForSale: toNumberValue(
+              stock.availableForSale ?? stock.availableSalesQuantity,
+            ),
             availableSalesQuantity: toNumberValue(
-              stock.availableSalesQuantity,
+              stock.availableForSale ?? stock.availableSalesQuantity,
             ),
           };
         })

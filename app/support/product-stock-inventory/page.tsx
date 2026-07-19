@@ -365,7 +365,7 @@ export default function SupportProductStockInventoryPage() {
     {
       key: "available",
       header: "موجودی قابل فروش",
-      render: (row) => formatNumber(row.availableSalesQuantity),
+      render: (row) => formatNumber(row.availableForSale),
     },
   ];
 

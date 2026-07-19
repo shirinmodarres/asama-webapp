@@ -172,7 +172,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
               data.map((product) => ({
                 productObjectId: product.objectId,
                 productName: product.name,
-                availableQuantity: product.availableSalesQuantity,
+                availableQuantity: product.availableForSale,
                 availableStocks: product.availableStocks,
               })),
             );
@@ -251,7 +251,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       nextErrors.quantity = POSITIVE_NUMBER_MESSAGE;
     } else if (
       selectedProduct?.hasAvailableSalesQuantity &&
-      requestedQuantity > selectedProduct.availableSalesQuantity
+      requestedQuantity > selectedProduct.availableForSale
     ) {
       nextErrors.quantity = "موجودی قابل فروش کافی نیست";
     }
@@ -473,7 +473,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 min={1}
                 max={
                   selectedProduct?.hasAvailableSalesQuantity
-                    ? selectedProduct.availableSalesQuantity
+                    ? selectedProduct.availableForSale
                     : undefined
                 }
                 value={quantity}

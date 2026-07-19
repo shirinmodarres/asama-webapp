@@ -144,6 +144,7 @@ export default function WarehouseInboundReceiptEditPage() {
             warehouseStock: 0,
             reservedStock: 0,
             availableStock: 0,
+            availableForSale: 0,
             availableSalesQuantity: 0,
             hasAvailableSalesQuantity: false,
             availableStocks: [],

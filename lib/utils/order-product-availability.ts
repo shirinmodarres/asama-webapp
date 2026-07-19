@@ -4,7 +4,7 @@ export function logOrderDropdownProductSource(product: Product): void {
   console.log("[ORDER_DROPDOWN_PRODUCT_SOURCE]", {
     productCode: product.sepidarCode || product.sku,
     productName: product.name,
-    availableSalesQuantity: product.availableSalesQuantity,
+    availableForSale: product.availableForSale,
     rawProduct: product,
   });
 }
@@ -20,5 +20,5 @@ export function formatOrderAvailableQuantity(
     return formatter(0);
   }
 
-  return formatter(product.availableSalesQuantity);
+  return formatter(product.availableForSale);
 }
