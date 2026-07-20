@@ -778,13 +778,6 @@ export function OrderForm({
                 oldQuantityByProductId,
               })
             : undefined;
-          if (
-            sepidarProductsOnly &&
-            product &&
-            !product.hasAvailableSalesQuantity
-          ) {
-            return false;
-          }
           return quantity > (availableQuantity ?? 0);
         },
       );
