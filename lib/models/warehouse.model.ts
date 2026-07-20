@@ -96,6 +96,7 @@ export interface WarehouseInventoryUnitRow {
   stockTitle: string;
   realQuantity: number;
   salesQuantity: number;
+  salesCapacity?: number;
   reservedQuantity: number;
   availableForSale: number;
   availableSalesQuantity: number;

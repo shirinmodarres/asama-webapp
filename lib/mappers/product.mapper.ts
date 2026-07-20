@@ -63,7 +63,13 @@ export function mapProductDto(dto: unknown): Product {
     record.availableForSale ??
     record.availableQuantity ??
     record.availableSalesQuantity ??
-    record.availableStock;
+    record.availableStock ??
+    record.salesCapacity;
+  const backendSalesCapacity =
+    record.salesCapacity ??
+    (record.useFullRealQuantityForSales === true
+      ? record.realQuantity
+      : record.salesQuantity);
   const availableStock =
     backendAvailableQuantity !== undefined &&
     backendAvailableQuantity !== null
@@ -71,6 +77,10 @@ export function mapProductDto(dto: unknown): Product {
       : inventories.length
         ? inventoryAvailableStock
         : salesStock - reservedStock;
+  const salesCapacity =
+    backendSalesCapacity !== undefined && backendSalesCapacity !== null
+      ? toNumberValue(backendSalesCapacity)
+      : availableStock;
   const warehouseAvailableStock = inventories.length
     ? inventoryWarehouseAvailableStock
     : record.warehouseAvailableStock === undefined
@@ -154,6 +164,7 @@ export function mapProductDto(dto: unknown): Product {
     availableForSale: availableStock,
     availableSalesQuantity: availableStock,
     hasAvailableSalesQuantity: false,
+    salesCapacity,
     inventorySource: toStringValue(record.inventorySource),
     availableStocks: [],
     warehouseAvailableStock,
@@ -205,7 +216,9 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
     );
   }
   const availableForSale = toNumberValue(
-    record.availableForSale ?? record.availableSalesQuantity,
+    record.availableForSale ??
+      record.availableSalesQuantity ??
+      record.salesCapacity,
   );
   return {
     ...product,
@@ -229,11 +242,21 @@ export function mapProductOrderOptionDto(dto: unknown): Product {
             reservedQuantity: toNumberValue(stock.reservedQuantity),
             useFullRealQuantityForSales:
               stock.useFullRealQuantityForSales === true,
+            salesCapacity: toNumberValue(
+              stock.salesCapacity ??
+                (stock.useFullRealQuantityForSales === true
+                  ? stock.realQuantity
+                  : stock.salesQuantity),
+            ),
             availableForSale: toNumberValue(
-              stock.availableForSale ?? stock.availableSalesQuantity,
+              stock.availableForSale ??
+                stock.availableSalesQuantity ??
+                stock.salesCapacity,
             ),
             availableSalesQuantity: toNumberValue(
-              stock.availableForSale ?? stock.availableSalesQuantity,
+              stock.availableForSale ??
+                stock.availableSalesQuantity ??
+                stock.salesCapacity,
             ),
           };
         })

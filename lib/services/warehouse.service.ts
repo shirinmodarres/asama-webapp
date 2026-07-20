@@ -164,12 +164,17 @@ function mapWarehouseInventoryUnitRow(dto: unknown): WarehouseInventoryUnitRow {
     stockTitle: toStringValue(record.stockTitle),
     realQuantity: toNumberValue(record.realQuantity),
     salesQuantity: toNumberValue(record.salesQuantity),
+    salesCapacity: toNumberValue(record.salesCapacity),
     reservedQuantity: toNumberValue(record.reservedQuantity),
     availableForSale: toNumberValue(
-      record.availableForSale ?? record.availableSalesQuantity,
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        record.salesCapacity,
     ),
     availableSalesQuantity: toNumberValue(
-      record.availableForSale ?? record.availableSalesQuantity,
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        record.salesCapacity,
     ),
     units: mapWarehouseItemUnitListDto(record.units),
   };

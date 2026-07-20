@@ -85,7 +85,7 @@ export default function WarehouseInboundReceiptEditPage() {
           data.units.map((unit, index) => ({
             rowId: `${unit.objectId || unit.productObjectId || "unit"}-${index}`,
             objectId: unit.objectId,
-            productObjectId: unit.productObjectId || data.productObjectId,
+            productObjectId: unit.productObjectId || "",
             productIdentifier: unit.productIdentifier,
             serialNumber: unit.serialNumber,
             trackingCode: unit.trackingCode,
@@ -336,7 +336,7 @@ export default function WarehouseInboundReceiptEditPage() {
 
     const normalizedUnits = units.map((unit) => ({
       objectId: unit.objectId,
-      productObjectId: unit.productObjectId || selectedProductId,
+      productObjectId: unit.productObjectId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
@@ -347,11 +347,11 @@ export default function WarehouseInboundReceiptEditPage() {
       normalizedUnits.length === 0 ||
       normalizedUnits.some(
         (unit) =>
-          !unit.productObjectId ||
-          !unit.productIdentifier ||
-          !unit.serialNumber ||
-          !unit.trackingCode ||
-          unit.quantity <= 0,
+        !unit.productObjectId ||
+        !unit.productIdentifier ||
+        !unit.serialNumber ||
+        !unit.trackingCode ||
+        unit.quantity <= 0,
       )
     ) {
       setError(
@@ -678,7 +678,7 @@ function groupEditableUnits(units: EditableUnit[]) {
   >();
 
   units.forEach((unit, index) => {
-    const key = unit.productObjectId || `unknown-${index}`;
+    const key = unit.productObjectId || unit.objectId || `unknown-${index}`;
     const existing = groups.get(key);
     if (existing) {
       existing.units.push(unit);

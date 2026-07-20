@@ -316,7 +316,11 @@ export default function SupportProductStockInventoryPage() {
           <div className="min-w-[160px] space-y-2">
             <Input
               inputMode="numeric"
-              value={draft?.salesQuantity ?? ""}
+              value={
+                useFull
+                  ? String(row.salesCapacity ?? row.realQuantity)
+                  : (draft?.salesQuantity ?? "")
+              }
               onChange={(event) =>
                 updateDraft(row.objectId, { salesQuantity: event.target.value })
               }
@@ -329,7 +333,7 @@ export default function SupportProductStockInventoryPage() {
             />
             {useFull ? (
               <p className="text-xs leading-6 text-[#2F6B3A]">
-                کل موجودی واقعی این انبار قابل فروش است.
+                کل موجودی واقعی این انبار، منهای رزرو، به‌صورت خودکار قابل فروش است.
               </p>
             ) : null}
           </div>

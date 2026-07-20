@@ -13,12 +13,5 @@ export function formatOrderAvailableQuantity(
   product: Product,
   formatter: (value: number) => string,
 ): string {
-  if (!product.hasAvailableSalesQuantity) {
-    if (process.env.NODE_ENV === "development") {
-      return "نامشخص";
-    }
-    return formatter(0);
-  }
-
-  return formatter(product.availableForSale);
+  return formatter(product.availableForSale ?? 0);
 }

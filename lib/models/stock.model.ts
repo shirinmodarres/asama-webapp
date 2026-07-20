@@ -38,8 +38,10 @@ export interface ProductStockInventory {
   stock: SepidarStock | null;
   realQuantity: number;
   salesQuantity: number;
+  salesCapacity: number;
   useFullRealQuantityForSales: boolean;
   reservedQuantity: number;
+  unreservedQuantity?: number;
   availableForSale: number;
   availableSalesQuantity: number;
   createdAt: string | null;
