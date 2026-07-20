@@ -36,6 +36,7 @@ import {
 interface EditableUnit {
   rowId: string;
   objectId?: string;
+  productObjectId: string;
   productIdentifier: string;
   serialNumber: string;
   trackingCode: string;
@@ -82,8 +83,9 @@ export default function WarehouseInboundReceiptEditPage() {
         setReceiptDate(toDateInputValue(data.receiptDate));
         setUnits(
           data.units.map((unit, index) => ({
-            rowId: `${unit.objectId || "unit"}-${index}`,
+            rowId: `${unit.objectId || unit.productObjectId || "unit"}-${index}`,
             objectId: unit.objectId,
+            productObjectId: unit.productObjectId || data.productObjectId,
             productIdentifier: unit.productIdentifier,
             serialNumber: unit.serialNumber,
             trackingCode: unit.trackingCode,
@@ -114,6 +116,7 @@ export default function WarehouseInboundReceiptEditPage() {
   );
 
   const productCanBeEdited = receipt?.canEditProduct === true;
+  const groupedUnits = useMemo(() => groupEditableUnits(units), [units]);
 
   const selectedProduct = useMemo(
     () =>
@@ -280,6 +283,7 @@ export default function WarehouseInboundReceiptEditPage() {
     setFieldErrors({});
     const unit = {
       rowId: `new-${Date.now()}`,
+      productObjectId: selectedProductId,
       productIdentifier: normalizeDigits(newProductIdentifier.trim()),
       serialNumber: normalizeDigits(newSerialNumber.trim()),
       trackingCode: normalizeDigits(newTrackingCode.trim()),
@@ -332,6 +336,7 @@ export default function WarehouseInboundReceiptEditPage() {
 
     const normalizedUnits = units.map((unit) => ({
       objectId: unit.objectId,
+      productObjectId: unit.productObjectId || selectedProductId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
@@ -342,6 +347,7 @@ export default function WarehouseInboundReceiptEditPage() {
       normalizedUnits.length === 0 ||
       normalizedUnits.some(
         (unit) =>
+          !unit.productObjectId ||
           !unit.productIdentifier ||
           !unit.serialNumber ||
           !unit.trackingCode ||
@@ -372,8 +378,8 @@ export default function WarehouseInboundReceiptEditPage() {
     setIsSubmitting(true);
     try {
       const updated = await updateInboundReceipt(receipt.objectId, {
-        productObjectId: productCanBeEdited ? selectedProductId : undefined,
-        sepidarItemId: productCanBeEdited
+        productObjectId: productCanBeEdited && groupedUnits.length === 1 ? selectedProductId : undefined,
+        sepidarItemId: productCanBeEdited && groupedUnits.length === 1
           ? selectedProduct?.sepidarItemId ?? null
           : undefined,
         supplierName: supplierName.trim() || null,
@@ -424,8 +430,28 @@ export default function WarehouseInboundReceiptEditPage() {
 
           <Card className="p-5">
             <dl className="grid gap-3 sm:grid-cols-4">
-              <InfoItem label="کالای فعلی" value={receipt.productName || "-"} />
-              <InfoItem label="کد کالای فعلی" value={formatFaDigits(receipt.productSku || receipt.productObjectId)} />
+              <InfoItem
+                label="کالاهای فعلی"
+                value={
+                  groupedUnits
+                    .map((group) => {
+                      const product = products.find((item) => item.objectId === group.productObjectId);
+                      return product?.name || group.productObjectId || "-";
+                    })
+                    .join("، ") || receipt.productName || "-"
+                }
+              />
+              <InfoItem
+                label="کد کالاهای فعلی"
+                value={
+                  groupedUnits
+                    .map((group) => {
+                      const product = products.find((item) => item.objectId === group.productObjectId);
+                      return product?.sku || product?.sepidarCode || group.productObjectId || "-";
+                    })
+                    .join("، ") || formatFaDigits(receipt.productSku || receipt.productObjectId)
+                }
+              />
               <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
               <InfoItem label="تعداد فعلی" value={formatFaNumber(totalQuantity)} />
             </dl>
@@ -437,9 +463,15 @@ export default function WarehouseInboundReceiptEditPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
                 <span>کالا</span>
-                <div className="rounded-xl border border-[#F7D7A8] bg-[#FFF8ED] px-4 py-3 text-sm leading-7 text-[#8A5A12]">
-                  تغییر کالا روی تمام واحدهای این رسید اعمال می‌شود.
-                </div>
+                {groupedUnits.length > 1 ? (
+                  <div className="rounded-xl border border-[#D1D5DB] bg-[#F8FAFC] px-4 py-3 text-sm leading-7 text-[#334155]">
+                    این رسید چندکالاست. ردیف‌ها زیر کالای مربوط به خودشان نمایش داده می‌شوند.
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-[#F7D7A8] bg-[#FFF8ED] px-4 py-3 text-sm leading-7 text-[#8A5A12]">
+                    تغییر کالا روی تمام واحدهای این رسید اعمال می‌شود.
+                  </div>
+                )}
                 <div className="relative">
                   <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                   <SearchableSelect
@@ -585,7 +617,30 @@ export default function WarehouseInboundReceiptEditPage() {
             </Button>
           </Card>
 
-          <DataTable columns={columns} rows={units} rowKey={(row) => row.rowId} />
+          <div className="space-y-4">
+            {groupedUnits.map((group) => {
+              const groupRows = units.filter((unit) => unit.productObjectId === group.productObjectId);
+              const product = products.find((item) => item.objectId === group.productObjectId);
+              return (
+                <Card key={group.rowId} className="p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-[#1F3A5F]">
+                        {product?.name || receipt.productName || "کالا"}
+                      </h3>
+                      <p className="mt-1 text-sm text-[#64748B]">
+                        {product?.sku || product?.sepidarCode || formatFaDigits(group.productObjectId)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] px-3 py-2 text-sm text-[#102034]">
+                      {formatFaNumber(groupRows.length)} عدد
+                    </div>
+                  </div>
+                  <DataTable columns={columns} rows={groupRows} rowKey={(row) => row.rowId} />
+                </Card>
+              );
+            })}
+          </div>
 
           <Button
             type="button"
@@ -614,6 +669,30 @@ function toDateInputValue(value: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
+}
+
+function groupEditableUnits(units: EditableUnit[]) {
+  const groups = new Map<
+    string,
+    { rowId: string; productObjectId: string; units: EditableUnit[] }
+  >();
+
+  units.forEach((unit, index) => {
+    const key = unit.productObjectId || `unknown-${index}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.units.push(unit);
+      return;
+    }
+
+    groups.set(key, {
+      rowId: `${key}-${index}`,
+      productObjectId: unit.productObjectId,
+      units: [unit],
+    });
+  });
+
+  return Array.from(groups.values());
 }
 
 function findDuplicateUnitField(
