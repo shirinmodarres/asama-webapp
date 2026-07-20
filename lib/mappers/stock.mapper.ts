@@ -71,9 +71,15 @@ export function mapProductStockInventoryDto(
       record.sepidarItemId === undefined || record.sepidarItemId === null
         ? null
         : toNumberValue(record.sepidarItemId),
-    productSku: normalizeDigits(toStringValue(record.productSku)),
-    productName: toStringValue(record.productName),
+    productCode: toNullableString(record.productCode ?? record.productSku),
+    productTitle: toNullableString(record.productTitle ?? record.productName),
+    productSku: normalizeDigits(
+      toStringValue(record.productSku ?? record.productCode),
+    ),
+    productName: toStringValue(record.productName ?? record.productTitle),
+    brandObjectId: toNullableString(record.brandObjectId),
     brandName: toNullableString(record.brandName ?? record.productBrandName),
+    brandTitle: toNullableString(record.brandTitle ?? record.brandName),
     stockObjectId: toNullableString(record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null

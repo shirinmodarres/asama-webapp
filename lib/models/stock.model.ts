@@ -25,9 +25,13 @@ export interface ProductStockInventory {
   id: string;
   productObjectId: string | null;
   sepidarItemId: number | null;
+  productCode?: string | null;
+  productTitle?: string | null;
   productSku: string;
   productName: string;
+  brandObjectId?: string | null;
   brandName?: string | null;
+  brandTitle?: string | null;
   stockObjectId: string | null;
   sepidarStockId: number | null;
   stockTitle: string;
