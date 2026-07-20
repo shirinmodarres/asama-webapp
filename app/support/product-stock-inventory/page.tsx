@@ -291,6 +291,9 @@ export default function SupportProductStockInventoryPage() {
             <p className="mt-1 text-xs text-[#6B7280]">
               {formatFaDigits(row.productSku || "-")}
             </p>
+            <p className="mt-1 text-xs text-[#6B7280]">
+              برند: {row.brandName || "-"}
+            </p>
           </div>
         );
       },
@@ -452,6 +455,11 @@ export default function SupportProductStockInventoryPage() {
                       <h2 className="font-semibold text-[#102034]">
                         {group.title}
                       </h2>
+                      {group.rows[0]?.brandName ? (
+                        <span className="rounded-full bg-[#EEF7F0] px-2 py-0.5 text-xs text-[#2F6B3A]">
+                          {group.rows[0].brandName}
+                        </span>
+                      ) : null}
                       {group.code ? (
                         <span className="text-xs text-[#64748B]">
                           {formatFaDigits(String(group.code))}
