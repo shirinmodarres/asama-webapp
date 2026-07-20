@@ -32,6 +32,8 @@ import {
   normalizeDigits,
   toNumber,
 } from "@/lib/utils/number-format";
+import type { ValidationFieldError } from "../../../import-helpers";
+import { extractValidationFieldErrors } from "../../../import-helpers";
 
 interface EditableUnit {
   rowId: string;
@@ -61,6 +63,12 @@ export default function WarehouseInboundReceiptEditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [rowFieldErrors, setRowFieldErrors] = useState<
+    Record<
+      string,
+      Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId", string>>
+    >
+  >({});
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -199,53 +207,69 @@ export default function WarehouseInboundReceiptEditPage() {
       key: "productIdentifier",
       header: "شناسه محصول",
       render: (row) => (
-        <Input
-          value={row.productIdentifier}
-          disabled={!isEditable}
-          onChange={(event) =>
-            updateUnit(row.rowId, { productIdentifier: event.target.value })
-          }
-        />
+        <div data-unit-row-id={row.rowId} data-edit-field="productIdentifier">
+          <Input
+            value={row.productIdentifier}
+            disabled={!isEditable}
+            onChange={(event) =>
+              updateUnit(row.rowId, { productIdentifier: event.target.value })
+            }
+            aria-invalid={Boolean(rowFieldErrors[row.rowId]?.productIdentifier)}
+          />
+          <FieldError message={rowFieldErrors[row.rowId]?.productIdentifier} />
+        </div>
       ),
     },
     {
       key: "serialNumber",
       header: "سریال محصول",
       render: (row) => (
-        <Input
-          value={row.serialNumber}
-          disabled={!isEditable}
-          onChange={(event) =>
-            updateUnit(row.rowId, { serialNumber: event.target.value })
-          }
-        />
+        <div data-unit-row-id={row.rowId} data-edit-field="serialNumber">
+          <Input
+            value={row.serialNumber}
+            disabled={!isEditable}
+            onChange={(event) =>
+              updateUnit(row.rowId, { serialNumber: event.target.value })
+            }
+            aria-invalid={Boolean(rowFieldErrors[row.rowId]?.serialNumber)}
+          />
+          <FieldError message={rowFieldErrors[row.rowId]?.serialNumber} />
+        </div>
       ),
     },
     {
       key: "trackingCode",
       header: "کد رهگیری",
       render: (row) => (
-        <Input
-          value={row.trackingCode}
-          disabled={!isEditable}
-          onChange={(event) =>
-            updateUnit(row.rowId, { trackingCode: event.target.value })
-          }
-        />
+        <div data-unit-row-id={row.rowId} data-edit-field="trackingCode">
+          <Input
+            value={row.trackingCode}
+            disabled={!isEditable}
+            onChange={(event) =>
+              updateUnit(row.rowId, { trackingCode: event.target.value })
+            }
+            aria-invalid={Boolean(rowFieldErrors[row.rowId]?.trackingCode)}
+          />
+          <FieldError message={rowFieldErrors[row.rowId]?.trackingCode} />
+        </div>
       ),
     },
     {
       key: "quantity",
       header: "تعداد",
       render: (row) => (
-        <Input
-          inputMode="numeric"
-          value={row.quantity}
-          disabled={!isEditable}
-          onChange={(event) =>
-            updateUnit(row.rowId, { quantity: event.target.value })
-          }
-        />
+        <div data-unit-row-id={row.rowId} data-edit-field="quantity">
+          <Input
+            inputMode="numeric"
+            value={row.quantity}
+            disabled={!isEditable}
+            onChange={(event) =>
+              updateUnit(row.rowId, { quantity: event.target.value })
+            }
+            aria-invalid={Boolean(rowFieldErrors[row.rowId]?.quantity)}
+          />
+          <FieldError message={rowFieldErrors[row.rowId]?.quantity} />
+        </div>
       ),
     },
     {
@@ -328,6 +352,7 @@ export default function WarehouseInboundReceiptEditPage() {
     setError("");
     setMessage("");
     setFieldErrors({});
+    setRowFieldErrors({});
 
     if (productCanBeEdited && !selectedProductId) {
       setFieldErrors({ selectedProductId: "لطفاً یک گزینه انتخاب کنید." });
@@ -395,6 +420,14 @@ export default function WarehouseInboundReceiptEditPage() {
       router.refresh();
       router.push(`/warehouse/inbound/receipts/${updated.objectId || updated.id}`);
     } catch (submitError) {
+      const validationErrors = extractInboundValidationFieldErrors(submitError);
+      if (validationErrors.length) {
+        const nextRowFieldErrors = buildEditRowFieldErrors(validationErrors, units);
+        setRowFieldErrors(nextRowFieldErrors);
+        setError("");
+        focusFirstEditFieldError(units, nextRowFieldErrors);
+        return;
+      }
       setError(formatInboundSubmitError(submitError));
     } finally {
       setIsSubmitting(false);
@@ -753,4 +786,79 @@ function formatInboundSubmitError(error: unknown): string {
   ].filter(Boolean);
 
   return detailRows.length ? `${baseMessage}\n${detailRows.join("\n")}` : baseMessage;
+}
+
+function extractInboundValidationFieldErrors(error: unknown): ValidationFieldError[] {
+  if (!error || typeof error !== "object") return [];
+  return extractValidationFieldErrors((error as { details?: unknown }).details);
+}
+
+function buildEditRowFieldErrors(
+  validationErrors: ValidationFieldError[],
+  units: EditableUnit[],
+): Record<
+  string,
+  Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId", string>>
+> {
+  return validationErrors.reduce<
+    Record<
+      string,
+      Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId", string>>
+    >
+  >((result, error) => {
+    const unit = units[error.rowIndex];
+    if (!unit) return result;
+    const field = normalizeEditFieldName(error.field);
+    result[unit.rowId] = {
+      ...result[unit.rowId],
+      [field]: error.message,
+    };
+    return result;
+  }, {});
+}
+
+function normalizeEditFieldName(
+  field: string,
+): "productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId" {
+  if (
+    field === "productIdentifier" ||
+    field === "serialNumber" ||
+    field === "trackingCode" ||
+    field === "quantity" ||
+    field === "productObjectId"
+  ) {
+    return field;
+  }
+  return "productIdentifier";
+}
+
+function focusFirstEditFieldError(
+  units: EditableUnit[],
+  errors: Record<
+    string,
+    Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId", string>>
+  >,
+) {
+  requestAnimationFrame(() => {
+    for (const unit of units) {
+      const rowErrors = errors[unit.rowId];
+      if (!rowErrors) continue;
+      const fields: Array<"productIdentifier" | "serialNumber" | "trackingCode" | "quantity" | "productObjectId"> = [
+        "productIdentifier",
+        "serialNumber",
+        "trackingCode",
+        "quantity",
+        "productObjectId",
+      ];
+      const nextField = fields.find((field) => Boolean(rowErrors[field]));
+      if (!nextField) continue;
+      const selector = `[data-unit-row-id="${unit.rowId}"][data-edit-field="${nextField}"] input`;
+      const element = document.querySelector(selector) as HTMLElement | null;
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+  });
 }

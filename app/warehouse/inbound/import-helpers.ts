@@ -18,6 +18,15 @@ export interface DuplicateWarehouseUnitDetail {
   existingCreatedAt?: string | null;
 }
 
+export interface ValidationFieldError {
+  rowIndex: number;
+  field: string;
+  message: string;
+  value?: string | null;
+  source?: "request" | "database" | "validation";
+  type?: string | null;
+}
+
 export type UnitRowErrors = Record<
   string,
   Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode", string>>
@@ -181,6 +190,43 @@ export function extractDuplicateDetails(
   });
 }
 
+export function extractValidationFieldErrors(
+  details: unknown,
+): ValidationFieldError[] {
+  if (!details || typeof details !== "object") return [];
+  const fieldErrors = (details as { fieldErrors?: unknown }).fieldErrors;
+  if (!Array.isArray(fieldErrors)) return [];
+
+  return fieldErrors.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const record = item as Record<string, unknown>;
+    const field =
+      record.field === "productIdentifier" ||
+      record.field === "serialNumber" ||
+      record.field === "trackingCode"
+        ? record.field
+        : null;
+    const rowIndex = Number(record.rowIndex);
+    const message = String(record.message ?? "").trim();
+    if (!field || !Number.isInteger(rowIndex) || !message) return [];
+    return [
+      {
+        rowIndex,
+        field,
+        message,
+        value: toNullableString(record.value),
+        source:
+          record.source === "request" ||
+          record.source === "database" ||
+          record.source === "validation"
+            ? record.source
+            : undefined,
+        type: toNullableString(record.type),
+      },
+    ];
+  });
+}
+
 export function buildDuplicateRowErrors(
   duplicates: DuplicateWarehouseUnitDetail[],
   units: DraftUnit[],
@@ -191,6 +237,21 @@ export function buildDuplicateRowErrors(
     result[row.rowId] = {
       ...result[row.rowId],
       [duplicate.field]: duplicateMessage(duplicate),
+    };
+    return result;
+  }, {});
+}
+
+export function buildValidationRowErrors(
+  fieldErrors: ValidationFieldError[],
+  units: DraftUnit[],
+): UnitRowErrors {
+  return fieldErrors.reduce<UnitRowErrors>((result, fieldError) => {
+    const row = units[fieldError.rowIndex];
+    if (!row) return result;
+    result[row.rowId] = {
+      ...result[row.rowId],
+      [fieldError.field]: fieldError.message,
     };
     return result;
   }, {});

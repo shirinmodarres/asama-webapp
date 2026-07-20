@@ -23,8 +23,10 @@ import { createInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 import {
   extractDuplicateDetails,
+  extractValidationFieldErrors,
   isEmptyImportRow,
   parseInboundImportFile,
+  type ValidationFieldError,
 } from "./import-helpers";
 
 interface ReceiptUnitDraft {
@@ -40,6 +42,11 @@ interface ReceiptGroupDraft {
   units: ReceiptUnitDraft[];
 }
 
+type InboundFieldErrorState = Record<
+  string,
+  Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "productObjectId", string>>
+>;
+
 export default function WarehouseInboundPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
@@ -51,6 +58,7 @@ export default function WarehouseInboundPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [groupErrors, setGroupErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<InboundFieldErrorState>({});
   const [notes, setNotes] = useState("");
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -210,28 +218,31 @@ export default function WarehouseInboundPage() {
     if (!group.productObjectId) errors.push("کالا انتخاب نشده است.");
     if (group.units.length === 0) errors.push("حداقل یک ردیف برای این کالا ثبت کنید.");
 
-    const serials = new Set<string>();
-    const tracking = new Set<string>();
     group.units.forEach((unit) => {
       const identifier = normalizeDigits(unit.productIdentifier.trim());
       const serial = normalizeDigits(unit.serialNumber.trim());
       const track = normalizeDigits(unit.trackingCode.trim());
       if (!identifier) errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
       if (!track) errors.push("کد رهگیری برای یکی از ردیف‌ها خالی است.");
-      if (serial && serials.has(serial)) errors.push("سریال کالا در این کالا تکراری است.");
-      if (track && tracking.has(track)) errors.push("کد رهگیری در این کالا تکراری است.");
-      if (serial) serials.add(serial);
-      if (track) tracking.add(track);
     });
     return errors;
   };
 
   const canSubmit = groups.length > 0 && groups.every((group) => validateGroup(group).length === 0);
 
+  const getFlattenedUnits = () =>
+    groups.flatMap((group) =>
+      group.units.map((unit) => ({
+        groupRowId: group.rowId,
+        unit,
+      })),
+    );
+
   const submitReceipt = async () => {
     setError("");
     setMessage("");
     setGroupErrors({});
+    setFieldErrors({});
 
     if (!selectedStockId) {
       setError("لطفاً انبار مقصد را انتخاب کنید.");
@@ -250,6 +261,7 @@ export default function WarehouseInboundPage() {
     setGroupErrors(nextGroupErrors);
     if (Object.keys(nextGroupErrors).length > 0) {
       setError("ردیف‌های دارای خطا را اصلاح کنید.");
+      focusFirstInboundFieldError(groups, {});
       return;
     }
 
@@ -275,6 +287,15 @@ export default function WarehouseInboundPage() {
       setGroups(groups.map((group) => createEmptyGroup(group.productObjectId)));
       setNotes("");
     } catch (submitError) {
+      const validationErrors = extractInboundValidationFieldErrors(submitError);
+      if (validationErrors.length) {
+        const nextFieldErrors = buildInboundFieldErrors(validationErrors, groups);
+        setFieldErrors(nextFieldErrors);
+        setGroupErrors(buildInboundGroupErrors(validationErrors, groups));
+        setError("");
+        focusFirstInboundFieldError(groups, nextFieldErrors);
+        return;
+      }
       setError(formatInboundSubmitError(submitError));
     } finally {
       setIsSubmitting(false);
@@ -441,38 +462,55 @@ export default function WarehouseInboundPage() {
                           <tr key={unit.rowId} className="border-t border-[#E5E7EB]">
                             <td className="px-3 py-2">{formatNumber(index + 1)}</td>
                             <td className="px-3 py-2">
-                              <Input
-                                value={unit.productIdentifier}
-                                onChange={(event) =>
-                                  updateUnit(group.rowId, unit.rowId, {
-                                    productIdentifier: event.target.value,
-                                  })
-                                }
-                                placeholder="شناسه محصول"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <Input
-                                value={unit.serialNumber}
-                                onChange={(event) =>
-                                  updateUnit(group.rowId, unit.rowId, {
-                                    serialNumber: event.target.value,
-                                  })
-                                }
-                                placeholder="سریال"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
+                              <div data-inbound-field="productIdentifier" data-unit-row-id={unit.rowId}>
                                 <Input
-                                  value={unit.trackingCode}
+                                  value={unit.productIdentifier}
                                   onChange={(event) =>
                                     updateUnit(group.rowId, unit.rowId, {
-                                      trackingCode: event.target.value,
+                                      productIdentifier: event.target.value,
                                     })
                                   }
-                                  placeholder="کد رهگیری"
+                                  placeholder="شناسه محصول"
+                                  aria-invalid={Boolean(fieldErrors[unit.rowId]?.productIdentifier)}
+                                  ref={(element) => {
+                                    if (!element) return;
+                                    element.dataset.unitRowId = unit.rowId;
+                                    element.dataset.inboundField = "productIdentifier";
+                                  }}
                                 />
+                                <FieldMessage message={fieldErrors[unit.rowId]?.productIdentifier} />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div data-inbound-field="serialNumber" data-unit-row-id={unit.rowId}>
+                                <Input
+                                  value={unit.serialNumber}
+                                  onChange={(event) =>
+                                    updateUnit(group.rowId, unit.rowId, {
+                                      serialNumber: event.target.value,
+                                    })
+                                  }
+                                  placeholder="سریال"
+                                  aria-invalid={Boolean(fieldErrors[unit.rowId]?.serialNumber)}
+                                />
+                                <FieldMessage message={fieldErrors[unit.rowId]?.serialNumber} />
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1" data-inbound-field="trackingCode" data-unit-row-id={unit.rowId}>
+                                  <Input
+                                    value={unit.trackingCode}
+                                    onChange={(event) =>
+                                      updateUnit(group.rowId, unit.rowId, {
+                                        trackingCode: event.target.value,
+                                      })
+                                    }
+                                    placeholder="کد رهگیری"
+                                    aria-invalid={Boolean(fieldErrors[unit.rowId]?.trackingCode)}
+                                  />
+                                  <FieldMessage message={fieldErrors[unit.rowId]?.trackingCode} />
+                                </div>
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -592,4 +630,99 @@ function formatInboundSubmitError(error: unknown): string {
       return `${fieldLabel}${value} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode}${rowLabel} ثبت شده است.`;
     })
     .join("\n")}`;
+}
+
+function extractInboundValidationFieldErrors(error: unknown): ValidationFieldError[] {
+  if (!error || typeof error !== "object") return [];
+  const details = (error as { details?: unknown }).details;
+  return extractValidationFieldErrors(details);
+}
+
+function buildInboundFieldErrors(
+  validationErrors: ValidationFieldError[],
+  groups: ReceiptGroupDraft[],
+): InboundFieldErrorState {
+  const flattened = groups.flatMap((group) =>
+    group.units.map((unit) => ({
+      groupRowId: group.rowId,
+      unitRowId: unit.rowId,
+    })),
+  );
+
+  return validationErrors.reduce<InboundFieldErrorState>((result, error) => {
+    const mappedUnit = flattened[error.rowIndex];
+    if (!mappedUnit) return result;
+    result[mappedUnit.unitRowId] = {
+      ...result[mappedUnit.unitRowId],
+      [normalizeInboundFieldName(error.field)]: error.message,
+    };
+    return result;
+  }, {});
+}
+
+function buildInboundGroupErrors(
+  validationErrors: ValidationFieldError[],
+  groups: ReceiptGroupDraft[],
+): Record<string, string> {
+  const flattened = groups.flatMap((group) =>
+    group.units.map((unit) => ({
+      groupRowId: group.rowId,
+      unitRowId: unit.rowId,
+    })),
+  );
+  return validationErrors.reduce<Record<string, string>>((result, error) => {
+    const mappedUnit = flattened[error.rowIndex];
+    if (!mappedUnit) return result;
+    const field = normalizeInboundFieldName(error.field);
+    if (!result[mappedUnit.groupRowId]) {
+      result[mappedUnit.groupRowId] = error.message;
+    }
+    if (field === "productIdentifier") {
+      result[mappedUnit.groupRowId] = error.message;
+    }
+    return result;
+  }, {});
+}
+
+function normalizeInboundFieldName(
+  field: string,
+): "productIdentifier" | "serialNumber" | "trackingCode" {
+  if (field === "serialNumber" || field === "trackingCode" || field === "productIdentifier") {
+    return field;
+  }
+  return "productIdentifier";
+}
+
+function FieldMessage({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1 text-xs leading-6 text-[#B45309]">{message}</p>;
+}
+
+function focusFirstInboundFieldError(
+  groups: ReceiptGroupDraft[],
+  errors: InboundFieldErrorState,
+) {
+  if (!Object.keys(errors).length) return;
+  requestAnimationFrame(() => {
+    for (const group of groups) {
+      for (const unit of group.units) {
+        const error = errors[unit.rowId];
+        if (!error) continue;
+        const fieldOrder: Array<keyof typeof error> = [
+          "productIdentifier",
+          "serialNumber",
+          "trackingCode",
+        ];
+        const nextField = fieldOrder.find((field) => Boolean(error[field]));
+        if (!nextField) continue;
+        const selector = `[data-unit-row-id="${unit.rowId}"][data-inbound-field="${nextField}"] input, [data-unit-row-id="${unit.rowId}"][data-inbound-field="${nextField}"] button`;
+        const element = document.querySelector(selector) as HTMLElement | null;
+        if (element) {
+          element.focus();
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+      }
+    }
+  });
 }
