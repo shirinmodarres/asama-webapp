@@ -544,7 +544,7 @@ function normalizeHeader(value: string): string {
 
 function duplicateMessage(duplicate: DuplicateWarehouseUnitDetail): string {
   const fieldLabel =
-    duplicate.field === "serialNumber" ? "این سریال" : "این کد رهگیری";
+    duplicate.field === "serialNumber" ? "سریال" : "کد رهگیری";
   const productName = duplicate.existingProductName || "کالا";
   const duplicateValue = duplicate.value ? ` (${formatFaDigits(duplicate.value)})` : "";
   const receiptCode = duplicate.existingReceiptCode
