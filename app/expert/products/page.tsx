@@ -146,7 +146,7 @@ export default function ExpertProductsPage() {
     {
       key: "sales-stock",
       header: "موجودی فروش",
-      render: (row) => formatNumber(row.availableSalesQuantity),
+      render: (row) => formatNumber(row.availableForSale),
     },
   ];
 

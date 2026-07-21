@@ -257,6 +257,7 @@ function mapWarehouseInboundReceiptItemGroupDto(
     units: toArray(record.units).map((unitDto) => {
       const unit = toRecord(unitDto);
       return {
+        productObjectId: toNullableString(unit.productObjectId) || undefined,
         productIdentifier: normalizeDigits(toStringValue(unit.productIdentifier)),
         serialNumber: normalizeDigits(toStringValue(unit.serialNumber)),
         trackingCode: normalizeDigits(toStringValue(unit.trackingCode)),

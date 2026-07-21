@@ -164,8 +164,18 @@ function mapWarehouseInventoryUnitRow(dto: unknown): WarehouseInventoryUnitRow {
     stockTitle: toStringValue(record.stockTitle),
     realQuantity: toNumberValue(record.realQuantity),
     salesQuantity: toNumberValue(record.salesQuantity),
+    salesCapacity: toNumberValue(record.salesCapacity),
     reservedQuantity: toNumberValue(record.reservedQuantity),
-    availableSalesQuantity: toNumberValue(record.availableSalesQuantity),
+    availableForSale: toNumberValue(
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        record.salesCapacity,
+    ),
+    availableSalesQuantity: toNumberValue(
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        record.salesCapacity,
+    ),
     units: mapWarehouseItemUnitListDto(record.units),
   };
 }
@@ -346,6 +356,7 @@ function normalizeInboundPayload(
         .map((item) => ({
           productObjectId: String(item.productObjectId).trim(),
           units: item.units.map((unit) => ({
+            productObjectId: String(unit.productObjectId || item.productObjectId || "").trim(),
             productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
             serialNumber: normalizeDigits(unit.serialNumber.trim()),
             trackingCode: normalizeDigits(unit.trackingCode.trim()),
@@ -358,6 +369,7 @@ function normalizeInboundPayload(
     ...payload,
     units: payload.units?.map((unit) => ({
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
+      productObjectId: unit.productObjectId ? String(unit.productObjectId).trim() : payload.productObjectId,
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),
     })) || [],
@@ -374,6 +386,7 @@ function normalizeUpdateInboundPayload(
     sepidarItemId: payload.sepidarItemId,
     units: payload.units.map((unit) => ({
       objectId: unit.objectId,
+      productObjectId: unit.productObjectId,
       productIdentifier: normalizeDigits(unit.productIdentifier.trim()),
       serialNumber: normalizeDigits(unit.serialNumber.trim()),
       trackingCode: normalizeDigits(unit.trackingCode.trim()),

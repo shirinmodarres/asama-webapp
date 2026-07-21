@@ -58,7 +58,9 @@ export interface Product {
    * forms. Use availableSalesQuantity from order-options instead.
    */
   availableStock: number;
+  availableForSale: number;
   availableSalesQuantity: number;
+  salesCapacity?: number;
   hasAvailableSalesQuantity: boolean;
   inventorySource?: "order_options" | "order_snapshot" | string;
   availableStocks: Array<{
@@ -69,6 +71,8 @@ export interface Product {
     salesQuantity: number;
     reservedQuantity: number;
     useFullRealQuantityForSales: boolean;
+    salesCapacity?: number;
+    availableForSale: number;
     availableSalesQuantity: number;
   }>;
   /**

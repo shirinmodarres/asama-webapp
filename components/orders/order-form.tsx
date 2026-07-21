@@ -424,7 +424,7 @@ export function OrderForm({
             data.map((product) => ({
               productObjectId: product.objectId,
               productName: product.name,
-              availableQuantity: product.availableSalesQuantity,
+              availableQuantity: product.availableForSale,
               availableStocks: product.availableStocks,
             })),
           );
@@ -778,13 +778,6 @@ export function OrderForm({
                 oldQuantityByProductId,
               })
             : undefined;
-          if (
-            sepidarProductsOnly &&
-            product &&
-            !product.hasAvailableSalesQuantity
-          ) {
-            return false;
-          }
           return quantity > (availableQuantity ?? 0);
         },
       );
@@ -1725,7 +1718,7 @@ function getEditableAvailableQuantity({
   mode: "create" | "edit";
   oldQuantityByProductId: Map<string, number>;
 }): number {
-  const backendAvailableSalesQuantity = product.availableSalesQuantity;
+  const backendAvailableSalesQuantity = product.availableForSale;
   const oldOrderQuantity =
     mode === "edit" ? oldQuantityByProductId.get(product.objectId) ?? 0 : 0;
   const editableAvailable = backendAvailableSalesQuantity + oldOrderQuantity;
@@ -1791,6 +1784,7 @@ function createProductFromOrderItem(item: OrderItem): Product {
     isSellable: true,
     status: "active",
     statusLabel: "فعال",
+    availableForSale: 0,
     availableSalesQuantity: 0,
     hasAvailableSalesQuantity: false,
     inventorySource: "order_snapshot",

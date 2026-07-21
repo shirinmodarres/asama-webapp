@@ -63,6 +63,16 @@ export function mapProductStockInventoryDto(
 ): ProductStockInventory {
   const record = toRecord(dto);
   const stock = record.stock ? mapSepidarStockDto(record.stock) : null;
+  const useFullRealQuantityForSales = toBooleanValue(
+    record.useFullRealQuantityForSales,
+  );
+  const salesCapacity = toNumberValue(
+    record.salesCapacity ??
+      (useFullRealQuantityForSales
+        ? record.realQuantity
+        : record.salesQuantity),
+  );
+  const reservedQuantity = toNumberValue(record.reservedQuantity);
   return {
     objectId: toStringValue(record.objectId),
     id: toStringValue(record.id) || toStringValue(record.objectId),
@@ -71,9 +81,15 @@ export function mapProductStockInventoryDto(
       record.sepidarItemId === undefined || record.sepidarItemId === null
         ? null
         : toNumberValue(record.sepidarItemId),
-    productSku: normalizeDigits(toStringValue(record.productSku)),
-    productName: toStringValue(record.productName),
+    productCode: toNullableString(record.productCode ?? record.productSku),
+    productTitle: toNullableString(record.productTitle ?? record.productName),
+    productSku: normalizeDigits(
+      toStringValue(record.productSku ?? record.productCode),
+    ),
+    productName: toStringValue(record.productName ?? record.productTitle),
+    brandObjectId: toNullableString(record.brandObjectId),
     brandName: toNullableString(record.brandName ?? record.productBrandName),
+    brandTitle: toNullableString(record.brandTitle ?? record.brandName),
     stockObjectId: toNullableString(record.stockObjectId),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null
@@ -83,11 +99,20 @@ export function mapProductStockInventoryDto(
     stock,
     realQuantity: toNumberValue(record.realQuantity),
     salesQuantity: toNumberValue(record.salesQuantity),
-    useFullRealQuantityForSales: toBooleanValue(
-      record.useFullRealQuantityForSales,
+    salesCapacity,
+    useFullRealQuantityForSales,
+    reservedQuantity,
+    unreservedQuantity: toNumberValue(record.unreservedQuantity),
+    availableForSale: toNumberValue(
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        (salesCapacity - reservedQuantity),
     ),
-    reservedQuantity: toNumberValue(record.reservedQuantity),
-    availableSalesQuantity: toNumberValue(record.availableSalesQuantity),
+    availableSalesQuantity: toNumberValue(
+      record.availableForSale ??
+        record.availableSalesQuantity ??
+        (salesCapacity - reservedQuantity),
+    ),
     createdAt: toNullableString(record.createdAt),
     updatedAt: toNullableString(record.updatedAt),
   };

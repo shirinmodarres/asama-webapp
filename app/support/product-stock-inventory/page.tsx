@@ -291,6 +291,9 @@ export default function SupportProductStockInventoryPage() {
             <p className="mt-1 text-xs text-[#6B7280]">
               {formatFaDigits(row.productSku || "-")}
             </p>
+            <p className="mt-1 text-xs text-[#6B7280]">
+              برند: {row.brandName || "-"}
+            </p>
           </div>
         );
       },
@@ -316,7 +319,11 @@ export default function SupportProductStockInventoryPage() {
           <div className="min-w-[160px] space-y-2">
             <Input
               inputMode="numeric"
-              value={draft?.salesQuantity ?? ""}
+              value={
+                useFull
+                  ? String(row.salesCapacity ?? row.realQuantity)
+                  : (draft?.salesQuantity ?? "")
+              }
               onChange={(event) =>
                 updateDraft(row.objectId, { salesQuantity: event.target.value })
               }
@@ -329,7 +336,7 @@ export default function SupportProductStockInventoryPage() {
             />
             {useFull ? (
               <p className="text-xs leading-6 text-[#2F6B3A]">
-                کل موجودی واقعی این انبار قابل فروش است.
+                کل موجودی واقعی این انبار، منهای رزرو، به‌صورت خودکار قابل فروش است.
               </p>
             ) : null}
           </div>
@@ -365,7 +372,7 @@ export default function SupportProductStockInventoryPage() {
     {
       key: "available",
       header: "موجودی قابل فروش",
-      render: (row) => formatNumber(row.availableSalesQuantity),
+      render: (row) => formatNumber(row.availableForSale),
     },
   ];
 
@@ -448,6 +455,11 @@ export default function SupportProductStockInventoryPage() {
                       <h2 className="font-semibold text-[#102034]">
                         {group.title}
                       </h2>
+                      {group.rows[0]?.brandName ? (
+                        <span className="rounded-full bg-[#EEF7F0] px-2 py-0.5 text-xs text-[#2F6B3A]">
+                          {group.rows[0].brandName}
+                        </span>
+                      ) : null}
                       {group.code ? (
                         <span className="text-xs text-[#64748B]">
                           {formatFaDigits(String(group.code))}

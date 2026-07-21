@@ -37,6 +37,9 @@ export interface Product {
   warehouseStock?: number;
   reservedStock: number;
   availableStock?: number;
+  availableForSale?: number;
+  availableSalesQuantity?: number;
+  salesCapacity?: number;
   warehouseAvailableStock?: number;
   najaInventoryQty: number;
 }

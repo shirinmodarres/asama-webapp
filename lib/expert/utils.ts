@@ -47,7 +47,8 @@ export function isOrderEditable(order: ExpertOrder): boolean {
 
 export function getAvailableStock(product: Product): number {
   return Math.max(
-    product.availableStock ??
+    product.availableForSale ??
+      product.availableStock ??
       (product.salesStock ?? product.totalStock) - product.reservedStock,
     0,
   );

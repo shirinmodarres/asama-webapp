@@ -69,6 +69,7 @@ export interface WarehouseInboundReceipt {
 }
 
 export interface WarehouseInboundReceiptItemUnit {
+  productObjectId?: string;
   productIdentifier: string;
   serialNumber: string;
   trackingCode: string;
@@ -95,7 +96,9 @@ export interface WarehouseInventoryUnitRow {
   stockTitle: string;
   realQuantity: number;
   salesQuantity: number;
+  salesCapacity?: number;
   reservedQuantity: number;
+  availableForSale: number;
   availableSalesQuantity: number;
   units: WarehouseItemUnit[];
 }
@@ -253,6 +256,7 @@ export interface CreateInboundReceiptPayload {
   productObjectId?: string;
   stockObjectId?: string;
   units?: Array<{
+    productObjectId?: string;
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;
@@ -260,6 +264,7 @@ export interface CreateInboundReceiptPayload {
   items?: Array<{
     productObjectId: string;
     units: Array<{
+      productObjectId?: string;
       productIdentifier: string;
       serialNumber: string;
       trackingCode: string;
@@ -277,6 +282,7 @@ export interface UpdateInboundReceiptPayload {
   notes?: string | null;
   units: Array<{
     objectId?: string;
+    productObjectId?: string;
     productIdentifier: string;
     serialNumber: string;
     trackingCode: string;
