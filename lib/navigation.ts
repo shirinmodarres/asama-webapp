@@ -27,6 +27,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "boxes",
       description: "کالاهای قابل فروش و قیمت‌ها",
     },
+    {
+      label: "پیش فاکتورها",
+      href: "/expert/quotations",
+      icon: "file-text",
+      description: "فهرست و مدیریت پیش فاکتور",
+    },
   ],
   naja: [
     {
