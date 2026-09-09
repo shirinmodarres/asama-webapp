@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ListFilter, ScanLine, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -9,6 +9,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,17 +22,23 @@ import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   executeStockTransfer,
-  listWarehouseStockTransfers,
+  listWarehouseStockTransfersPage,
   validateStockTransferScan,
 } from "@/lib/services/stock.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+
+const PAGE_SIZE = 25;
 
 export default function WarehouseStockTransfersPage() {
   const [transfers, setTransfers] = useState<StockTransferRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [activeTransfer, setActiveTransfer] =
     useState<StockTransferRequest | null>(null);
   const [scanCode, setScanCode] = useState("");
@@ -41,10 +48,25 @@ export default function WarehouseStockTransfersPage() {
   const [isSubmittingScan, setIsSubmittingScan] = useState(false);
   const scanInputRef = useRef<HTMLInputElement | null>(null);
 
-  const reloadTransfers = async () => {
-    const data = await listWarehouseStockTransfers();
-    setTransfers(data);
-  };
+  const reloadTransfers = useCallback(async () => {
+    const result = await listWarehouseStockTransfersPage({
+      page,
+      pageSize: PAGE_SIZE,
+      search: debouncedSearch || undefined,
+      status: status === "all" ? undefined : status,
+    });
+    setTransfers(result.items);
+    setTotalPages(result.pagination.totalPages);
+    setTotalItems(result.pagination.total);
+  }, [debouncedSearch, page, status]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPage(1);
+      setDebouncedSearch(search.trim());
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     let isMounted = true;
@@ -52,8 +74,17 @@ export default function WarehouseStockTransfersPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listWarehouseStockTransfers();
-        if (isMounted) setTransfers(data);
+        const result = await listWarehouseStockTransfersPage({
+          page,
+          pageSize: PAGE_SIZE,
+          search: debouncedSearch || undefined,
+          status: status === "all" ? undefined : status,
+        });
+        if (isMounted) {
+          setTransfers(result.items);
+          setTotalPages(result.pagination.totalPages);
+          setTotalItems(result.pagination.total);
+        }
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -64,7 +95,7 @@ export default function WarehouseStockTransfersPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [debouncedSearch, page, status]);
 
   useEffect(() => {
     if (activeTransfer) {
@@ -141,19 +172,6 @@ export default function WarehouseStockTransfersPage() {
     event.preventDefault();
     void handleScan();
   };
-
-  const rows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return transfers.filter((transfer) => {
-      const matchesStatus = status === "all" || transfer.status === status;
-      const matchesSearch =
-        !query ||
-        (transfer.productName ?? "").toLowerCase().includes(query) ||
-        (transfer.sourceStockTitle ?? "").toLowerCase().includes(query) ||
-        (transfer.destinationStockTitle ?? "").toLowerCase().includes(query);
-      return matchesStatus && matchesSearch;
-    });
-  }, [search, status, transfers]);
 
   const columns: DataTableColumn<StockTransferRequest>[] = [
     {
@@ -332,7 +350,10 @@ export default function WarehouseStockTransfersPage() {
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <SearchableSelect
                 value={status}
-                onValueChange={setStatus}
+                onValueChange={(value) => {
+                  setPage(1);
+                  setStatus(value);
+                }}
                 options={[
                   { value: "all", label: "همه وضعیت‌ها" },
                   { value: "pending", label: "در انتظار تأیید" },
@@ -357,6 +378,7 @@ export default function WarehouseStockTransfersPage() {
               onClick={() => {
                 setSearch("");
                 setStatus("all");
+                setPage(1);
               }}
             >
               حذف فیلترها
@@ -370,12 +392,20 @@ export default function WarehouseStockTransfersPage() {
         <LoadingState title="در حال دریافت انتقال‌ها" />
       ) : error ? (
         <PageErrorMessage title="دریافت انتقال‌ها انجام نشد" message={error} />
-      ) : rows.length ? (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.objectId}
-        />
+      ) : transfers.length ? (
+        <div className="space-y-4">
+          <DataTable
+            columns={columns}
+            rows={transfers}
+            rowKey={(row) => row.objectId}
+          />
+          <PaginationBar
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            onPageChange={setPage}
+          />
+        </div>
       ) : (
         <EmptyState
           title="انتقالی یافت نشد"

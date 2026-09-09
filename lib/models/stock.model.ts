@@ -109,6 +109,16 @@ export interface StockTransferRequest {
   updatedAt: string | null;
 }
 
+export interface StockTransferListResult {
+  items: StockTransferRequest[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface CreateStockTransferPayload {
   sourceStockObjectId: string;
   destinationStockObjectId: string;

@@ -15,6 +15,7 @@ import type {
   ProductStockInventory,
   SepidarStock,
   SepidarStockInventory,
+  StockTransferListResult,
   StockTransferRequest,
   UpdateProductStockInventoryPayload,
 } from "@/lib/models/stock.model";
@@ -120,6 +121,35 @@ export async function listWarehouseStockTransfers(filters?: {
   search?: string;
 }): Promise<StockTransferRequest[]> {
   return listTransfersFromPath("/api/warehouse/stock-transfers", filters);
+}
+
+export async function listWarehouseStockTransfersPage(filters: {
+  status?: string;
+  search?: string;
+  page: number;
+  pageSize: number;
+}): Promise<StockTransferListResult> {
+  const params = new URLSearchParams({
+    page: String(filters.page),
+    pageSize: String(filters.pageSize),
+  });
+  if (filters.status) params.set("status", filters.status);
+  if (filters.search) params.set("search", filters.search);
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/stock-transfers?${params.toString()}`,
+  );
+  const record = toRecord(data);
+  const pagination = toRecord(record.pagination);
+  const items = mapStockTransferRequestListDto(data);
+  return {
+    items,
+    pagination: {
+      page: toNumberValue(pagination.page) || filters.page,
+      pageSize: toNumberValue(pagination.pageSize) || filters.pageSize,
+      total: toNumberValue(pagination.total),
+      totalPages: toNumberValue(pagination.totalPages) || 1,
+    },
+  };
 }
 
 async function listTransfersFromPath(
