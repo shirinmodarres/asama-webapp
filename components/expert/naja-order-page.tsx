@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -65,6 +65,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     Array<SalesTypeOption>
   >([]);
   const [selectedSalesTypeId, setSelectedSalesTypeId] = useState("");
+  const [selectedStockObjectId, setSelectedStockObjectId] = useState("");
   const [selectedAssignment, setSelectedAssignment] =
     useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,6 +78,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const [recipientFirstName, setRecipientFirstName] = useState("");
   const [recipientLastName, setRecipientLastName] = useState("");
   const [recipientNationalId, setRecipientNationalId] = useState("");
+  const [recipientMobile, setRecipientMobile] = useState("");
   const [najaOrderNumber, setNajaOrderNumber] = useState("");
   const [najaPurchaseDate, setNajaPurchaseDate] = useState("");
   const [createdByName, setCreatedByName] = useState(
@@ -87,6 +89,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const [error, setError] = useState("");
   const [assignmentError, setAssignmentError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const submitGuardRef = useRef(false);
 
   const najaSalesTypes = useMemo(
     () =>
@@ -132,6 +135,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   }, []);
 
   const selectedCustomer = selectedAssignment;
+  const allowedStockOptions = useMemo(
+    () => getAllowedStockOptions(selectedCustomer),
+    [selectedCustomer],
+  );
   const selectedProduct =
     products.find((product) => product.objectId === productId) ?? null;
   const totalAmount = selectedProduct ? selectedProduct.unitPrice * quantity : 0;
@@ -141,26 +148,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     selectedSalesTypeId,
   );
   const paymentMethodTitle = paymentMethodSnapshot?.title || getPaymentMethodTitle(selectedCustomer);
-
-  useEffect(() => {
-    if (!selectedCustomer || selectedSalesTypeId) return;
-    const fallback = getCustomerPaymentMethodSnapshot(selectedCustomer, salesTypes);
-    if (fallback?.objectId) {
-      setSelectedSalesTypeId(fallback.objectId);
-      return;
-    }
-    const titleMatch =
-      salesTypes.find((item) => item.title === selectedCustomer.saleType?.title) ||
-      salesTypes.find(
-        (item) =>
-          selectedCustomer.saleType?.sepidarSaleTypeId !== undefined &&
-          selectedCustomer.saleType?.sepidarSaleTypeId !== null &&
-          item.sepidarCode === selectedCustomer.saleType.sepidarSaleTypeId,
-      );
-    if (titleMatch?.objectId) {
-      setSelectedSalesTypeId(titleMatch.objectId);
-    }
-  }, [selectedCustomer, salesTypes, selectedSalesTypeId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -178,6 +165,27 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         );
         if (!isMounted) return;
         setSelectedAssignment(assignment);
+        const assignedPaymentMethod = getCustomerPaymentMethodSnapshot(
+          assignment,
+          salesTypes,
+        );
+        setSelectedSalesTypeId(
+          assignedPaymentMethod?.internalCode !== null &&
+            assignedPaymentMethod?.internalCode !== undefined &&
+            NAJA_PAYMENT_METHOD_CODES.has(assignedPaymentMethod.internalCode)
+            ? assignedPaymentMethod.objectId || ""
+            : "",
+        );
+        const allowedStockIds = getAllowedStockOptions(assignment).map(
+          (stock) => stock.objectId,
+        );
+        setSelectedStockObjectId((current) =>
+          current && allowedStockIds.includes(current)
+            ? current
+            : allowedStockIds.length === 1
+              ? allowedStockIds[0]
+              : "",
+        );
         if (process.env.NODE_ENV === "development") {
           console.debug("[NajaOrderForm] assignment inventory source", {
             customer: assignment,
@@ -202,7 +210,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [customerObjectId]);
+  }, [customerObjectId, salesTypes]);
 
   useEffect(() => {
     let isMounted = true;
@@ -214,7 +222,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       const saleTypeId = selectedCustomer?.saleType?.sepidarSaleTypeId;
       const priceListIds = selectedCustomer?.priceListIds ?? [];
       const priceListId = selectedCustomer?.priceListId;
-      if (!hasAssignmentInventory(selectedCustomer) || (!priceListId && priceListIds.length === 0 && !saleTypeId)) {
+      if (
+        !hasAssignmentInventory(selectedCustomer) ||
+        !selectedStockObjectId ||
+        (!priceListId && priceListIds.length === 0 && !saleTypeId)
+      ) {
         setIsLoadingProducts(false);
         return;
       }
@@ -225,6 +237,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         const context = {
           customerObjectId: selectedCustomer.objectId,
           expertUserId: getStoredCurrentUser()?.objectId,
+          stockObjectId: selectedStockObjectId,
         };
         const data = priceListIds.length > 0 || priceListId
           ? await listOrderProductsForAssignment(context)
@@ -255,7 +268,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [selectedCustomer]);
+  }, [selectedCustomer, selectedStockObjectId]);
 
   const customerOptions = useMemo(
     () =>
@@ -285,6 +298,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   );
 
   const handleSubmit = async () => {
+    if (submitGuardRef.current || isSubmitting) return;
     setError("");
     setFieldErrors({});
     const nextErrors: Record<string, string> = {};
@@ -298,6 +312,17 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     }
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
     if (!productId) nextErrors.items = "حداقل یک کالا به سفارش اضافه کنید.";
+    if (!selectedStockObjectId) {
+      nextErrors.selectedStockObjectId = "لطفاً انبار سفارش را انتخاب کنید.";
+    }
+    const selectedNajaSalesType = najaSalesTypes.find(
+      (salesType) => salesType.objectId === selectedSalesTypeId,
+    );
+    if (!selectedSalesTypeId) {
+      nextErrors.selectedSalesTypeId = "لطفاً روش پرداخت را انتخاب کنید.";
+    } else if (!selectedNajaSalesType) {
+      nextErrors.selectedSalesTypeId = "روش پرداخت انتخاب‌شده برای ناجا معتبر نیست.";
+    }
     if (!recipientFirstName.trim()) {
       nextErrors.recipientFirstName = "نام الزامی است.";
     }
@@ -333,6 +358,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     if (Object.keys(nextErrors).length > 0) return;
     if (!selectedCustomer || !selectedProduct) return;
 
+    submitGuardRef.current = true;
     setIsSubmitting(true);
     try {
       const order = await createNajaOrder({
@@ -345,9 +371,12 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         salesTypeInternalCode: paymentMethodSnapshot?.internalCode ?? undefined,
         salesTypeSepidarCode: paymentMethodSnapshot?.sepidarCode ?? undefined,
         priceListId: selectedCustomer.priceListId ?? undefined,
+        stockObjectId: selectedStockObjectId,
+        selectedStockObjectIds: [selectedStockObjectId],
         recipientFirstName: recipientFirstName.trim(),
         recipientLastName: recipientLastName.trim(),
         recipientNationalId: normalizeDigits(recipientNationalId.trim()),
+        recipientMobile: normalizeDigits(recipientMobile.trim()) || undefined,
         najaOrderNumber: normalizeDigits(najaOrderNumber.trim()),
         najaPurchaseDate: najaPurchaseDate || undefined,
         items: [
@@ -362,11 +391,11 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           },
         ],
       });
-      router.refresh();
-      router.push(`/naja/orders/${order.objectId}`);
+      router.replace(`/naja/orders/${order.objectId}`);
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {
+      submitGuardRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -401,6 +430,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   onValueChange={(value) => {
                     setCustomerObjectId(value);
                     setSelectedAssignment(null);
+                    setSelectedStockObjectId("");
+                    setSelectedSalesTypeId("");
+                    setProductId("");
                     setAssignmentError("");
                     setFieldErrors((current) => ({
                       ...current,
@@ -480,7 +512,13 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                       }
                     : null
                 }
-                onValueChange={(value) => setSelectedSalesTypeId(value)}
+                onValueChange={(value) => {
+                  setSelectedSalesTypeId(value);
+                  setFieldErrors((current) => ({
+                    ...current,
+                    selectedSalesTypeId: "",
+                  }));
+                }}
                 options={najaSalesTypes.map((salesType) => ({
                   value: salesType.objectId,
                   label: salesType.title,
@@ -492,12 +530,47 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 searchPlaceholder="جستجو در روش پرداخت"
                 emptyMessage="روش پرداختی پیدا نشد"
                 disabled={isLoading || isLoadingAssignment}
+                invalid={Boolean(fieldErrors.selectedSalesTypeId)}
               />
+              <FieldError message={fieldErrors.selectedSalesTypeId} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+              <span>انبار سفارش</span>
+              <SearchableSelect
+                value={selectedStockObjectId || undefined}
+                onValueChange={(value) => {
+                  setSelectedStockObjectId(value);
+                  setProductId("");
+                  setFieldErrors((current) => ({
+                    ...current,
+                    selectedStockObjectId: "",
+                    productId: "",
+                  }));
+                }}
+                options={allowedStockOptions.map((stock) => ({
+                  value: stock.objectId,
+                  label: stock.title,
+                  description:
+                    stock.sepidarStockId !== null
+                      ? `شناسه سپیدار: ${formatFaDigits(stock.sepidarStockId)}`
+                      : undefined,
+                }))}
+                placeholder={
+                  selectedCustomer
+                    ? "انتخاب انبار"
+                    : "ابتدا مرکز ناجا را انتخاب کنید."
+                }
+                searchPlaceholder="جستجو در انبارها"
+                emptyMessage="انبار مجازی پیدا نشد"
+                disabled={!selectedCustomer || isLoadingAssignment}
+                invalid={Boolean(fieldErrors.selectedStockObjectId)}
+              />
+              <FieldError message={fieldErrors.selectedStockObjectId} />
             </label>
 
             <div className="rounded-[18px] border border-[#DDEAE0] bg-[#F3FAF4] p-4 text-sm leading-7 text-[#2F6B3A] md:col-span-2">
-              موجودی قابل فروش بر اساس انبارهای مجاز تخصیص این مرکز از سرور
-              دریافت می‌شود.
+              موجودی و اعتبارسنجی سفارش فقط بر اساس انبار انتخاب‌شده انجام می‌شود.
             </div>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
@@ -529,6 +602,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }
                   disabled={
                     !selectedCustomer ||
+                    !selectedStockObjectId ||
                     !hasAssignmentInventory(selectedCustomer) ||
                     isLoadingAssignment ||
                     isLoadingProducts
@@ -646,9 +720,19 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }));
                 }}
                 aria-invalid={Boolean(fieldErrors.recipientNationalId)}
-                />
-                <FieldError message={fieldErrors.recipientNationalId} />
-              </label>
+              />
+              <FieldError message={fieldErrors.recipientNationalId} />
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>موبایل</span>
+              <Input
+                inputMode="tel"
+                value={recipientMobile}
+                onChange={(event) => setRecipientMobile(event.target.value)}
+                placeholder="اختیاری"
+              />
+            </label>
 
             <div className="mt-2 border-t border-[#E5E7EB] pt-4 md:col-span-2">
               <h3 className="text-base font-semibold text-[#102034]">
@@ -724,11 +808,13 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                 isLoadingAssignment ||
                 isLoadingProducts ||
                 Boolean(assignmentError) ||
+                !selectedStockObjectId ||
+                !selectedSalesTypeId ||
                 !hasAssignmentInventory(selectedCustomer) ||
                 customers.length === 0
               }
             >
-              ثبت سفارش ناجا
+              {isSubmitting ? "در حال ثبت..." : "ثبت سفارش ناجا"}
               <ChevronLeft className="size-4" />
             </Button>
           </div>
@@ -743,7 +829,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           warehouseStatus="reserved"
           saleTypeTitle={paymentMethodTitle}
           stockTitles={
-            selectedCustomer ? getAllowedStockTitles(selectedCustomer) : []
+            allowedStockOptions
+              .filter((stock) => stock.objectId === selectedStockObjectId)
+              .map((stock) => stock.title)
           }
         />
       </section>
@@ -772,6 +860,28 @@ function getAllowedStockTitles(customer: Customer): string[] {
     );
   }
   return customer.allowedStockTitles;
+}
+
+function getAllowedStockOptions(customer: Customer | null | undefined): Array<{
+  objectId: string;
+  title: string;
+  sepidarStockId: number | null;
+}> {
+  if (!customer) return [];
+  if (customer.allowedStocks.length) {
+    return customer.allowedStocks.map((stock) => ({
+      objectId: String(stock.objectId),
+      title: [stock.code ? formatFaDigits(stock.code) : null, stock.title]
+        .filter(Boolean)
+        .join(" - "),
+      sepidarStockId: stock.sepidarStockId,
+    }));
+  }
+  return customer.allowedStockObjectIds.map((objectId, index) => ({
+    objectId: String(objectId),
+    title: customer.allowedStockTitles[index] || String(objectId),
+    sepidarStockId: customer.allowedSepidarStockIds[index] ?? null,
+  }));
 }
 
 function getPaymentMethodTitle(customer: Customer | null | undefined): string | null {

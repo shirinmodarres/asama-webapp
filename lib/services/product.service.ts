@@ -49,6 +49,7 @@ export async function listOrderProductsBySaleType(
   context?: {
     customerObjectId?: string;
     expertUserId?: string;
+    stockObjectId?: string;
   },
 ): Promise<Product[]> {
   const params = new URLSearchParams({ saleTypeId: String(saleTypeId) });
@@ -57,6 +58,9 @@ export async function listOrderProductsBySaleType(
   }
   if (context?.expertUserId) {
     params.set("expertUserId", context.expertUserId);
+  }
+  if (context?.stockObjectId) {
+    params.set("stockObjectId", context.stockObjectId);
   }
   const data = await httpClient.get<unknown>(
     `/api/products/order-options?${params.toString()}`,
