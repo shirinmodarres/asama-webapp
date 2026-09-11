@@ -37,7 +37,7 @@ export default function EditSupportStockTransferPage() {
   }, [params.id]);
 
   const save = async () => {
-    if (!transfer || transfer.status !== "pending_manager_approval") return;
+    if (!transfer || !["pending", "pending_manager_approval"].includes(transfer.status)) return;
     setSaving(true); setError("");
     try {
       await updateStockTransfer(transfer.objectId, {

@@ -3,22 +3,16 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Ban, FileText, Pencil } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { TransferCancelDialog } from "@/components/stock-transfer/transfer-cancel-dialog";
+import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { StockTransferRequest } from "@/lib/models/stock.model";
@@ -27,6 +21,7 @@ import { cancelStockTransfer, getSupportStockTransfer } from "@/lib/services/sto
 import { useParams } from "next/navigation";
 
 const cancellableStatuses = new Set([
+  "pending",
   "pending_manager_approval",
 ]);
 
@@ -36,7 +31,6 @@ export default function SupportStockTransferDetailPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -61,9 +55,11 @@ export default function SupportStockTransferDetailPage() {
       });
       setTransfer(updated);
       setIsCancelDialogOpen(false);
-      setMessage("درخواست انتقال لغو شد و موجودی قابل استفاده باقی ماند.");
+      toast.success("درخواست انتقال لغو شد.");
     } catch (cancelError) {
-      setError(getErrorMessage(cancelError));
+      const message = getErrorMessage(cancelError);
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -76,7 +72,6 @@ export default function SupportStockTransferDetailPage() {
         description="اقلام و وضعیت انتقال بین انبارها"
         actions={<Link href="/support/stock-transfers" className="btn-secondary"><ArrowRight className="size-4" />بازگشت</Link>}
       />
-      {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
       {error ? <InlineErrorMessage message={error} /> : null}
       {loading ? <LoadingState title="در حال دریافت جزئیات انتقال" /> : !transfer ? (
         <EmptyState title="درخواست انتقال یافت نشد" description="شناسه انتقال معتبر نیست." />
@@ -84,7 +79,7 @@ export default function SupportStockTransferDetailPage() {
         <div className="space-y-5">
           <Card className="p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Info label="وضعیت" value={<Badge variant={transfer.status === "cancelled" ? "destructive" : "neutral"}>{transfer.statusLabel}</Badge>} />
+              <Info label="وضعیت" value={<TransferStatusBadge status={transfer.status} />} />
               <Info label="انبار مبدأ" value={transfer.sourceStockTitle || "-"} />
               <Info label="انبار مقصد" value={transfer.destinationStockTitle || "-"} />
               <Info label="تعداد کل" value={formatNumber(transfer.quantity)} />
@@ -107,7 +102,7 @@ export default function SupportStockTransferDetailPage() {
                   <Ban className="size-4" />لغو درخواست انتقال
                 </Button>
               ) : null}
-              {transfer.status === "pending_manager_approval" ? (
+              {cancellableStatuses.has(transfer.status) ? (
                 <Button asChild type="button" variant="outline">
                   <Link href={`/support/stock-transfers/${transfer.objectId}/edit`}><Pencil className="size-4" />ویرایش انتقال</Link>
                 </Button>
@@ -124,22 +119,7 @@ export default function SupportStockTransferDetailPage() {
           </Card>
         </div>
       )}
-      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
-        <DialogContent dir="rtl">
-          <DialogHeader>
-            <DialogTitle>لغو درخواست انتقال</DialogTitle>
-            <DialogDescription>
-              با لغو این درخواست، claimهای احتمالی واحدها آزاد می‌شود. آیا از لغو مطمئن هستید؟
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsCancelDialogOpen(false)} disabled={submitting}>انصراف</Button>
-            <Button type="button" variant="destructive" onClick={handleCancel} disabled={submitting}>
-              {submitting ? "در حال لغو..." : "تأیید لغو"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <TransferCancelDialog transfer={transfer} mode="support" open={isCancelDialogOpen} submitting={submitting} onOpenChange={setIsCancelDialogOpen} onConfirm={handleCancel} />
     </DashboardLayout>
   );
 }

@@ -14,11 +14,11 @@ import type {
 import { normalizeDigits } from "@/lib/utils/number-format";
 
 const TRANSFER_STATUS_LABELS: Record<string, string> = {
-  pending: "در انتظار تأیید",
+  pending: "در انتظار تأیید مدیر",
   pending_manager_approval: "در انتظار تأیید مدیر",
   approved_waiting_warehouse_scan: "در انتظار اسکن انبار",
-  approved_waiting_tracking_codes: "در انتظار ثبت کدهای رهگیری",
-  approved: "تأیید شده",
+  approved_waiting_tracking_codes: "در انتظار اسکن انبار",
+  approved: "تکمیل شده",
   completed: "تکمیل شده",
   rejected: "رد شده",
   cancelled: "لغو شده",

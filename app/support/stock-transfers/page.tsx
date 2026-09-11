@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
-import { EmptyState } from "@/components/shared/empty-state";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionHeader } from "@/components/shared/section-header";
-import { Badge } from "@/components/ui/badge";
+import { StockTransferList } from "@/components/stock-transfer/stock-transfer-list";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatDateTime, formatNumber } from "@/lib/expert/utils";
+import { formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
-import type { SepidarStock, StockTransferRequest } from "@/lib/models/stock.model";
+import type { SepidarStock } from "@/lib/models/stock.model";
 import type { ProductStockInventory } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
@@ -27,7 +23,6 @@ import {
   createStockTransfer,
   listProductStockInventory,
   listSupportStocks,
-  listStockTransfers,
 } from "@/lib/services/stock.service";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
 
@@ -43,7 +38,7 @@ interface TransferDraftItem {
 export default function SupportStockTransfersPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
-  const [transfers, setTransfers] = useState<StockTransferRequest[]>([]);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const [productId, setProductId] = useState("");
   const [sourceStockId, setSourceStockId] = useState("");
   const [destinationStockId, setDestinationStockId] = useState("");
@@ -61,14 +56,12 @@ export default function SupportStockTransfersPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
-    const [productData, stockData, transferData] = await Promise.all([
+    const [productData, stockData] = await Promise.all([
       listProducts("support"),
       listSupportStocks(),
-      listStockTransfers(),
     ]);
     setProducts(productData.filter((product) => product.isSyncedFromSepidar));
     setStocks(stockData);
-    setTransfers(transferData);
   };
 
   useEffect(() => {
@@ -248,6 +241,7 @@ export default function SupportStockTransfersPage() {
           "پشتیبان",
       });
       await loadData();
+      setListRefreshKey((current) => current + 1);
       setProductId("");
       setSourceStockId("");
       setDestinationStockId("");
@@ -262,55 +256,6 @@ export default function SupportStockTransfersPage() {
       setIsSubmitting(false);
     }
   };
-
-  const columns: DataTableColumn<StockTransferRequest>[] = [
-    {
-      key: "product",
-      header: "کالا",
-      render: (row) =>
-        row.items.length > 1
-          ? `${formatNumber(row.items.length)} کالا`
-          : row.items[0]?.productName || row.productName || "-",
-    },
-    {
-      key: "source",
-      header: "انبار مبدأ",
-      render: (row) => row.sourceStockTitle || "انبار زاگرس",
-    },
-    {
-      key: "destination",
-      header: "انبار مقصد",
-      render: (row) => row.destinationStockTitle || "-",
-    },
-    {
-      key: "quantity",
-      header: "تعداد کالا",
-      render: (row) => formatNumber(row.quantity),
-    },
-    {
-      key: "status",
-      header: "وضعیت",
-      render: (row) => (
-        <Badge variant={row.status === "approved" ? "success" : row.status === "rejected" ? "destructive" : "warning"}>
-          {row.statusLabel}
-        </Badge>
-      ),
-    },
-    {
-      key: "requestedAt",
-      header: "تاریخ",
-      render: (row) => (row.requestedAt ? formatDateTime(row.requestedAt) : "-"),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) => (
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/support/stock-transfers/${row.objectId}`}>مشاهده جزئیات</Link>
-        </Button>
-      ),
-    },
-  ];
 
   return (
     <DashboardLayout role="support" title="انتقال موجودی">
@@ -480,14 +425,7 @@ export default function SupportStockTransfersPage() {
             </Button>
           </Card>
 
-          {transfers.length ? (
-            <DataTable columns={columns} rows={transfers} rowKey={(row) => row.objectId} />
-          ) : (
-            <EmptyState
-              title="درخواست انتقالی ثبت نشده است"
-              description="درخواست‌های انتقال موجودی پس از ثبت اینجا نمایش داده می‌شوند."
-            />
-          )}
+          <StockTransferList role="support" refreshKey={listRefreshKey} />
         </div>
       )}
     </DashboardLayout>

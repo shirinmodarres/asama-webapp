@@ -4,6 +4,7 @@ import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from "re
 import Link from "next/link";
 import { CheckCircle2, ListFilter, ScanLine, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -11,7 +12,6 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -192,20 +192,7 @@ export default function WarehouseStockTransfersPage() {
     {
       key: "status",
       header: "وضعیت",
-      render: (row) => (
-        <Badge
-          variant={
-            row.status === "approved"
-              || row.status === "completed"
-              ? "success"
-              : row.status === "rejected"
-                ? "destructive"
-                : "warning"
-          }
-        >
-          {row.statusLabel}
-        </Badge>
-      ),
+      render: (row) => <TransferStatusBadge status={row.status} />,
     },
     {
       key: "date",
@@ -221,8 +208,7 @@ export default function WarehouseStockTransfersPage() {
           <Button asChild size="sm" variant="outline">
             <Link href={`/warehouse/stock-transfers/${row.objectId}`}>جزئیات</Link>
           </Button>
-          {row.status === "approved_waiting_tracking_codes" ||
-          row.status === "approved_waiting_warehouse_scan" ? (
+          {row.status === "approved_waiting_warehouse_scan" ? (
             <Button asChild size="sm">
               <Link href={`/warehouse/stock-transfers/${row.objectId}/execute`}>
                 <ScanLine className="size-4" />

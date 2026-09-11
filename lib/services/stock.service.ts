@@ -62,7 +62,11 @@ export async function listStockTransfers(filters?: {
   pageSize?: number;
   search?: string;
 }): Promise<StockTransferRequest[]> {
-  return listTransfersFromPath("/api/support/stock-transfers", filters);
+  return (await listSupportStockTransfersPage(filters)).items;
+}
+
+export function listSupportStockTransfersPage(filters?: TransferListFilters): Promise<StockTransferListResult> {
+  return listTransferPageFromPath("/api/support/stock-transfers", filters);
 }
 
 export async function getSupportStockTransfer(
@@ -102,7 +106,11 @@ export async function listManagerStockTransfers(filters?: {
   pageSize?: number;
   search?: string;
 }): Promise<StockTransferRequest[]> {
-  return listTransfersFromPath("/api/manager/stock-transfers", filters);
+  return (await listManagerStockTransfersPage(filters)).items;
+}
+
+export function listManagerStockTransfersPage(filters?: TransferListFilters): Promise<StockTransferListResult> {
+  return listTransferPageFromPath("/api/manager/stock-transfers", filters);
 }
 
 export async function getManagerStockTransfer(
@@ -120,42 +128,19 @@ export async function listWarehouseStockTransfers(filters?: {
   pageSize?: number;
   search?: string;
 }): Promise<StockTransferRequest[]> {
-  return listTransfersFromPath("/api/warehouse/stock-transfers", filters);
+  return (await listWarehouseStockTransfersPage(filters)).items;
 }
 
-export async function listWarehouseStockTransfersPage(filters: {
-  status?: string;
-  search?: string;
-  page: number;
-  pageSize: number;
-}): Promise<StockTransferListResult> {
-  const params = new URLSearchParams({
-    page: String(filters.page),
-    pageSize: String(filters.pageSize),
-  });
-  if (filters.status) params.set("status", filters.status);
-  if (filters.search) params.set("search", filters.search);
-  const data = await httpClient.get<unknown>(
-    `/api/warehouse/stock-transfers?${params.toString()}`,
-  );
-  const record = toRecord(data);
-  const pagination = toRecord(record.pagination);
-  const items = mapStockTransferRequestListDto(data);
-  return {
-    items,
-    pagination: {
-      page: toNumberValue(pagination.page) || filters.page,
-      pageSize: toNumberValue(pagination.pageSize) || filters.pageSize,
-      total: toNumberValue(pagination.total),
-      totalPages: toNumberValue(pagination.totalPages) || 1,
-    },
-  };
+export function listWarehouseStockTransfersPage(filters?: TransferListFilters): Promise<StockTransferListResult> {
+  return listTransferPageFromPath("/api/warehouse/stock-transfers", filters);
 }
 
-async function listTransfersFromPath(
+type TransferListFilters = { status?: string; page?: number; pageSize?: number; search?: string };
+
+async function listTransferPageFromPath(
   path: string,
-  filters?: { status?: string; page?: number; pageSize?: number; search?: string },
-): Promise<StockTransferRequest[]> {
+  filters?: TransferListFilters,
+): Promise<StockTransferListResult> {
   const params = new URLSearchParams();
   if (filters?.status) params.set("status", filters.status);
   if (filters?.page) params.set("page", String(filters.page));
@@ -163,7 +148,18 @@ async function listTransfersFromPath(
   if (filters?.search) params.set("search", filters.search);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const data = await httpClient.get<unknown>(`${path}${suffix}`);
-  return mapStockTransferRequestListDto(data);
+  const record = toRecord(data);
+  const pagination = toRecord(record.pagination);
+  const items = mapStockTransferRequestListDto(data);
+  return {
+    items,
+    pagination: {
+      page: toNumberValue(pagination.page) || filters?.page || 1,
+      pageSize: toNumberValue(pagination.pageSize) || filters?.pageSize || items.length || 20,
+      total: toNumberValue(pagination.total) || items.length,
+      totalPages: toNumberValue(pagination.totalPages) || 1,
+    },
+  };
 }
 
 export async function updateStockTransfer(

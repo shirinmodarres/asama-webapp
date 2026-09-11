@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { TransferCancelDialog } from "@/components/stock-transfer/transfer-cancel-dialog";
+import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -30,6 +33,7 @@ export default function ManagerStockTransferDetailPage() {
   const [submitting, setSubmitting] = useState<"approve" | "reject" | "cancel" | "">("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -60,15 +64,23 @@ export default function ManagerStockTransferDetailPage() {
 
   const handleCancel = async () => {
     if (!transfer || transfer.status !== "approved_waiting_warehouse_scan") return;
-    if (!window.confirm("این انتقال و رزرو موجودی آن لغو شود؟")) return;
+    setIsCancelDialogOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!transfer || transfer.status !== "approved_waiting_warehouse_scan" || submitting) return;
     setSubmitting("cancel");
     setError("");
     try {
       const updated = await cancelManagerStockTransfer(transfer.objectId, { cancelledByName: actorName });
       setTransfer(updated);
+      setIsCancelDialogOpen(false);
       setMessage("انتقال لغو شد و رزرو موجودی آزاد شد.");
+      toast.success("انتقال لغو شد و رزرو موجودی آزاد شد.");
     } catch (actionError) {
-      setError(getErrorMessage(actionError));
+      const nextError = getErrorMessage(actionError);
+      setError(nextError);
+      toast.error(nextError);
     } finally {
       setSubmitting("");
     }
@@ -87,17 +99,21 @@ export default function ManagerStockTransferDetailPage() {
           approvedByName: actorName,
         });
         setMessage("درخواست انتقال موجودی تأیید شد.");
+        toast.success("انتقال تأیید شد و برای اسکن انبار ارسال شد.");
       } else {
         await rejectStockTransfer(transfer.objectId, {
           rejectedByName: actorName,
         });
         setMessage("درخواست انتقال موجودی رد شد.");
+        toast.success("درخواست انتقال رد شد.");
       }
       const refreshed = await getManagerStockTransfer(transfer.objectId);
       setTransfer(refreshed);
       router.refresh();
     } catch (actionError) {
-      setError(formatTransferActionError(actionError));
+      const nextError = formatTransferActionError(actionError);
+      setError(nextError);
+      toast.error(nextError);
     } finally {
       setSubmitting("");
     }
@@ -132,7 +148,7 @@ export default function ManagerStockTransferDetailPage() {
         <div className="space-y-5">
           <Card className="p-5">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <InfoItem label="وضعیت" value={transfer.statusLabel} />
+              <InfoItem label="وضعیت" value={<TransferStatusBadge status={transfer.status} />} />
               <InfoItem
                 label="انبار مبدأ"
                 value={transfer.sourceStockTitle || transfer.sourceStockObjectId || "-"}
@@ -184,7 +200,7 @@ export default function ManagerStockTransferDetailPage() {
               </Button>
             </div> : transfer.status === "approved_waiting_warehouse_scan" ? (
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" variant="outline" onClick={handleCancel} disabled={Boolean(submitting)}>
+                <Button type="button" variant="destructive" onClick={handleCancel} disabled={Boolean(submitting)}>
                   <XCircle className="size-4" /> لغو و آزادسازی رزرو
                 </Button>
               </div>
@@ -218,11 +234,12 @@ export default function ManagerStockTransferDetailPage() {
           </Card>
         </div>
       )}
+      <TransferCancelDialog transfer={transfer} mode="manager" open={isCancelDialogOpen} submitting={submitting === "cancel"} onOpenChange={setIsCancelDialogOpen} onConfirm={confirmCancel} />
     </DashboardLayout>
   );
 }
 
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3">
       <div className="text-xs text-[#64748B]">{label}</div>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "آساما | سامانه داخلی عملیات",
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="fa" dir="rtl" data-scroll-behavior="smooth">
       <body className="min-h-full bg-[var(--color-page)] text-[var(--color-foreground)]">
         {children}
+        <Toaster />
       </body>
     </html>
   );
