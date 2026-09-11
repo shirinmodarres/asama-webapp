@@ -18,7 +18,7 @@ const TRANSFER_STATUS_LABELS: Record<string, string> = {
   pending_manager_approval: "در انتظار تأیید مدیر",
   approved_waiting_warehouse_scan: "در انتظار اسکن انبار",
   approved_waiting_tracking_codes: "در انتظار اسکن انبار",
-  approved: "تأیید شده (قدیمی)",
+  approved: "تکمیل شده",
   completed: "تکمیل شده",
   rejected: "رد شده",
   cancelled: "لغو شده",

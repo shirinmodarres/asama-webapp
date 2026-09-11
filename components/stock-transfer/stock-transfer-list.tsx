@@ -28,7 +28,7 @@ const statusOptions = [
   { value: "completed", label: "تکمیل شده" },
   { value: "rejected", label: "رد شده" },
   { value: "cancelled", label: "لغو شده" },
-  { value: "approved", label: "تأیید شده قدیمی" },
+  { value: "approved", label: "تکمیل شده" },
 ];
 
 export function StockTransferList({ role, refreshKey = 0 }: { role: "support" | "manager"; refreshKey?: number }) {
