@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Ban, FileText, Pencil } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { TransferCancelDialog } from "@/components/stock-transfer/transfer-cancel-dialog";
 import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";

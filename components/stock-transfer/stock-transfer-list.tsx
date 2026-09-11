@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Ban, CheckCircle2, Eye, Pencil, Search, XCircle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 import { TransferCancelDialog } from "@/components/stock-transfer/transfer-cancel-dialog";
 import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
