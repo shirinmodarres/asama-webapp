@@ -156,7 +156,6 @@ function TransferItemsTable({ rows, startIndex }: { rows: TransferDetailRow[]; s
           <TableHeader className="w-[13%]">شناسه</TableHeader>
           <TableHeader className="w-[17%]">سریال</TableHeader>
           <TableHeader className="w-[17%]">کد رهگیری</TableHeader>
-          <TableHeader className="w-12">تعداد</TableHeader>
         </tr></thead>
         <tbody>{rows.map((row, index) => (
           <tr key={row.key} className="print-table-row border-t border-[#CBD5E1]">
@@ -165,7 +164,6 @@ function TransferItemsTable({ rows, startIndex }: { rows: TransferDetailRow[]; s
             <TableCell>{formatFaDigits(row.productIdentifier) || "-"}</TableCell>
             <TableCell>{formatFaDigits(row.serialNumber) || "-"}</TableCell>
             <TableCell>{formatFaDigits(row.trackingCode) || "-"}</TableCell>
-            <TableCell>{formatNumber(row.quantity)}</TableCell>
           </tr>
         ))}</tbody>
       </table>
