@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, PackageSearch, Trash2, Upload } from "lucide-react";
+import { Plus, PackageSearch, Save, Trash2, Upload } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
@@ -42,6 +42,13 @@ interface ReceiptGroupDraft {
   units: ReceiptUnitDraft[];
 }
 
+interface InboundReceiptDraftState {
+  groups: ReceiptGroupDraft[];
+  selectedStockId: string;
+  notes: string;
+  savedAt: string;
+}
+
 type InboundFieldErrorState = Record<
   string,
   Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "productObjectId", string>>
@@ -57,10 +64,13 @@ export default function WarehouseInboundPage() {
   const [isImporting, setIsImporting] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [draftMessage, setDraftMessage] = useState("");
   const [groupErrors, setGroupErrors] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<InboundFieldErrorState>({});
   const [notes, setNotes] = useState("");
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const draftReadyRef = useRef(false);
+  const skipNextDraftSaveRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -74,18 +84,28 @@ export default function WarehouseInboundPage() {
         ]);
         if (!isMounted) return;
         const allowedProducts = productData.filter((product) => product.isSyncedFromSepidar);
+        const activeStocks = stockData.filter((stock) => stock.isActive);
         setProducts(allowedProducts);
-        setStocks(stockData.filter((stock) => stock.isActive));
-        setSelectedStockId(
-          stockData.find((stock) => stock.isZagros)?.objectId ||
-            stockData[0]?.objectId ||
-            "",
-        );
-        if (allowedProducts[0]) {
+        setStocks(activeStocks);
+        const draft = readInboundReceiptDraft(allowedProducts, activeStocks);
+        if (draft) {
+          setSelectedStockId(draft.selectedStockId);
+          setGroups(draft.groups);
+          setNotes(draft.notes);
+          setDraftMessage(
+            `پیش‌نویس ثبت موقت بازیابی شد (${formatDateTime(draft.savedAt)})`,
+          );
+        } else if (allowedProducts[0]) {
+          setSelectedStockId(
+            activeStocks.find((stock) => stock.isZagros)?.objectId ||
+              activeStocks[0]?.objectId ||
+              "",
+          );
           setGroups([
             createEmptyGroup(allowedProducts[0].objectId),
           ]);
         }
+        draftReadyRef.current = true;
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -97,6 +117,15 @@ export default function WarehouseInboundPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!draftReadyRef.current) return;
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      return;
+    }
+    writeInboundReceiptDraft({ groups, selectedStockId, notes });
+  }, [groups, notes, selectedStockId]);
 
   const productOptions = useMemo(
     () =>
@@ -284,6 +313,9 @@ export default function WarehouseInboundPage() {
       setMessage(
         `رسید ورود ${formatFaDigits(receipt.receiptCode)} در ${receipt.stockTitle || "انبار انتخاب‌شده"} ثبت شد.`,
       );
+      window.localStorage.removeItem(INBOUND_RECEIPT_DRAFT_KEY);
+      setDraftMessage("");
+      skipNextDraftSaveRef.current = true;
       setGroups(groups.map((group) => createEmptyGroup(group.productObjectId)));
       setNotes("");
     } catch (submitError) {
@@ -302,6 +334,16 @@ export default function WarehouseInboundPage() {
     }
   };
 
+  const saveDraft = () => {
+    const savedAt = writeInboundReceiptDraft({ groups, selectedStockId, notes });
+    setDraftMessage(`پیش‌نویس ثبت موقت ذخیره شد (${formatDateTime(savedAt)})`);
+  };
+
+  const clearDraft = () => {
+    window.localStorage.removeItem(INBOUND_RECEIPT_DRAFT_KEY);
+    setDraftMessage("پیش‌نویس ثبت موقت پاک شد.");
+  };
+
   return (
     <DashboardLayout role="warehouse" title="ورود کالا">
       {isLoading ? (
@@ -311,6 +353,7 @@ export default function WarehouseInboundPage() {
       ) : (
         <div className="space-y-5">
           {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
+          {draftMessage ? <div className="asama-banner px-4 py-3 text-sm">{draftMessage}</div> : null}
           {error ? <InlineErrorMessage message={error} /> : null}
 
           <Card className="p-5">
@@ -552,6 +595,23 @@ export default function WarehouseInboundPage() {
             </Button>
             <Button
               type="button"
+              variant="outline"
+              onClick={saveDraft}
+              disabled={isSubmitting}
+            >
+              <Save className="size-4" />
+              ثبت موقت
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={clearDraft}
+              disabled={isSubmitting}
+            >
+              پاک کردن پیش‌نویس
+            </Button>
+            <Button
+              type="button"
               onClick={submitReceipt}
               disabled={isSubmitting || !canSubmit}
             >
@@ -572,6 +632,54 @@ export default function WarehouseInboundPage() {
       )}
     </DashboardLayout>
   );
+}
+
+const INBOUND_RECEIPT_DRAFT_KEY = "asama:warehouse:inbound:draft";
+
+function writeInboundReceiptDraft(
+  values: Omit<InboundReceiptDraftState, "savedAt">,
+) {
+  const savedAt = new Date().toISOString();
+  window.localStorage.setItem(
+    INBOUND_RECEIPT_DRAFT_KEY,
+    JSON.stringify({ ...values, savedAt } satisfies InboundReceiptDraftState),
+  );
+  return savedAt;
+}
+
+function readInboundReceiptDraft(
+  products: Product[],
+  stocks: SepidarStock[],
+): InboundReceiptDraftState | null {
+  try {
+    const raw = window.localStorage.getItem(INBOUND_RECEIPT_DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as Partial<InboundReceiptDraftState>;
+    const productIds = new Set(products.map((product) => product.objectId));
+    const stockIds = new Set(stocks.map((stock) => stock.objectId));
+    if (!draft.selectedStockId || !stockIds.has(draft.selectedStockId)) return null;
+    const groups = (Array.isArray(draft.groups) ? draft.groups : [])
+      .filter((group) => productIds.has(String(group?.productObjectId || "")))
+      .map((group) => ({
+        rowId: String(group.rowId || `${Date.now()}-${Math.random()}`),
+        productObjectId: String(group.productObjectId),
+        units: (Array.isArray(group.units) ? group.units : []).map((unit) => ({
+          rowId: String(unit.rowId || `${Date.now()}-${Math.random()}`),
+          productIdentifier: String(unit.productIdentifier || ""),
+          serialNumber: String(unit.serialNumber || ""),
+          trackingCode: String(unit.trackingCode || ""),
+        })),
+      }));
+    if (!groups.length) return null;
+    return {
+      groups,
+      selectedStockId: draft.selectedStockId,
+      notes: typeof draft.notes === "string" ? draft.notes : "",
+      savedAt: draft.savedAt || new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function createEmptyUnit(): ReceiptUnitDraft {

@@ -3,7 +3,7 @@
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CheckCircle2, ScanLine, Trash2 } from "lucide-react";
+import { CheckCircle2, Save, ScanLine, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatNumber } from "@/lib/expert/utils";
+import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { StockTransferItem, StockTransferRequest } from "@/lib/models/stock.model";
 import type { WarehouseItemUnit } from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -29,6 +29,11 @@ import { formatFaDigits } from "@/lib/utils/number-format";
 type ScannedByProduct = Record<string, WarehouseItemUnit[]>;
 type ScanInputByProduct = Record<string, string>;
 type ErrorByProduct = Record<string, string>;
+type TransferScanDraft = {
+  scanned: ScannedByProduct;
+  scanInputs: ScanInputByProduct;
+  savedAt: string;
+};
 
 export default function WarehouseStockTransferExecutePage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +41,7 @@ export default function WarehouseStockTransferExecutePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [draftMessage, setDraftMessage] = useState("");
   const [scanInputs, setScanInputs] = useState<ScanInputByProduct>({});
   const [scanErrors, setScanErrors] = useState<ErrorByProduct>({});
   const [scanned, setScanned] = useState<ScannedByProduct>({});
@@ -51,6 +57,16 @@ export default function WarehouseStockTransferExecutePage() {
       try {
         const data = await getWarehouseStockTransfer(params.id);
         if (!isMounted) return;
+        if (data.status !== "completed") {
+          const draft = readTransferScanDraft(data);
+          if (draft) {
+            setScanned(draft.scanned);
+            setScanInputs(draft.scanInputs);
+            setDraftMessage(
+              `پیش‌نویس ثبت موقت بازیابی شد (${formatDateTime(draft.savedAt)})`,
+            );
+          }
+        }
         setTransfer(data);
         const firstProductId = data.items[0]?.productObjectId || "";
         setActiveProductId(firstProductId);
@@ -66,6 +82,11 @@ export default function WarehouseStockTransferExecutePage() {
       isMounted = false;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    if (!transfer || transfer.status === "completed") return;
+    writeTransferScanDraft(transfer.objectId, { scanned, scanInputs });
+  }, [scanInputs, scanned, transfer]);
 
   const allScannedUnitIds = useMemo(
     () => Object.values(scanned).flat().map((unit) => unit.objectId),
@@ -207,6 +228,8 @@ export default function WarehouseStockTransferExecutePage() {
           getStoredCurrentUser()?.username ||
           "انباردار",
       });
+      window.localStorage.removeItem(getTransferScanDraftKey(transfer.objectId));
+      setDraftMessage("");
       setMessage("انتقال با کدهای رهگیری ثبت‌شده تکمیل شد.");
       const refreshed = await getWarehouseStockTransfer(transfer.objectId);
       setTransfer(refreshed);
@@ -215,6 +238,21 @@ export default function WarehouseStockTransferExecutePage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const saveDraft = () => {
+    if (!transfer || transfer.status === "completed") return;
+    const savedAt = writeTransferScanDraft(transfer.objectId, {
+      scanned,
+      scanInputs,
+    });
+    setDraftMessage(`پیش‌نویس ثبت موقت ذخیره شد (${formatDateTime(savedAt)})`);
+  };
+
+  const clearDraft = () => {
+    if (!transfer) return;
+    window.localStorage.removeItem(getTransferScanDraftKey(transfer.objectId));
+    setDraftMessage("پیش‌نویس ثبت موقت پاک شد.");
   };
 
   return (
@@ -243,6 +281,7 @@ export default function WarehouseStockTransferExecutePage() {
           />
 
           {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
+          {draftMessage ? <div className="asama-banner px-4 py-3 text-sm">{draftMessage}</div> : null}
           {error ? <InlineErrorMessage message={error} /> : null}
 
           {transfer.status === "completed" ? (
@@ -357,19 +396,86 @@ export default function WarehouseStockTransferExecutePage() {
             <p className="text-sm text-[#64748B]">
               انتقال فقط وقتی قابل ثبت است که تعداد اسکن‌شده همه کالاها با تعداد درخواست برابر باشد.
             </p>
-            <Button
-              type="button"
-              onClick={submitExecution}
-              disabled={!canSubmit || isSubmitting || transfer.status === "completed"}
-            >
-              <CheckCircle2 className="size-4" />
-              تأیید نهایی انتقال
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={saveDraft}
+                disabled={isSubmitting || transfer.status === "completed"}
+              >
+                <Save className="size-4" />
+                ثبت موقت
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={clearDraft}
+                disabled={isSubmitting || transfer.status === "completed"}
+              >
+                پاک کردن پیش‌نویس
+              </Button>
+              <Button
+                type="button"
+                onClick={submitExecution}
+                disabled={!canSubmit || isSubmitting || transfer.status === "completed"}
+              >
+                <CheckCircle2 className="size-4" />
+                تأیید نهایی انتقال
+              </Button>
+            </div>
           </div>
         </div>
       )}
     </DashboardLayout>
   );
+}
+
+function getTransferScanDraftKey(transferObjectId: string) {
+  return `asama:warehouse:stock-transfer:draft:${transferObjectId}`;
+}
+
+function writeTransferScanDraft(
+  transferObjectId: string,
+  values: Pick<TransferScanDraft, "scanned" | "scanInputs">,
+) {
+  const savedAt = new Date().toISOString();
+  const draft: TransferScanDraft = { ...values, savedAt };
+  window.localStorage.setItem(
+    getTransferScanDraftKey(transferObjectId),
+    JSON.stringify(draft),
+  );
+  return savedAt;
+}
+
+function readTransferScanDraft(
+  transfer: StockTransferRequest,
+): TransferScanDraft | null {
+  try {
+    const raw = window.localStorage.getItem(
+      getTransferScanDraftKey(transfer.objectId),
+    );
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as Partial<TransferScanDraft>;
+    const scanned = transfer.items.reduce<ScannedByProduct>((result, item) => {
+      const units = Array.isArray(draft.scanned?.[item.productObjectId])
+        ? draft.scanned[item.productObjectId]
+        : [];
+      result[item.productObjectId] = units
+        .filter(
+          (unit): unit is WarehouseItemUnit =>
+            Boolean(unit?.objectId && unit.productObjectId === item.productObjectId),
+        )
+        .slice(0, item.quantity);
+      return result;
+    }, {});
+    return {
+      scanned,
+      scanInputs: draft.scanInputs || {},
+      savedAt: draft.savedAt || new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 function validateScannedUnitForItem(
