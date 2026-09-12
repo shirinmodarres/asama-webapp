@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Landmark, PackageSearch } from "lucide-react";
+import { ChevronLeft, Landmark, PackageSearch, Tags } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { FieldError } from "@/components/shared/field-error";
 import { JalaliDateInput } from "@/components/shared/jalali-date-input";
@@ -65,6 +65,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     Array<SalesTypeOption>
   >([]);
   const [selectedSalesTypeId, setSelectedSalesTypeId] = useState("");
+  const [selectedPriceListId, setSelectedPriceListId] = useState("");
   const [selectedStockObjectId, setSelectedStockObjectId] = useState("");
   const [selectedAssignment, setSelectedAssignment] =
     useState<Customer | null>(null);
@@ -139,6 +140,10 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     () => getAllowedStockOptions(selectedCustomer),
     [selectedCustomer],
   );
+  const priceListOptions = useMemo(
+    () => getPriceListOptions(selectedCustomer),
+    [selectedCustomer],
+  );
   const selectedProduct =
     products.find((product) => product.objectId === productId) ?? null;
   const totalAmount = selectedProduct ? selectedProduct.unitPrice * quantity : 0;
@@ -154,6 +159,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
     async function loadAssignment() {
       setSelectedAssignment(null);
+      setSelectedPriceListId("");
       setAssignmentError("");
       if (!customerObjectId) return;
 
@@ -165,6 +171,12 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         );
         if (!isMounted) return;
         setSelectedAssignment(assignment);
+        const assignmentPriceListOptions = getPriceListOptions(assignment);
+        setSelectedPriceListId(
+          assignmentPriceListOptions.length === 1
+            ? assignmentPriceListOptions[0].objectId
+            : "",
+        );
         const assignedPaymentMethod = getCustomerPaymentMethodSnapshot(
           assignment,
           salesTypes,
@@ -222,10 +234,12 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       const saleTypeId = selectedCustomer?.saleType?.sepidarSaleTypeId;
       const priceListIds = selectedCustomer?.priceListIds ?? [];
       const priceListId = selectedCustomer?.priceListId;
+      const hasAssignedPriceLists = priceListIds.length > 0 || Boolean(priceListId);
       if (
         !hasAssignmentInventory(selectedCustomer) ||
         !selectedStockObjectId ||
-        (!priceListId && priceListIds.length === 0 && !saleTypeId)
+        (hasAssignedPriceLists && !selectedPriceListId) ||
+        (!hasAssignedPriceLists && !saleTypeId)
       ) {
         setIsLoadingProducts(false);
         return;
@@ -238,8 +252,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           customerObjectId: selectedCustomer.objectId,
           expertUserId: getStoredCurrentUser()?.objectId,
           stockObjectId: selectedStockObjectId,
+          priceListId: selectedPriceListId || undefined,
         };
-        const data = priceListIds.length > 0 || priceListId
+        const data = hasAssignedPriceLists
           ? await listOrderProductsForAssignment(context)
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (isMounted) {
@@ -268,7 +283,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     return () => {
       isMounted = false;
     };
-  }, [selectedCustomer, selectedStockObjectId]);
+  }, [selectedCustomer, selectedPriceListId, selectedStockObjectId]);
 
   const customerOptions = useMemo(
     () =>
@@ -309,6 +324,9 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
     if (customerObjectId && !hasAssignmentInventory(selectedCustomer)) {
       nextErrors.customerObjectId =
         "برای این مرکز تنظیمات فروش تعریف نشده است.";
+    }
+    if (priceListOptions.length > 0 && !selectedPriceListId) {
+      nextErrors.selectedPriceListId = "لطفاً لیست قیمت را انتخاب کنید.";
     }
     if (!productId) nextErrors.productId = "لطفاً کالا را انتخاب کنید.";
     if (!productId) nextErrors.items = "حداقل یک کالا به سفارش اضافه کنید.";
@@ -370,7 +388,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
         salesTypeTitle: paymentMethodSnapshot?.title || undefined,
         salesTypeInternalCode: paymentMethodSnapshot?.internalCode ?? undefined,
         salesTypeSepidarCode: paymentMethodSnapshot?.sepidarCode ?? undefined,
-        priceListId: selectedCustomer.priceListId ?? undefined,
+        priceListId: selectedProduct.priceListId || selectedPriceListId || undefined,
         stockObjectId: selectedStockObjectId,
         selectedStockObjectIds: [selectedStockObjectId],
         recipientFirstName: recipientFirstName.trim(),
@@ -432,6 +450,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                     setSelectedAssignment(null);
                     setSelectedStockObjectId("");
                     setSelectedSalesTypeId("");
+                    setSelectedPriceListId("");
                     setProductId("");
                     setAssignmentError("");
                     setFieldErrors((current) => ({
@@ -536,6 +555,41 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
             </label>
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
+              <span>لیست قیمت</span>
+              <div className="relative">
+                <Tags className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
+                <SearchableSelect
+                  value={selectedPriceListId || undefined}
+                  onValueChange={(value) => {
+                    setSelectedPriceListId(value);
+                    setProductId("");
+                    setFieldErrors((current) => ({
+                      ...current,
+                      selectedPriceListId: "",
+                      productId: "",
+                    }));
+                  }}
+                  options={priceListOptions.map((priceList) => ({
+                    value: priceList.objectId,
+                    label: priceList.label,
+                    searchText: priceList.searchText,
+                  }))}
+                  placeholder={
+                    selectedCustomer
+                      ? "انتخاب لیست قیمت"
+                      : "ابتدا مرکز ناجا را انتخاب کنید."
+                  }
+                  searchPlaceholder="جستجو در لیست‌های قیمت"
+                  emptyMessage="لیست قیمت فعالی برای این مرکز پیدا نشد"
+                  disabled={!selectedCustomer || isLoadingAssignment}
+                  triggerClassName="pr-10"
+                  invalid={Boolean(fieldErrors.selectedPriceListId)}
+                />
+                <FieldError message={fieldErrors.selectedPriceListId} />
+              </div>
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>انبار سفارش</span>
               <SearchableSelect
                 value={selectedStockObjectId || undefined}
@@ -588,9 +642,12 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }}
                   options={productOptions}
                   placeholder={
-                    selectedCustomer
+                    selectedCustomer &&
+                    (priceListOptions.length === 0 || selectedPriceListId)
                       ? "انتخاب کالا"
-                      : "ابتدا مرکز ناجا را انتخاب کنید."
+                      : selectedCustomer
+                        ? "ابتدا لیست قیمت را انتخاب کنید."
+                        : "ابتدا مرکز ناجا را انتخاب کنید."
                   }
                   searchPlaceholder="جستجو در کالاها"
                   emptyMessage={
@@ -602,6 +659,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   }
                   disabled={
                     !selectedCustomer ||
+                    (priceListOptions.length > 0 && !selectedPriceListId) ||
                     !selectedStockObjectId ||
                     !hasAssignmentInventory(selectedCustomer) ||
                     isLoadingAssignment ||
@@ -882,6 +940,54 @@ function getAllowedStockOptions(customer: Customer | null | undefined): Array<{
     title: customer.allowedStockTitles[index] || String(objectId),
     sepidarStockId: customer.allowedSepidarStockIds[index] ?? null,
   }));
+}
+
+function getPriceListOptions(customer: Customer | null | undefined): Array<{
+  objectId: string;
+  label: string;
+  searchText: string;
+}> {
+  if (!customer) return [];
+
+  const snapshotsById = new Map(
+    customer.priceLists
+      .filter((priceList) => priceList.objectId)
+      .map((priceList) => [priceList.objectId, priceList]),
+  );
+  const ids = customer.priceListIds.length
+    ? customer.priceListIds
+    : customer.priceListId
+      ? [customer.priceListId]
+      : [];
+
+  return [...new Set(ids)].map((objectId) => {
+    const priceList = snapshotsById.get(objectId);
+    const title =
+      priceList?.displayName ||
+      priceList?.name ||
+      priceList?.title ||
+      (customer.priceListId === objectId ? customer.priceListTitle : null) ||
+      objectId;
+    const details = [priceList?.brandName, priceList?.typeTitle || priceList?.typeCode]
+      .filter(Boolean)
+      .join(" - ");
+    const label = details && !title.includes(details) ? `${title} - ${details}` : title;
+
+    return {
+      objectId,
+      label,
+      searchText: [
+        title,
+        priceList?.brandName,
+        priceList?.typeTitle,
+        priceList?.typeCode,
+        priceList?.internalCode,
+        priceList?.code,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    };
+  });
 }
 
 function getPaymentMethodTitle(customer: Customer | null | undefined): string | null {

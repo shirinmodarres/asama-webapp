@@ -48,6 +48,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "ثبت‌شده و برگشتی",
     },
     {
+      label: "کالاها و لیست قیمت‌ها",
+      href: "/naja/products",
+      icon: "boxes",
+      description: "لیست‌های اختصاص‌یافته و کالاهای قابل فروش",
+    },
+    {
       label: "گزارش ریالی",
       href: "/naja/reports/rial",
       icon: "file-text",

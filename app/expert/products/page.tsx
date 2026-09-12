@@ -18,10 +18,15 @@ import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { listOrderProductsForAssignment } from "@/lib/services/product.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import type { RoleKey } from "@/lib/types";
 
 const ALL = "__all";
 
-export default function ExpertProductsPage() {
+interface AssignedProductsPageProps {
+  role?: Extract<RoleKey, "expert" | "naja">;
+}
+
+export function AssignedProductsPage({ role = "expert" }: AssignedProductsPageProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -98,6 +103,20 @@ export default function ExpertProductsPage() {
 
   const priceListOptions = useMemo(() => {
     const rows = new Map<string, string>();
+    const selectedCustomer = customers.find(
+      (customer) => customer.objectId === selectedCustomerId,
+    );
+    selectedCustomer?.priceLists.forEach((priceList) => {
+      if (priceList.objectId) {
+        rows.set(
+          priceList.objectId,
+          priceList.displayName || priceList.name || priceList.title || priceList.objectId,
+        );
+      }
+    });
+    selectedCustomer?.priceListIds.forEach((priceListId) => {
+      if (!rows.has(priceListId)) rows.set(priceListId, priceListId);
+    });
     products.forEach((product) => {
       if (product.priceListId) {
         rows.set(product.priceListId, product.priceListTitle || product.priceListId);
@@ -107,7 +126,7 @@ export default function ExpertProductsPage() {
       { value: ALL, label: "همه لیست‌ها" },
       ...Array.from(rows.entries()).map(([value, label]) => ({ value, label })),
     ];
-  }, [products]);
+  }, [customers, products, selectedCustomerId]);
 
   const brandOptions = useMemo(() => {
     const brands = [...new Set(products.map((product) => product.brandName || product.brand).filter(Boolean))];
@@ -152,7 +171,7 @@ export default function ExpertProductsPage() {
   ];
 
   return (
-    <DashboardLayout role="expert" title="کالاها و قیمت‌ها">
+    <DashboardLayout role={role} title="کالاها و قیمت‌ها">
       <SectionHeader
         title="کالاها و قیمت‌ها"
         description="کالاهای قابل فروش بر اساس مشتری و لیست‌های قیمت اختصاص‌یافته"
@@ -214,4 +233,8 @@ export default function ExpertProductsPage() {
       )}
     </DashboardLayout>
   );
+}
+
+export default function ExpertProductsPage() {
+  return <AssignedProductsPage />;
 }

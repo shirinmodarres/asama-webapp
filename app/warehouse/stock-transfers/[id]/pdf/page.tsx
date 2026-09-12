@@ -151,7 +151,7 @@ function TransferItemsTable({ rows, startIndex }: { rows: TransferDetailRow[]; s
       <h2 className="border-b border-[#94A3B8] px-3 py-1.5 text-[10.5px] font-bold text-[#1F3A5F]">جزئیات اقلام</h2>
       <table className="items-table w-full table-fixed border-collapse text-right text-[10px] leading-4">
         <thead><tr className="bg-[#EDF3F7] text-[#1F3A5F]">
-          <TableHeader className="w-10">ردیف</TableHeader>
+          <TableHeader className="w-7">ردیف</TableHeader>
           <TableHeader className="w-[28%]">نام کالا</TableHeader>
           <TableHeader className="w-[13%]">شناسه</TableHeader>
           <TableHeader className="w-[17%]">سریال</TableHeader>
