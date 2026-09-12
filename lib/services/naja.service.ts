@@ -17,10 +17,12 @@ import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
 export async function createNajaOrder(
   payload: CreateNajaOrderPayload,
 ): Promise<Order> {
+  const requestPayload = { ...payload };
+  delete requestPayload.expertUserId;
   const data = await httpClient.post<unknown>(
     "/api/naja/orders",
     {
-      ...payload,
+      ...requestPayload,
       recipientNationalId: normalizeDigits(payload.recipientNationalId),
       najaOrderNumber: normalizeDigits(payload.najaOrderNumber),
       quantity:

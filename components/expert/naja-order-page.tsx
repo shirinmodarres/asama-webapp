@@ -382,7 +382,6 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
       const order = await createNajaOrder({
         orderType: "naja",
         createdByName: createdByName.trim(),
-        expertUserId: getStoredCurrentUser()?.objectId || undefined,
         customerObjectId,
         salesTypeObjectId: paymentMethodSnapshot?.objectId || undefined,
         salesTypeTitle: paymentMethodSnapshot?.title || undefined,
