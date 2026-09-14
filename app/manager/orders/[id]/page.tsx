@@ -47,6 +47,10 @@ import type {
 } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
+  approveNajaOrder,
+  rejectNajaOrder,
+} from "@/lib/services/naja.service";
+import {
   approveOrder,
   approveFinancialOrder,
   cancelOrder,
@@ -59,7 +63,7 @@ import {
 } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
-type DecisionType = "approve" | "cancel" | "needs_review" | null;
+type DecisionType = "approve" | "reject" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
 interface StockSelectionOption {
   stockObjectId: string;
@@ -80,6 +84,7 @@ export default function ManagerOrderReviewPage() {
   const [financialDecision, setFinancialDecision] = useState<"approve" | "return" | null>(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
+  const [najaRejectReason, setNajaRejectReason] = useState("");
   const [financialCorrectionReason, setFinancialCorrectionReason] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [stockSelectionOptions, setStockSelectionOptions] = useState<
@@ -148,13 +153,26 @@ export default function ManagerOrderReviewPage() {
   );
   const isFinancialControlUser = currentRole === "financial_control";
   const isNajaOrder = order.orderType === "naja";
+  const effectiveFinancialApprovalStatus =
+    order.financialApprovalStatus ??
+    (order.orderStatus === "pending_financial_approval" ? "pending" : null);
   const financialGateOpen =
-    !order.financialApprovalStatus || order.financialApprovalStatus === "approved";
+    !effectiveFinancialApprovalStatus || effectiveFinancialApprovalStatus === "approved";
   const canManageFinancialDecision =
     isFinancialControlUser &&
     order.orderStatus === "pending_financial_approval" &&
-    order.financialApprovalStatus === "pending";
-  const canApprove = ["pending_manager_approval", "review_resolved"].includes(order.orderStatus) && financialGateOpen;
+    effectiveFinancialApprovalStatus === "pending";
+  const canApprove =
+    financialGateOpen &&
+    (isNajaOrder
+      ? order.orderStatus === "pending_manager_approval"
+      : ["pending_manager_approval", "review_resolved"].includes(
+          order.orderStatus,
+        ));
+  const canRejectNaja =
+    isNajaOrder &&
+    order.orderStatus === "pending_manager_approval" &&
+    financialGateOpen;
   const canNeedReview = !isNajaOrder && order.orderStatus === "pending_manager_approval";
   const shouldShowNeedReviewButton =
     !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
@@ -278,14 +296,41 @@ export default function ManagerOrderReviewPage() {
       return;
     }
 
+    if (decision === "reject" && !najaRejectReason.trim()) {
+      setDialogErrors({
+        najaRejectReason: "لطفاً دلیل رد سفارش ناجا را وارد کنید.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage("");
     setDialogErrors({});
 
     try {
-      const result =
-        decision === "approve"
-          ? await approveOrder(order.objectId)
+      if (decision === "approve") {
+        if (isNajaOrder) {
+          const updated = await approveNajaOrder(order.objectId, {
+            approvedByName: currentUserName,
+          });
+          setOrder(updated);
+          setMessageType("success");
+          setMessage("سفارش ناجا با موفقیت تأیید شد.");
+          setDecision(null);
+          router.refresh();
+        } else {
+          const result = await approveOrder(order.objectId);
+          handleApproveSuccess(result);
+        }
+        return;
+      }
+
+      const updated =
+        decision === "reject"
+          ? await rejectNajaOrder(order.objectId, {
+              reason: najaRejectReason.trim(),
+              rejectedByName: currentUserName,
+            })
           : decision === "needs_review"
             ? await markOrderNeedsReview(order.objectId, {
                 reasonCode: reviewReasonCode,
@@ -294,20 +339,18 @@ export default function ManagerOrderReviewPage() {
             : await cancelOrder(order.objectId, {
                 cancelledByName: currentUserName,
               });
-      if (decision === "approve") {
-        handleApproveSuccess(result as OrderApprovalResult);
-        return;
-      }
-      const updated = result as Order;
       setOrder(updated);
       setMessageType("success");
       setMessage(
-        decision === "needs_review"
+        decision === "reject"
+          ? "سفارش ناجا رد شد."
+          : decision === "needs_review"
           ? "سفارش برای بررسی کارشناس ثبت شد."
           : "سفارش با موفقیت لغو شد.",
       );
       setDecision(null);
       setReviewReasonCode("");
+      setNajaRejectReason("");
     } catch (error) {
       if (decision === "approve") {
         handleApprovalError(error);
@@ -547,7 +590,7 @@ export default function ManagerOrderReviewPage() {
                 label="وضعیت تأیید مالی"
                 value={
                   order.financialApprovalStatusLabel ||
-                  getFinancialApprovalStatusLabel(order.financialApprovalStatus) ||
+                  getFinancialApprovalStatusLabel(effectiveFinancialApprovalStatus) ||
                   "-"
                 }
               />
@@ -828,7 +871,7 @@ export default function ManagerOrderReviewPage() {
                 کنترل مالی
               </p>
               <p className="mt-2 text-sm leading-7 text-[#64748B]">
-                وضعیت فعلی: {order.financialApprovalStatusLabel || getFinancialApprovalStatusLabel(order.financialApprovalStatus) || "-"}
+                وضعیت فعلی: {order.financialApprovalStatusLabel || getFinancialApprovalStatusLabel(effectiveFinancialApprovalStatus) || "-"}
               </p>
               {canManageFinancialDecision ? (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -869,11 +912,13 @@ export default function ManagerOrderReviewPage() {
             <p className="text-sm leading-7 text-[#6B7280]">
               {isFinancialControlUser
                 ? "سفارش را در این مرحله تأیید یا برای اصلاح برگردانید."
-                : canApprove || canCancel || canNeedReview
+                : canApprove || canRejectNaja || canCancel || canNeedReview
                 ? "وضعیت سفارش را مشخص کنید."
                 : null}
             </p>
-            {!isFinancialControlUser && order.financialApprovalStatus && order.financialApprovalStatus !== "approved" ? (
+            {!isFinancialControlUser &&
+            effectiveFinancialApprovalStatus &&
+            effectiveFinancialApprovalStatus !== "approved" ? (
               <p className="mt-3 rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] px-3 py-2 text-sm text-[#8A5A00]">
                 این سفارش هنوز در انتظار تأیید کنترل مالی است.
               </p>
@@ -905,6 +950,19 @@ export default function ManagerOrderReviewPage() {
                   }
                 >
                   <AlertTriangle className="size-5 shrink-0" /> نیازمند بررسی
+                </Button>
+              ) : null}
+
+              {canRejectNaja ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={isSubmitting}
+                  onClick={() => setDecision("reject")}
+                  className="w-full justify-center gap-2 sm:col-span-2"
+                >
+                  <XCircle className="size-4" />
+                  رد سفارش ناجا
                 </Button>
               ) : null}
 
@@ -982,6 +1040,8 @@ export default function ManagerOrderReviewPage() {
         title={
           decision === "approve"
             ? "تایید سفارش"
+            : decision === "reject"
+              ? "رد سفارش ناجا"
             : decision === "needs_review"
               ? "ارسال برای بررسی"
               : "لغو سفارش"
@@ -989,6 +1049,8 @@ export default function ManagerOrderReviewPage() {
         message={
           decision === "approve"
             ? "با تایید، سفارش وارد فرآیند انبار می شود."
+            : decision === "reject"
+              ? "با رد سفارش، رزرو احتمالی آن طبق منطق فعلی سفارش آزاد می‌شود."
             : decision === "needs_review"
               ? "در این وضعیت موجودی سفارش تا ۴۸ ساعت رزرو می‌ماند و کارشناس باید مشکل را برطرف کند."
               : order.quotationStatus === "success"
@@ -998,16 +1060,19 @@ export default function ManagerOrderReviewPage() {
         confirmText={
           decision === "approve"
             ? "تایید نهایی"
+            : decision === "reject"
+              ? "ثبت رد سفارش"
             : decision === "needs_review"
               ? "ثبت نیاز به بررسی"
               : "ثبت لغو سفارش"
         }
-        tone={decision === "cancel" ? "danger" : "success"}
+        tone={decision === "cancel" || decision === "reject" ? "danger" : "success"}
         busy={isSubmitting}
         onConfirm={confirmDecision}
         onCancel={() => {
           setDecision(null);
           setReviewReasonCode("");
+          setNajaRejectReason("");
           setDialogErrors({});
         }}
       >
@@ -1044,6 +1109,25 @@ export default function ManagerOrderReviewPage() {
               </SelectContent>
             </Select>
             <FieldError message={dialogErrors.reviewReasonCode} />
+          </label>
+        ) : null}
+        {decision === "reject" ? (
+          <label className="grid gap-2 text-sm font-medium text-[#334155]">
+            <span>دلیل رد سفارش</span>
+            <Textarea
+              value={najaRejectReason}
+              onChange={(event) => {
+                setNajaRejectReason(event.target.value);
+                setDialogErrors((current) => ({
+                  ...current,
+                  najaRejectReason: "",
+                }));
+              }}
+              placeholder="دلیل رد سفارش ناجا را وارد کنید"
+              rows={4}
+              disabled={isSubmitting}
+            />
+            <FieldError message={dialogErrors.najaRejectReason} />
           </label>
         ) : null}
       </ConfirmationModal>

@@ -44,9 +44,11 @@ export async function createNajaOrder(
 
 export async function approveNajaOrder(
   orderObjectId: string,
+  payload?: { approvedByName?: string },
 ): Promise<Order> {
   const data = await httpClient.post<unknown>(
     `/api/naja/orders/${orderObjectId}/approve`,
+    payload,
   );
   return mapOrderDto(data);
 }
