@@ -10,11 +10,11 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getFinancialApprovalStatusLabel } from "@/lib/domain/statuses";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -22,6 +22,8 @@ import { listOrders } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 type FinancialTabKey = "pending" | "needs_correction" | "approved";
+
+const PAGE_SIZE = 15;
 
 export default function FinancialControlOrdersPage() {
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
@@ -33,6 +35,7 @@ export default function FinancialControlOrdersPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activeTab, setActiveTab] = useState<FinancialTabKey>("pending");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +84,16 @@ export default function FinancialControlOrdersPage() {
         }),
     [activeOrders, dateFrom, dateTo, search],
   );
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const paginatedOrders = useMemo(
+    () => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [currentPage, filteredOrders],
+  );
+
+  function selectTab(tab: FinancialTabKey) {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  }
 
   const columns: DataTableColumn<Order>[] = [
     {
@@ -139,21 +152,21 @@ export default function FinancialControlOrdersPage() {
               icon={<ShieldAlert className="size-4" />}
               label={`در انتظار تأیید مالی (${formatFaDigits(pendingOrders.length)})`}
               description="سفارش‌های آماده بررسی"
-              onClick={() => setActiveTab("pending")}
+              onClick={() => selectTab("pending")}
             />
             <TabButton
               active={activeTab === "needs_correction"}
               icon={<CheckCircle2 className="size-4" />}
               label={`نیازمند اصلاح (${formatFaDigits(returnedOrders.length)})`}
               description="سفارش‌های برگشتی"
-              onClick={() => setActiveTab("needs_correction")}
+              onClick={() => selectTab("needs_correction")}
             />
             <TabButton
               active={activeTab === "approved"}
               icon={<CheckCircle2 className="size-4" />}
               label={`تأیید شده (${formatFaDigits(approvedOrders.length)})`}
               description="سفارش‌های بررسی‌شده"
-              onClick={() => setActiveTab("approved")}
+              onClick={() => selectTab("approved")}
             />
           </div>
         </div>
@@ -165,7 +178,10 @@ export default function FinancialControlOrdersPage() {
               <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <Input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="جستجو بر اساس کد سفارش، مشتری یا ثبت کننده"
                 className="pr-10"
               />
@@ -176,6 +192,7 @@ export default function FinancialControlOrdersPage() {
             onChange={(range) => {
               setDateFrom(range.from ?? "");
               setDateTo(range.to ?? "");
+              setCurrentPage(1);
             }}
           />
           {hasFilters ? (
@@ -187,6 +204,7 @@ export default function FinancialControlOrdersPage() {
                 setSearch("");
                 setDateFrom("");
                 setDateTo("");
+                setCurrentPage(1);
               }}
             >
               <span>حذف فیلترها</span>
@@ -201,11 +219,19 @@ export default function FinancialControlOrdersPage() {
       ) : error ? (
         <PageErrorMessage title="دریافت سفارش ها انجام نشد" message={error} />
       ) : filteredOrders.length > 0 ? (
-        <DataTable
-          columns={columns}
-          rows={filteredOrders}
-          rowKey={(row) => row.objectId || row.id}
-        />
+        <div className="space-y-4">
+          <DataTable
+            columns={columns}
+            rows={paginatedOrders}
+            rowKey={(row) => row.objectId || row.id}
+          />
+          <PaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredOrders.length}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       ) : (
         <EmptyState
           title="سفارش مالی یافت نشد"
