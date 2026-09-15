@@ -10,6 +10,7 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,8 @@ import { listStocks } from "@/lib/services/stock.service";
 import { listWarehouseOrders } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
+const PAGE_SIZE = 15;
+
 export default function WarehouseOutboundPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [stocks, setStocks] = useState<SepidarStock[]>([]);
@@ -31,6 +34,7 @@ export default function WarehouseOutboundPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -78,6 +82,11 @@ export default function WarehouseOutboundPage() {
       })
       .filter((order) => isWithinDateRange(order.createdAt, dateFrom, dateTo));
   }, [dateFrom, dateTo, orders, search, stockObjectId]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const paginatedRows = useMemo(
+    () => rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [currentPage, rows],
+  );
 
   const hasActiveFilters =
     search.trim().length > 0 ||
@@ -193,7 +202,10 @@ export default function WarehouseOutboundPage() {
               <Search className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <Input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="جستجو بر اساس کد سفارش، مشتری یا گیرنده"
                 className="pr-10"
               />
@@ -205,7 +217,10 @@ export default function WarehouseOutboundPage() {
               <ListFilter className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
               <SearchableSelect
                 value={stockObjectId}
-                onValueChange={setStockObjectId}
+                onValueChange={(value) => {
+                  setStockObjectId(value);
+                  setCurrentPage(1);
+                }}
                 options={stockOptions}
                 placeholder="همه انبارها"
                 searchPlaceholder="جستجو در انبارها"
@@ -219,6 +234,7 @@ export default function WarehouseOutboundPage() {
             onChange={(range) => {
               setDateFrom(range.from ?? "");
               setDateTo(range.to ?? "");
+              setCurrentPage(1);
             }}
           />
           {hasActiveFilters ? (
@@ -231,6 +247,7 @@ export default function WarehouseOutboundPage() {
                 setStockObjectId("all");
                 setDateFrom("");
                 setDateTo("");
+                setCurrentPage(1);
               }}
             >
               <span>حذف فیلترها</span>
@@ -245,11 +262,19 @@ export default function WarehouseOutboundPage() {
       ) : error ? (
         <PageErrorMessage title="دریافت سفارش‌ها انجام نشد" message={error} />
       ) : rows.length > 0 ? (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.objectId || row.id}
-        />
+        <div className="space-y-4">
+          <DataTable
+            columns={columns}
+            rows={paginatedRows}
+            rowKey={(row) => row.objectId || row.id}
+          />
+          <PaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={rows.length}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       ) : (
         <EmptyState
           title="سفارشی برای خروج کالا وجود ندارد"
