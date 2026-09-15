@@ -126,7 +126,7 @@ export default function ReferencePriceListsPage() {
       setDisplayName("");
       setNotes("");
       await load();
-      setMessage("لیست مرجع فعال شد.");
+      setMessage("لیست مرجع فعال شد و اختصاص‌های جاری به لیست‌های جدید منتقل شدند.");
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
