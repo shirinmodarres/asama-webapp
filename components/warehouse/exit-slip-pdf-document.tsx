@@ -41,7 +41,7 @@ interface ExitSlipPdfDocumentProps {
 const SUMMARY_ROWS_FIRST_PAGE = 16;
 const SUMMARY_ROWS_NEXT_PAGE = 22;
 const DETAIL_ROWS_FIRST_PAGE = 16;
-const DETAIL_ROWS_NEXT_PAGE = 22;
+const DETAIL_ROWS_NEXT_PAGE = 20;
 
 export function ExitSlipPdfDocument({
   title,
@@ -135,7 +135,7 @@ export function ExitSlipPdfDocument({
 function SlipHeader({ fields }: { fields: SlipInfoField[] }) {
   return (
     <header className="relative flex min-h-24 items-start justify-between">
-      <div className="absolute left-0 top-[-12px] w-fit border-r-2 border-[#7BC68A] bg-white/95 px-2 py-0.5 text-[9px] leading-5 text-[#334155]">
+      <div className="absolute left-0 top-[-10px] w-fit border-r-2 border-[#7BC68A] bg-white/95 px-2 py-0.5 text-[9px] leading-5 text-[#334155]">
         {fields.map((field) => (
           <InlineInfo key={field.label} {...field} />
         ))}
