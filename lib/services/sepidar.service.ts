@@ -18,6 +18,8 @@ export interface SepidarSettings {
   lastLoginAt: string | null;
   lastAuthorizedAt: string | null;
   automaticQuotationPushEnabled: boolean;
+  quotationPushConfigurable: boolean;
+  quotationPushEnvironment: "development" | "production";
   quotationPushUpdatedAt: string | null;
   quotationPushUpdatedByName: string | null;
 }
@@ -93,6 +95,8 @@ export async function updateAutomaticQuotationPush(
 ): Promise<Pick<
   SepidarSettings,
   | "automaticQuotationPushEnabled"
+  | "quotationPushConfigurable"
+  | "quotationPushEnvironment"
   | "quotationPushUpdatedAt"
   | "quotationPushUpdatedByName"
 >> {
@@ -105,6 +109,11 @@ export async function updateAutomaticQuotationPush(
     automaticQuotationPushEnabled: toBooleanValue(
       record.automaticQuotationPushEnabled,
     ),
+    quotationPushConfigurable: toBooleanValue(record.quotationPushConfigurable),
+    quotationPushEnvironment:
+      toStringValue(record.quotationPushEnvironment) === "production"
+        ? "production"
+        : "development",
     quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
     quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
   };
@@ -171,6 +180,11 @@ function mapSepidarSettings(dto: unknown): SepidarSettings {
     automaticQuotationPushEnabled: toBooleanValue(
       record.automaticQuotationPushEnabled,
     ),
+    quotationPushConfigurable: toBooleanValue(record.quotationPushConfigurable),
+    quotationPushEnvironment:
+      toStringValue(record.quotationPushEnvironment) === "production"
+        ? "production"
+        : "development",
     quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
     quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
   };

@@ -340,7 +340,9 @@ export default function SupportSepidarSettingsPage() {
                     در صورت فعال‌بودن، بعد از تأیید مدیر فروش پیش‌فاکتور در سپیدار ثبت می‌شود.
                   </p>
                   <p className="mt-1 text-xs text-[#7B8797]">
-                    وضعیت پیش‌فرض خاموش است و ارسال مجدد دستی مستقل از این تنظیم کار می‌کند.
+                    {settings?.quotationPushEnvironment === "production"
+                      ? "در محیط production این قابلیت همیشه فعال است و امکان خاموش‌کردن ندارد."
+                      : "در محیط dev وضعیت پیش‌فرض خاموش است و ارسال مجدد دستی مستقل از این تنظیم کار می‌کند."}
                   </p>
                 </div>
               </div>
@@ -354,7 +356,9 @@ export default function SupportSepidarSettingsPage() {
                 <Switch
                   aria-label="ارسال خودکار پیش‌فاکتور سپیدار"
                   checked={Boolean(settings?.automaticQuotationPushEnabled)}
-                  disabled={isSavingQuotationPush}
+                  disabled={
+                    isSavingQuotationPush || !settings?.quotationPushConfigurable
+                  }
                   onCheckedChange={changeAutomaticQuotationPush}
                 />
               </div>
