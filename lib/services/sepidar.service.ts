@@ -17,6 +17,9 @@ export interface SepidarSettings {
   lastRegisterAt: string | null;
   lastLoginAt: string | null;
   lastAuthorizedAt: string | null;
+  automaticQuotationPushEnabled: boolean;
+  quotationPushUpdatedAt: string | null;
+  quotationPushUpdatedByName: string | null;
 }
 
 export interface UpdateSepidarSettingsPayload {
@@ -85,6 +88,28 @@ export async function updateSepidarSettings(
   return mapSepidarSettings(data);
 }
 
+export async function updateAutomaticQuotationPush(
+  enabled: boolean,
+): Promise<Pick<
+  SepidarSettings,
+  | "automaticQuotationPushEnabled"
+  | "quotationPushUpdatedAt"
+  | "quotationPushUpdatedByName"
+>> {
+  const data = await httpClient.patch<unknown>(
+    "/api/integrations/sepidar/settings/quotation-push",
+    { enabled },
+  );
+  const record = toRecord(data);
+  return {
+    automaticQuotationPushEnabled: toBooleanValue(
+      record.automaticQuotationPushEnabled,
+    ),
+    quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
+    quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
+  };
+}
+
 export async function testSepidarConnection(): Promise<SepidarConnectionTestResult> {
   const data = await httpClient.post<unknown>(
     "/api/integrations/sepidar/test-connection",
@@ -143,6 +168,11 @@ function mapSepidarSettings(dto: unknown): SepidarSettings {
     lastRegisterAt: toStringValue(record.lastRegisterAt) || null,
     lastLoginAt: toStringValue(record.lastLoginAt) || null,
     lastAuthorizedAt: toStringValue(record.lastAuthorizedAt) || null,
+    automaticQuotationPushEnabled: toBooleanValue(
+      record.automaticQuotationPushEnabled,
+    ),
+    quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
+    quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
   };
 }
 

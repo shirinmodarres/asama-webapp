@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Activity, RefreshCw, Save, ServerCog, Zap } from "lucide-react";
+import { Activity, FileOutput, RefreshCw, Save, ServerCog, Zap } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { getErrorMessage, type ApiError } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import {
@@ -25,6 +26,7 @@ import {
   syncSepidarStocks,
   testSepidarConnection,
   updateSepidarSettings,
+  updateAutomaticQuotationPush,
   type SepidarConnectionTestResult,
   type SepidarDiagnosticStep,
   type SepidarSettings,
@@ -63,6 +65,7 @@ export default function SupportSepidarSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSavingQuotationPush, setIsSavingQuotationPush] = useState(false);
   const [syncingKey, setSyncingKey] = useState<SyncKey | "">("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -155,6 +158,26 @@ export default function SupportSepidarSettingsPage() {
       setError(getSepidarUiError(testError));
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const changeAutomaticQuotationPush = async (enabled: boolean) => {
+    if (!settings || isSavingQuotationPush) return;
+    setIsSavingQuotationPush(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updateAutomaticQuotationPush(enabled);
+      setSettings((current) => current ? { ...current, ...updated } : current);
+      setMessage(
+        enabled
+          ? "ارسال خودکار پیش‌فاکتور سپیدار فعال شد."
+          : "ارسال خودکار پیش‌فاکتور سپیدار غیرفعال شد.",
+      );
+    } catch (saveError) {
+      setError(getSepidarUiError(saveError));
+    } finally {
+      setIsSavingQuotationPush(false);
     }
   };
 
@@ -302,6 +325,41 @@ export default function SupportSepidarSettingsPage() {
             onChange={setForm}
             onSubmit={saveSettings}
           />
+
+          <Card className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EFF6F0] text-[#4E8B58]">
+                  <FileOutput className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-[#102034]">
+                    ارسال خودکار پیش‌فاکتور
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-[#6B7280]">
+                    در صورت فعال‌بودن، بعد از تأیید مدیر فروش پیش‌فاکتور در سپیدار ثبت می‌شود.
+                  </p>
+                  <p className="mt-1 text-xs text-[#7B8797]">
+                    وضعیت پیش‌فرض خاموش است و ارسال مجدد دستی مستقل از این تنظیم کار می‌کند.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <Badge
+                  variant={settings?.automaticQuotationPushEnabled ? "success" : "neutral"}
+                  dot
+                >
+                  {settings?.automaticQuotationPushEnabled ? "فعال" : "غیرفعال"}
+                </Badge>
+                <Switch
+                  aria-label="ارسال خودکار پیش‌فاکتور سپیدار"
+                  checked={Boolean(settings?.automaticQuotationPushEnabled)}
+                  disabled={isSavingQuotationPush}
+                  onCheckedChange={changeAutomaticQuotationPush}
+                />
+              </div>
+            </div>
+          </Card>
 
           <Card className="p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
