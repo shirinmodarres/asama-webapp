@@ -28,13 +28,40 @@ export function Toaster() {
   useEffect(() => {
     const handleToast = (event: Event) => {
       const item = (event as CustomEvent<ToastItem>).detail;
-      setItems((current) => [...current, item]);
+      setItems((current) => {
+        if (current.some(({ message, tone }) => message === item.message && tone === item.tone)) {
+          return current;
+        }
+        return [...current, item];
+      });
       window.setTimeout(() => {
         setItems((current) => current.filter(({ id }) => id !== item.id));
       }, 4500);
     };
+
+    const promoteLegacyActionBanners = () => {
+      document.querySelectorAll<HTMLElement>(".asama-banner").forEach((banner) => {
+        const message = banner.textContent?.trim() || "";
+        if (!message) return;
+        banner.hidden = true;
+        if (banner.dataset.toastMessage === message) return;
+        banner.dataset.toastMessage = message;
+        showToast("success", message);
+      });
+    };
+
     window.addEventListener(TOAST_EVENT, handleToast);
-    return () => window.removeEventListener(TOAST_EVENT, handleToast);
+    promoteLegacyActionBanners();
+    const observer = new MutationObserver(promoteLegacyActionBanners);
+    observer.observe(document.body, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener(TOAST_EVENT, handleToast);
+    };
   }, []);
 
   return (
