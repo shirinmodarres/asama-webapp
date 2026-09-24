@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { isProductIdentifierRequired } from "@/lib/domain/product-identifier";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Product } from "@/lib/models/product.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
@@ -306,6 +307,8 @@ export default function WarehouseInboundPage() {
 
   const validateGroup = (group: ReceiptGroupDraft) => {
     const errors: string[] = [];
+    const product = products.find((item) => item.objectId === group.productObjectId);
+    const identifierRequired = isProductIdentifierRequired(product);
     if (!group.productObjectId) errors.push("کالا انتخاب نشده است.");
     if (group.units.length === 0) errors.push("حداقل یک ردیف برای این کالا ثبت کنید.");
 
@@ -313,7 +316,9 @@ export default function WarehouseInboundPage() {
       const identifier = normalizeDigits(unit.productIdentifier.trim());
       const serial = normalizeDigits(unit.serialNumber.trim());
       const track = normalizeDigits(unit.trackingCode.trim());
-      if (!identifier) errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
+      if (identifierRequired && !identifier) {
+        errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
+      }
       if (!track) errors.push("کد رهگیری برای یکی از ردیف‌ها خالی است.");
     });
     return errors;
@@ -459,7 +464,10 @@ export default function WarehouseInboundPage() {
           <div className="space-y-4">
             {groups.map((group, groupIndex) => {
               const product = products.find((item) => item.objectId === group.productObjectId);
-              const progress = countCompletedUnits(group.units);
+              const progress = countCompletedUnits(
+                group.units,
+                isProductIdentifierRequired(product),
+              );
               return (
                 <Card key={group.rowId} className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -790,10 +798,13 @@ function getProductIdentifier(product?: Product): string {
     : normalizeDigits(String(property.Value).trim());
 }
 
-function countCompletedUnits(units: ReceiptUnitDraft[]): number {
+function countCompletedUnits(
+  units: ReceiptUnitDraft[],
+  productIdentifierRequired: boolean,
+): number {
   return units.filter((unit) =>
     Boolean(
-      normalizeDigits(unit.productIdentifier.trim()) &&
+      (!productIdentifierRequired || normalizeDigits(unit.productIdentifier.trim())) &&
         normalizeDigits(unit.serialNumber.trim()) &&
         normalizeDigits(unit.trackingCode.trim()),
     ),
