@@ -102,7 +102,10 @@ export default function WarehouseInboundPage() {
               "",
           );
           setGroups([
-            createEmptyGroup(allowedProducts[0].objectId),
+            createEmptyGroup(
+              allowedProducts[0].objectId,
+              getProductIdentifier(allowedProducts[0]),
+            ),
           ]);
         }
         draftReadyRef.current = true;
@@ -134,11 +137,26 @@ export default function WarehouseInboundPage() {
           value: product.objectId,
           label: `${formatFaDigits(product.sku || product.sepidarCode || "")} - ${formatFaDigits(product.name)}`,
           description: "",
-          searchText: [product.name, product.sku, product.sepidarCode, product.brandName, product.brand]
+          searchText: [
+            product.name,
+            product.sku,
+            product.sepidarCode,
+            product.brandName,
+            product.brand,
+            getProductIdentifier(product),
+          ]
             .filter(Boolean)
             .join(" "),
         };
       }),
+    [products],
+  );
+
+  const productIdentifierOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(products.map(getProductIdentifier).filter(Boolean)),
+      ),
     [products],
   );
 
@@ -157,13 +175,18 @@ export default function WarehouseInboundPage() {
 
   const addGroup = () => {
     const defaultProductId = products[0]?.objectId || "";
-    setGroups((current) => [...current, createEmptyGroup(defaultProductId)]);
+    setGroups((current) => [
+      ...current,
+      createEmptyGroup(defaultProductId, getProductIdentifier(products[0])),
+    ]);
   };
 
   const removeGroup = (rowId: string) => {
     setGroups((current) => {
       const next = current.filter((group) => group.rowId !== rowId);
-      return next.length ? next : [createEmptyGroup(products[0]?.objectId || "")];
+      return next.length
+        ? next
+        : [createEmptyGroup(products[0]?.objectId || "", getProductIdentifier(products[0]))];
     });
     setGroupErrors((current) => {
       const next = { ...current };
@@ -173,10 +196,46 @@ export default function WarehouseInboundPage() {
   };
 
   const updateGroupProduct = (rowId: string, productObjectId: string) => {
+    const productIdentifier = getProductIdentifier(
+      products.find((product) => product.objectId === productObjectId),
+    );
     setGroups((current) =>
       current.map((group) =>
-        group.rowId === rowId ? { ...group, productObjectId } : group,
+        group.rowId === rowId
+          ? {
+              ...group,
+              productObjectId,
+              units: group.units.map((unit) => ({ ...unit, productIdentifier })),
+            }
+          : group,
       ),
+    );
+  };
+
+  const updateProductIdentifier = (rowId: string, unitId: string, value: string) => {
+    const normalizedIdentifier = normalizeDigits(value.trim());
+    const matchedProduct = products.find(
+      (product) =>
+        normalizeDigits(getProductIdentifier(product)) === normalizedIdentifier,
+    );
+    setGroups((current) =>
+      current.map((group) => {
+        if (group.rowId !== rowId) return group;
+        if (!matchedProduct) {
+          return {
+            ...group,
+            units: group.units.map((unit) =>
+              unit.rowId === unitId ? { ...unit, productIdentifier: value } : unit,
+            ),
+          };
+        }
+        const productIdentifier = getProductIdentifier(matchedProduct);
+        return {
+          ...group,
+          productObjectId: matchedProduct.objectId,
+          units: group.units.map((unit) => ({ ...unit, productIdentifier })),
+        };
+      }),
     );
   };
 
@@ -186,8 +245,11 @@ export default function WarehouseInboundPage() {
         if (group.rowId !== rowId) return group;
         const nextUnits = [...group.units];
         if (quantity > nextUnits.length) {
+          const productIdentifier = getProductIdentifier(
+            products.find((product) => product.objectId === group.productObjectId),
+          );
           while (nextUnits.length < quantity) {
-            nextUnits.push(createEmptyUnit());
+            nextUnits.push(createEmptyUnit(productIdentifier));
           }
         } else if (quantity < nextUnits.length) {
           nextUnits.length = Math.max(0, quantity);
@@ -316,7 +378,16 @@ export default function WarehouseInboundPage() {
       window.localStorage.removeItem(INBOUND_RECEIPT_DRAFT_KEY);
       setDraftMessage("");
       skipNextDraftSaveRef.current = true;
-      setGroups(groups.map((group) => createEmptyGroup(group.productObjectId)));
+      setGroups(
+        groups.map((group) =>
+          createEmptyGroup(
+            group.productObjectId,
+            getProductIdentifier(
+              products.find((product) => product.objectId === group.productObjectId),
+            ),
+          ),
+        ),
+      );
       setNotes("");
     } catch (submitError) {
       const validationErrors = extractInboundValidationFieldErrors(submitError);
@@ -491,6 +562,11 @@ export default function WarehouseInboundPage() {
                   ) : null}
 
                   <div className="mt-5 overflow-x-auto rounded-xl border border-[#E5E7EB]">
+                    <datalist id={`product-identifiers-${group.rowId}`}>
+                      {productIdentifierOptions.map((identifier) => (
+                        <option key={identifier} value={identifier} />
+                      ))}
+                    </datalist>
                     <table className="min-w-full border-collapse text-right text-sm">
                       <thead>
                         <tr className="bg-[#F8FBFD] text-[#1F3A5F]">
@@ -508,10 +584,13 @@ export default function WarehouseInboundPage() {
                               <div data-inbound-field="productIdentifier" data-unit-row-id={unit.rowId}>
                                 <Input
                                   value={unit.productIdentifier}
+                                  list={`product-identifiers-${group.rowId}`}
                                   onChange={(event) =>
-                                    updateUnit(group.rowId, unit.rowId, {
-                                      productIdentifier: event.target.value,
-                                    })
+                                    updateProductIdentifier(
+                                      group.rowId,
+                                      unit.rowId,
+                                      event.target.value,
+                                    )
                                   }
                                   placeholder="شناسه محصول"
                                   aria-invalid={Boolean(fieldErrors[unit.rowId]?.productIdentifier)}
@@ -682,21 +761,33 @@ function readInboundReceiptDraft(
   }
 }
 
-function createEmptyUnit(): ReceiptUnitDraft {
+function createEmptyUnit(productIdentifier = ""): ReceiptUnitDraft {
   return {
     rowId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    productIdentifier: "",
+    productIdentifier,
     serialNumber: "",
     trackingCode: "",
   };
 }
 
-function createEmptyGroup(productObjectId: string): ReceiptGroupDraft {
+function createEmptyGroup(
+  productObjectId: string,
+  productIdentifier = "",
+): ReceiptGroupDraft {
   return {
     rowId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     productObjectId,
-    units: [createEmptyUnit()],
+    units: [createEmptyUnit(productIdentifier)],
   };
+}
+
+function getProductIdentifier(product?: Product): string {
+  const property = product?.sepidarPropertyValues?.find(
+    (item) => Number(item.PropertyRef) === 3,
+  );
+  return property?.Value === null || property?.Value === undefined
+    ? ""
+    : normalizeDigits(String(property.Value).trim());
 }
 
 function countCompletedUnits(units: ReceiptUnitDraft[]): number {

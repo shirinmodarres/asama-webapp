@@ -14,6 +14,10 @@ export interface Product {
   brand: string;
   brandName?: string | null;
   saleGroupRef?: string | number | null;
+  sepidarPropertyValues?: Array<{
+    PropertyRef: string | number | null;
+    Value: string | number | null;
+  }>;
   model: string | null;
   category: string;
   unit: string;
