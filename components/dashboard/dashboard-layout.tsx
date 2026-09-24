@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { LoadingState } from "@/components/shared/loading-state";
-import { getPanelRouteForRole } from "@/lib/domain/roles";
+import { getEffectiveRole, getPanelRouteForRole } from "@/lib/domain/roles";
 import { sidebarByRole } from "@/lib/navigation";
 import type { AuthUser } from "@/lib/models/auth.model";
 import { getStoredCurrentUser, getStoredSessionToken, me } from "@/lib/services/auth.service";
@@ -36,8 +36,9 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
 
       const storedUser = getStoredCurrentUser();
       if (storedUser) {
-        if (getPanelRouteForRole(storedUser.role) !== `/${role}`) {
-          router.replace(getPanelRouteForRole(storedUser.role));
+        const storedRoute = getPanelRouteForRole(getEffectiveRole(storedUser));
+        if (storedRoute !== `/${role}`) {
+          router.replace(storedRoute);
           return;
         }
         if (isMounted) {
@@ -50,8 +51,9 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
       try {
         const response = await me();
         if (!isMounted) return;
-        if (getPanelRouteForRole(response.user.role) !== `/${role}`) {
-          router.replace(getPanelRouteForRole(response.user.role));
+        const responseRoute = getPanelRouteForRole(getEffectiveRole(response.user));
+        if (responseRoute !== `/${role}`) {
+          router.replace(responseRoute);
           return;
         }
         setCurrentUser(response.user);

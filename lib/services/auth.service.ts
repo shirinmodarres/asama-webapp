@@ -45,6 +45,15 @@ export async function me(): Promise<LoginResponse> {
   return response;
 }
 
+export async function switchActiveRole(
+  role: AuthUser["activeRole"],
+): Promise<LoginResponse> {
+  const data = await httpClient.post<unknown>("/api/auth/switch-role", { role });
+  const response = mapLoginResponse(data);
+  persistSessionStorage(response);
+  return response;
+}
+
 export async function logout(): Promise<void> {
   try {
     await httpClient.post<unknown>("/api/auth/logout");

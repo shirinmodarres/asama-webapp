@@ -1,4 +1,5 @@
 export type BackendRoleKey =
+  | "god"
   | "expert"
   | "sales_manager"
   | "financial_control"
@@ -17,6 +18,7 @@ export type PanelRoleKey =
   | "naja";
 
 export const ROLE_LABELS: Record<BackendRoleKey, string> = {
+  god: "مدیرکل",
   expert: "کارشناس",
   sales_manager: "مدیر فروش",
   financial_control: "کارشناس کنترل مالی",
@@ -27,6 +29,7 @@ export const ROLE_LABELS: Record<BackendRoleKey, string> = {
 };
 
 export const PANEL_ROUTE_BY_ROLE: Record<BackendRoleKey, `/${PanelRoleKey}`> = {
+  god: "/manager",
   expert: "/expert",
   sales_manager: "/manager",
   financial_control: "/finance-control",
@@ -37,6 +40,7 @@ export const PANEL_ROUTE_BY_ROLE: Record<BackendRoleKey, `/${PanelRoleKey}`> = {
 };
 
 export const PANEL_ROLE_BY_BACKEND_ROLE: Record<BackendRoleKey, PanelRoleKey> = {
+  god: "manager",
   expert: "expert",
   sales_manager: "manager",
   financial_control: "finance-control",
@@ -71,6 +75,14 @@ export function getPanelRouteForRole(
 ): "/" | `/${PanelRoleKey}` {
   if (!role) return "/";
   return PANEL_ROUTE_BY_ROLE[role] ?? "/";
+}
+
+export function getEffectiveRole(
+  user: { role: BackendRoleKey; activeRole?: BackendRoleKey | null },
+): BackendRoleKey {
+  return user.role === "god" && user.activeRole && user.activeRole !== "god"
+    ? user.activeRole
+    : user.role;
 }
 
 export function getPanelRoleForBackendRole(

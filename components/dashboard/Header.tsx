@@ -8,6 +8,7 @@ import { sidebarByRole } from "@/lib/navigation";
 import type { AuthUser } from "@/lib/models/auth.model";
 import type { RoleKey } from "@/lib/types";
 import { logout } from "@/lib/services/auth.service";
+import { RoleSwitcher } from "@/components/dashboard/role-switcher";
 
 interface HeaderProps {
   title: string;
@@ -58,6 +59,7 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
         </div>
 
         <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end md:gap-3">
+          {user.canSwitchRole ? <RoleSwitcher user={user} /> : null}
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-[#D8E1EA] bg-[#F8FBFD] px-2.5 py-2 text-right sm:flex-none sm:gap-3 sm:px-3 sm:py-2.5">
             <Avatar>
               <AvatarFallback>{user.fullName.charAt(0)}</AvatarFallback>
@@ -67,7 +69,9 @@ export function Header({ title, role, user, onMenuClick }: HeaderProps) {
                 {user.fullName}
               </div>
               <div className="truncate text-[11px] text-[#6B7280] sm:text-xs">
-                {user.roleLabel}
+                {user.canSwitchRole
+                  ? `${user.roleLabel} · در نقش ${user.activeRoleLabel}`
+                  : user.roleLabel}
               </div>
             </div>
           </div>

@@ -1,10 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft } from "lucide-react";
-import { roles, rolesByKey } from "@/lib/mock-data";
-import type { RoleKey } from "@/lib/types";
-import { roleIconMap } from "@/components/shared/app-icons";
+import { toast } from "@/components/ui/sonner";
 import {
   Select,
   SelectContent,
@@ -12,57 +11,65 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/api/api-error";
+import {
+  getPanelRouteForRole,
+  ROLE_OPTIONS,
+  type BackendRoleKey,
+} from "@/lib/domain/roles";
+import type { AuthUser } from "@/lib/models/auth.model";
+import { switchActiveRole } from "@/lib/services/auth.service";
 
 interface RoleSwitcherProps {
-  currentRole: RoleKey;
+  user: AuthUser;
 }
 
-export function RoleSwitcher({ currentRole }: RoleSwitcherProps) {
+const switchableRoles = ROLE_OPTIONS.filter((option) => option.value !== "god");
+
+export function RoleSwitcher({ user }: RoleSwitcherProps) {
   const router = useRouter();
-  const currentRoleInfo = rolesByKey[currentRole];
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  const handleRoleChange = async (value: string) => {
+    const role = value as BackendRoleKey;
+    if (role === user.activeRole || isSwitching) return;
+    setIsSwitching(true);
+    try {
+      const response = await switchActiveRole(role);
+      toast.success(`نقش فعال به «${response.user.activeRoleLabel}» تغییر کرد.`);
+      router.replace(getPanelRouteForRole(response.user.activeRole));
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setIsSwitching(false);
+    }
+  };
 
   return (
-    <div className="min-w-[220px]">
+    <div className="min-w-0 flex-1 sm:min-w-[210px] sm:flex-none">
       <Select
-        value={currentRole}
-        onValueChange={(value) => {
-          localStorage.setItem("asama-demo-role", value);
-          router.push(rolesByKey[value as RoleKey]?.path ?? "/");
-        }}
+        value={user.activeRole}
+        onValueChange={handleRoleChange}
+        disabled={isSwitching}
       >
-        <SelectTrigger className="h-12 border-[#D6E2D9] bg-[#F8FBF9] pr-3.5 pl-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-8 items-center justify-center rounded-[12px] bg-[#F3FAF4] text-[#6CAE75]">
-              <ArrowRightLeft className="size-4" />
+        <SelectTrigger className="h-12 border-[#D6E2D9] bg-[#F8FBF9] pr-3 pl-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#F3FAF4] text-[#6CAE75]">
+              <ArrowRightLeft className={isSwitching ? "size-4 animate-pulse" : "size-4"} />
             </span>
             <div className="min-w-0 text-right">
-              <p className="text-[11px] font-semibold tracking-wide text-[#6B7280]">
-                تغییر نقش
-              </p>
-              <SelectValue placeholder={currentRoleInfo.title} />
+              <p className="text-[11px] font-semibold text-[#6B7280]">ورود در نقش</p>
+              <SelectValue placeholder={user.activeRoleLabel} />
             </div>
           </div>
         </SelectTrigger>
         <SelectContent>
-          {roles.map((role) => {
-            const Icon = roleIconMap[role.icon];
-
-            return (
-              <SelectItem key={role.key} value={role.key}>
-                <div className="flex items-center gap-2.5">
-                  <span className="flex size-7 items-center justify-center rounded-[10px] bg-[#F1F5F8] text-[#1F3A5F]">
-                    <Icon className="size-3.5" />
-                  </span>
-                  <div className="text-right">
-                    <div className="font-medium">{role.title}</div>
-                    <div className="text-[11px] text-[#6B7280]">
-                      {role.userName}
-                    </div>
-                  </div>
-                </div>
-              </SelectItem>
-            );
-          })}
+          {switchableRoles.map((role) => (
+            <SelectItem key={role.value} value={role.value}>
+              {role.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
