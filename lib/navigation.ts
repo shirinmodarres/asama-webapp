@@ -28,10 +28,10 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "کالاهای قابل فروش و قیمت‌ها",
     },
     {
-      label: "پیش فاکتورها",
+      label: "درخواست‌های فروش",
       href: "/expert/quotations",
       icon: "file-text",
-      description: "فهرست و مدیریت پیش فاکتور",
+      description: "فهرست و مدیریت درخواست فروش",
     },
   ],
   naja: [

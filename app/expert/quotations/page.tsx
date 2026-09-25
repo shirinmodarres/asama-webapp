@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { PlusCircle, Search, X } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
-import type { SalesQuotation } from "@/lib/models/sales-quotation.model";
+import { formatCurrency, formatNumber } from "@/lib/expert/utils";
+import type { SalesQuotation, SalesQuotationStatus } from "@/lib/models/sales-quotation.model";
 import { listSalesQuotations } from "@/lib/services/sales-quotation.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
@@ -41,7 +41,7 @@ export default function ExpertQuotationsPage() {
       try {
         const data = await listSalesQuotations({
           search: search.trim() || undefined,
-          status: statusFilter === "all" ? undefined : (statusFilter as any),
+          status: statusFilter === "all" ? undefined : (statusFilter as SalesQuotationStatus),
         });
         if (mounted) setQuotations(data);
       } catch (loadError) {
@@ -114,17 +114,17 @@ export default function ExpertQuotationsPage() {
   ];
 
   return (
-    <DashboardLayout role="expert" title="پیش فاکتورها">
+    <DashboardLayout role="expert" title="درخواست‌های فروش">
       <SectionHeader
-        title="پیش فاکتورهای من"
-        description="فهرست پیش فاکتورهای ثبت‌شده توسط کارشناس"
+        title="درخواست‌های فروش من"
+        description="فهرست درخواست‌های فروش ثبت‌شده توسط کارشناس"
         actions={
           <Link
             href="/expert/quotations/new"
             className="inline-flex items-center gap-2 rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-4 py-2 text-sm font-medium !text-white"
           >
             <PlusCircle className="size-4" />
-            <span>پیش فاکتور جدید</span>
+            <span>درخواست فروش جدید</span>
           </Link>
         }
       />
@@ -169,15 +169,15 @@ export default function ExpertQuotationsPage() {
         </div>
       </section>
       {isLoading ? (
-        <LoadingState title="در حال دریافت پیش فاکتورها" />
+        <LoadingState title="در حال دریافت درخواست‌های فروش" />
       ) : error ? (
-        <PageErrorMessage title="دریافت پیش فاکتورها انجام نشد" message={error} />
+        <PageErrorMessage title="دریافت درخواست‌های فروش انجام نشد" message={error} />
       ) : quotations.length ? (
         <DataTable columns={columns} rows={quotations} rowKey={(row) => row.objectId} />
       ) : (
         <EmptyState
-          title="پیش فاکتوری یافت نشد"
-          description="هنوز پیش فاکتوری برای شما ثبت نشده است."
+          title="درخواست فروشی یافت نشد"
+          description="هنوز درخواست فروشی برای شما ثبت نشده است."
         />
       )}
     </DashboardLayout>

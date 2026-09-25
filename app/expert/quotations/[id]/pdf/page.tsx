@@ -27,7 +27,7 @@ export default function SalesQuotationPdfPage() {
         const result = await getSalesQuotationPdfData(params.id);
         if (isMounted) {
           setQuotation(result);
-          document.title = `پیش فاکتور - ${result.customerName || "بدون مشتری"}`;
+          document.title = `درخواست فروش - ${result.customerName || "بدون مشتری"}`;
           if (
             new URLSearchParams(window.location.search).get("print") === "1"
           ) {
@@ -86,7 +86,7 @@ export default function SalesQuotationPdfPage() {
         {isLoading ? (
           <PdfPage>
             <div className="space-y-3 text-sm text-[#6B7280]">
-              در حال دریافت پیش‌فاکتور...
+              در حال دریافت درخواست فروش...
             </div>
           </PdfPage>
         ) : error ? (
@@ -95,7 +95,7 @@ export default function SalesQuotationPdfPage() {
           </PdfPage>
         ) : !quotation ? (
           <PdfPage>
-            <div className="space-y-3 text-sm text-[#6B7280]">پیش‌فاکتور یافت نشد.</div>
+            <div className="space-y-3 text-sm text-[#6B7280]">درخواست فروش یافت نشد.</div>
           </PdfPage>
         ) : (
           <>
@@ -111,7 +111,7 @@ export default function SalesQuotationPdfPage() {
                     <header className="relative flex min-h-28 justify-between">
                       <div className="absolute left-0 top-[-6mm] border-r-2 border-[#7BC68A] bg-white/95 px-2.5 py-1 text-[9px] leading-5 text-[#334155]">
                         <InlineInfo
-                          label="شماره پیش‌فاکتور"
+                          label="شماره درخواست فروش"
                           value={formatFaDigits(quotation.quotationNumber) || "-"}
                         />
                         <InlineInfo
@@ -136,7 +136,7 @@ export default function SalesQuotationPdfPage() {
                     <div className="flex justify-center">
                       <div className="bg-white/95 px-6 py-0.5">
                         <h1 className="text-lg font-bold text-[#102034]">
-                          پیش‌فاکتور فروش
+                          درخواست فروش
                         </h1>
                       </div>
                     </div>
@@ -215,9 +215,9 @@ export default function SalesQuotationPdfPage() {
                       <>
                         <section className="mr-auto w-full max-w-[260px] overflow-hidden rounded-md border border-[#CBD5E1] bg-white/95 text-[11px]">
                           <Total label="جمع مبلغ اقلام" value={quotation.subtotal} />
-                          <Total label="مبلغ تخفیف" value={quotation.discountAmount} />
-                          <Total label="ارزش افزوده (۱۰٪)" value={quotation.taxAmount} />
-                          <Total label="جمع کل" value={quotation.total} emphasis />
+                          <Total label="مجموع کسورات" value={quotation.deductionTotal} />
+                          <Total label="مجموع اضافات" value={quotation.additionTotal} />
+                          <Total label="مبلغ نهایی درخواست" value={quotation.finalTotal} emphasis />
                         </section>
 
                         <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
@@ -228,7 +228,7 @@ export default function SalesQuotationPdfPage() {
                             {quotation.notes || "-"}
                           </p>
                           <p className="mt-2 text-[9px] font-bold leading-5 text-[#334155]">
-                            این پیش‌فاکتور تا تاریخ{" "}
+                            این درخواست فروش تا تاریخ{" "}
                             {quotation.validUntil
                               ? formatQuotationDate(quotation.validUntil)
                               : "-"}{" "}

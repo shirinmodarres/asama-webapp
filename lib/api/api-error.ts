@@ -43,6 +43,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   INBOUND_RECEIPT_NOT_EDITABLE:
     "این رسید به دلیل خروج کالا قابل ویرایش نیست.",
   INSUFFICIENT_SALES_STOCK: "موجودی فروش کافی نیست.",
+  INSUFFICIENT_AVAILABLE_FOR_SALE: "موجودی قابل فروش یک یا چند کالا کافی نیست.",
   INSUFFICIENT_WAREHOUSE_STOCK: "موجودی انبار کافی نیست.",
   WAREHOUSE_STOCK_NEGATIVE: "موجودی انبار نمی‌تواند منفی شود.",
   SALES_STOCK_BELOW_RESERVED:

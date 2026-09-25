@@ -48,6 +48,8 @@ function buildQuotationSubmitPayload({
   selectedValidUntil,
   discountPercentage,
   taxPercentage,
+  stockObjectId,
+  adjustments,
   status,
   rows,
 }) {
@@ -62,6 +64,8 @@ function buildQuotationSubmitPayload({
     validUntil: selectedValidUntil || null,
     discountPercentage,
     taxPercentage,
+    stockObjectId,
+    adjustments,
     status,
     items: rows.map((row) => ({
       productObjectId: row.productId,

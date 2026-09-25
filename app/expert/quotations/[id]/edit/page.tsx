@@ -8,8 +8,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { getErrorMessage } from "@/lib/api/api-error";
-import type { SalesQuotation } from "@/lib/models/sales-quotation.model";
-import { getSalesQuotation, updateSalesQuotation } from "@/lib/services/sales-quotation.service";
+import type { SalesQuotation, UpdateSalesQuotationPayload } from "@/lib/models/sales-quotation.model";
+import { finalizeSalesQuotation, getSalesQuotation, updateSalesQuotation } from "@/lib/services/sales-quotation.service";
 
 export default function EditExpertQuotationPage() {
   const params = useParams<{ id: string }>();
@@ -39,26 +39,29 @@ export default function EditExpertQuotationPage() {
     };
   }, [params.id]);
 
-  const handleSubmit = async (payload: any) => {
+  const handleSubmit = async (payload: UpdateSalesQuotationPayload) => {
     setIsSubmitting(true);
     try {
       const updated = await updateSalesQuotation(params.id, payload);
-      router.push(`/expert/quotations/${updated.objectId}`);
+      const result = payload.status === "finalized"
+        ? await finalizeSalesQuotation(updated.objectId)
+        : updated;
+      router.push(`/expert/quotations/${result.objectId}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <DashboardLayout role="expert" title="ویرایش پیش فاکتور">
+    <DashboardLayout role="expert" title="ویرایش درخواست فروش">
       {isLoading ? (
-        <LoadingState title="در حال دریافت پیش فاکتور" />
+        <LoadingState title="در حال دریافت درخواست فروش" />
       ) : error ? (
-        <PageErrorMessage title="دریافت پیش فاکتور انجام نشد" message={error} />
+        <PageErrorMessage title="دریافت درخواست فروش انجام نشد" message={error} />
       ) : !quotation ? (
-        <EmptyState title="پیش فاکتور یافت نشد" description="رکوردی برای این شناسه وجود ندارد." />
+        <EmptyState title="درخواست فروش یافت نشد" description="رکوردی برای این شناسه وجود ندارد." />
       ) : quotation.status !== "draft" ? (
-        <PageErrorMessage title="این پیش فاکتور قابل ویرایش نیست" message="فقط پیش‌نویس‌ها قابل تغییر هستند." />
+        <PageErrorMessage title="این درخواست فروش قابل ویرایش نیست" message="فقط پیش‌نویس‌ها قابل تغییر هستند." />
       ) : (
         <QuotationForm
           mode="edit"
@@ -71,4 +74,3 @@ export default function EditExpertQuotationPage() {
     </DashboardLayout>
   );
 }
-

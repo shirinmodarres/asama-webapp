@@ -72,18 +72,18 @@ export default function ExpertQuotationDetailPage() {
   };
 
   return (
-    <DashboardLayout role="expert" title="جزئیات پیش فاکتور">
+    <DashboardLayout role="expert" title="جزئیات درخواست فروش">
       {isLoading ? (
-        <LoadingState title="در حال دریافت پیش فاکتور" />
+        <LoadingState title="در حال دریافت درخواست فروش" />
       ) : error ? (
-        <PageErrorMessage title="دریافت پیش فاکتور انجام نشد" message={error} />
+        <PageErrorMessage title="دریافت درخواست فروش انجام نشد" message={error} />
       ) : !quotation ? (
-        <EmptyState title="پیش فاکتور یافت نشد" description="رکوردی برای این شناسه وجود ندارد." />
+        <EmptyState title="درخواست فروش یافت نشد" description="رکوردی برای این شناسه وجود ندارد." />
       ) : (
         <>
           <SectionHeader
-            title={`پیش فاکتور ${formatFaDigits(quotation.quotationNumber)}`}
-            description="پیش فاکتور مستقل از سفارش و بدون تأثیر روی موجودی"
+            title={`درخواست فروش ${formatFaDigits(quotation.quotationNumber)}`}
+            description={quotation.orderObjectId ? "این درخواست نهایی و به سفارش تبدیل شده است." : "پیش‌نویس درخواست فروش؛ تا زمان نهایی‌سازی موجودی رزرو نمی‌شود."}
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <Link
@@ -101,11 +101,11 @@ export default function ExpertQuotationDetailPage() {
                     ویرایش
                   </Link>
                 ) : null}
-                <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => handleAction(() => finalizeSalesQuotation(quotation.objectId))}>
+                {quotation.status === "draft" ? <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => handleAction(() => finalizeSalesQuotation(quotation.objectId))}>
                   <CheckCircle2 className="ml-2 size-4" />
-                  نهایی‌سازی
-                </Button>
-                {quotation.status !== "cancelled" ? (
+                  نهایی‌سازی درخواست
+                </Button> : null}
+                {quotation.status === "draft" ? (
                   <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => handleAction(() => cancelSalesQuotation(quotation.objectId))}>
                     <Ban className="ml-2 size-4" />
                     لغو
@@ -136,18 +136,23 @@ export default function ExpertQuotationDetailPage() {
           />
 
           {actionError ? <PageErrorMessage title="انجام عملیات ممکن نشد" message={actionError} /> : null}
+          {quotation.orderObjectId ? (
+            <Link href={`/expert/orders/${quotation.orderObjectId}`} className="inline-flex w-fit items-center rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+              مشاهده سفارش ساخته‌شده
+            </Link>
+          ) : null}
 
           <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <Card className="overflow-hidden p-0">
               <div className="border-b border-[#E5E7EB] px-5 py-4">
-                <h3 className="text-base font-semibold text-[#1F3A5F]">اقلام پیش فاکتور</h3>
+                <h3 className="text-base font-semibold text-[#1F3A5F]">اقلام درخواست فروش</h3>
               </div>
               <DataTable columns={columns} rows={quotation.items} rowKey={(row) => row.productObjectId || row.productSku || row.productName} />
             </Card>
 
             <div className="space-y-4">
               <Card className="p-5">
-                <h3 className="text-base font-semibold text-[#1F3A5F]">اطلاعات پیش فاکتور</h3>
+                <h3 className="text-base font-semibold text-[#1F3A5F]">اطلاعات درخواست فروش</h3>
                 <dl className="mt-4 space-y-3 text-sm">
                   <InfoRow label="مشتری" value={quotation.customerName || "-"} />
                   {quotation.salesTypeTitle ? (
@@ -159,11 +164,10 @@ export default function ExpertQuotationDetailPage() {
                   <InfoRow label="وضعیت" value={<QuotationStatusPill status={quotation.status} />} />
                   <InfoRow label="تاریخ اعتبار" value={quotation.validUntil ? formatDate(quotation.validUntil) : "-"} />
                   <InfoRow label="جمع مبلغ اقلام" value={formatCurrency(quotation.subtotal)} />
-                  <InfoRow label="درصد تخفیف کل" value={`${formatNumber(quotation.discountPercentage)}%`} />
-                  <InfoRow label="مبلغ تخفیف" value={formatCurrency(quotation.discountAmount)} />
-                  <InfoRow label="مبلغ مشمول ارزش افزوده" value={formatCurrency(Math.max(0, quotation.subtotal - quotation.discountAmount))} />
-                  <InfoRow label="ارزش افزوده ۱۰٪" value={formatCurrency(quotation.taxAmount)} />
-                  <InfoRow label="جمع کل" value={formatCurrency(quotation.total)} />
+                  {quotation.adjustments.map((item, index) => <InfoRow key={`${item.title}-${index}`} label={`${item.type === "addition" ? "+" : "-"} ${item.title} (${formatNumber(item.percentage)}٪)`} value={formatCurrency(item.amount || 0)} />)}
+                  <InfoRow label="مجموع کسورات" value={formatCurrency(quotation.deductionTotal)} />
+                  <InfoRow label="مجموع اضافات" value={formatCurrency(quotation.additionTotal)} />
+                  <InfoRow label="مبلغ نهایی درخواست" value={formatCurrency(quotation.finalTotal)} />
                 </dl>
               </Card>
               {quotation.notes ? (

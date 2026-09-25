@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { CircleMinus, CirclePlus, PlusCircle, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
@@ -18,12 +18,13 @@ import type {
   CreateSalesQuotationPayload,
   SalesQuotation,
   SalesQuotationItem,
+  SalesRequestAdjustment,
 } from "@/lib/models/sales-quotation.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { listQuotationProductsForAssignment } from "@/lib/services/product.service";
 import { listActiveSalesTypes } from "@/lib/services/sales-type.service";
-import { formatFaDigits, normalizeDigits, toNumber } from "@/lib/utils/number-format";
+import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
 import { JalaliDateInput } from "@/components/shared/jalali-date-input";
 import { SELECT_REQUIRED_MESSAGE, POSITIVE_NUMBER_MESSAGE } from "@/lib/utils/form-validation";
 import { jalaliToIso, todayJalaliParts } from "@/lib/utils/jalali-date";
@@ -62,6 +63,22 @@ interface SalesTypeOption {
   sepidarCode?: number | null;
 }
 
+interface DraftAdjustment extends SalesRequestAdjustment {
+  rowId: string;
+}
+
+const ADJUSTMENT_PRESETS = [
+  "تخفیف پایه",
+  "تخفیف سبد خرید",
+  "تخفیف خوش‌حسابی",
+  "کمک هزینه حمل",
+  "تخفیف تسویه زودتر",
+  "تخفیف خرید نقدی",
+  "پشت‌دست / مدیریت بازار",
+  "جایزه / کمک هزینه سفر",
+  "سایر",
+];
+
 export function QuotationForm({
   mode,
   initialQuotation,
@@ -94,6 +111,9 @@ export function QuotationForm({
     })(),
   );
   const [notes, setNotes] = useState(initialQuotation?.notes || "");
+  const [selectedStockObjectId, setSelectedStockObjectId] = useState(
+    initialQuotation?.stockObjectId || "",
+  );
   const [rows, setRows] = useState<DraftRow[]>(
     initialQuotation?.items?.length
       ? initialQuotation.items.map((item, index) => ({
@@ -107,11 +127,11 @@ export function QuotationForm({
   const [rowErrors, setRowErrors] = useState<
     Record<string, { productId?: string; quantity?: string }>
   >({});
-  const [discountPercentage, setDiscountPercentage] = useState(
-    initialQuotation?.discountPercentage ?? 0,
-  );
-  const [taxPercentage, setTaxPercentage] = useState(
-    initialQuotation?.taxPercentage ?? 10,
+  const [adjustments, setAdjustments] = useState<DraftAdjustment[]>(
+    (initialQuotation?.adjustments || []).map((item, index) => ({
+      ...item,
+      rowId: `adjustment-${index}`,
+    })),
   );
   const quotationSalesTypeFallback = useMemo(
     () => getQuotationSalesTypeSnapshot(initialQuotation) as SalesTypeOption | null,
@@ -187,8 +207,11 @@ export function QuotationForm({
       mounted = false;
     };
   }, [
+    initialQuotation,
     initialQuotation?.salesTypeObjectId,
     quotationCustomerFallback,
+    quotationSalesTypeFallback,
+    selectedCustomerId,
     selectedSalesTypeId,
   ]);
 
@@ -200,6 +223,22 @@ export function QuotationForm({
         : null),
     [customers, quotationCustomerFallback, selectedCustomerId],
   );
+  const stockOptions = useMemo(() => {
+    if (selectedCustomer?.allowedStocks?.length) {
+      return selectedCustomer.allowedStocks.map((stock: Customer["allowedStocks"][number]) => ({
+        value: stock.objectId,
+        label: stock.title || stock.objectId,
+      }));
+    }
+    return (selectedCustomer?.allowedStockObjectIds || []).map((objectId: string, index: number) => ({
+      value: objectId,
+      label: selectedCustomer?.allowedStockTitles?.[index] || objectId,
+    }));
+  }, [selectedCustomer]);
+
+  const effectiveStockObjectId = stockOptions.some((option: PriceListOption) => option.value === selectedStockObjectId)
+    ? selectedStockObjectId
+    : stockOptions.length === 1 ? stockOptions[0].value : "";
 
   const priceListOptions = useMemo(() => {
     const options: PriceListOption[] = [];
@@ -260,6 +299,8 @@ export function QuotationForm({
           }))
           .filter((option: { value: string; label: string }) => Boolean(option.value));
         if (fallbackPriceLists.length) {
+          // Keep the stored draft selection when asynchronously loaded assignment data arrives.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedPriceListId((current: string) => {
             if (current && fallbackOptions.some((option: { value: string; label: string }) => option.value === current)) return current;
             return (
@@ -306,6 +347,7 @@ export function QuotationForm({
           {
             customerObjectId: selectedCustomerId,
             priceListId: selectedPriceListId,
+            stockObjectId: effectiveStockObjectId || undefined,
             expertUserId: getStoredCurrentUser()?.objectId,
           },
         );
@@ -326,7 +368,7 @@ export function QuotationForm({
     return () => {
       mounted = false;
     };
-  }, [initialQuotation, mode, selectedCustomerId, selectedPriceListId]);
+  }, [effectiveStockObjectId, initialQuotation, mode, selectedCustomerId, selectedPriceListId]);
 
   const productOptions = useMemo(
     () =>
@@ -380,10 +422,17 @@ export function QuotationForm({
   );
 
   const subtotal = resolvedRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const discountAmount = subtotal * (discountPercentage / 100);
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
-  const taxAmount = taxableAmount * (taxPercentage / 100);
-  const total = taxableAmount + taxAmount;
+  const calculatedAdjustments = adjustments.map((item) => ({
+    ...item,
+    amount: subtotal * (item.percentage / 100),
+  }));
+  const deductionTotal = calculatedAdjustments
+    .filter((item) => item.type === "deduction")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const additionTotal = calculatedAdjustments
+    .filter((item) => item.type === "addition")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const total = Math.max(0, subtotal - deductionTotal + additionTotal);
   const itemCount = resolvedRows.length;
   const totalQuantity = resolvedRows.reduce((sum, row) => sum + row.quantity, 0);
 
@@ -425,6 +474,10 @@ export function QuotationForm({
       setError("لطفاً لیست قیمت را انتخاب کنید.");
       return;
     }
+    if (!effectiveStockObjectId) {
+      setError("لطفاً انبار درخواست را انتخاب کنید.");
+      return;
+    }
 
     if (resolvedRows.length === 0) {
       setError("حداقل یک کالا اضافه کنید.");
@@ -440,6 +493,8 @@ export function QuotationForm({
       }
       if (!Number.isFinite(row.quantity) || row.quantity <= 0) {
         rowErrors.quantity = POSITIVE_NUMBER_MESSAGE;
+      } else if (row.productId && row.quantity > Number(productsById[row.productId]?.availableForSale || 0)) {
+        rowErrors.quantity = `حداکثر موجودی قابل فروش ${formatNumber(productsById[row.productId]?.availableForSale || 0)} است.`;
       }
       if (Object.keys(rowErrors).length) {
         nextRowErrors[row.rowId] = rowErrors;
@@ -448,6 +503,24 @@ export function QuotationForm({
 
     if (Object.keys(nextRowErrors).length) {
       setRowErrors(nextRowErrors);
+      return;
+    }
+
+    const requestedByProduct = resolvedRows.reduce<Record<string, number>>((result, row) => {
+      result[row.productId] = (result[row.productId] || 0) + row.quantity;
+      return result;
+    }, {});
+    const overAvailableProduct = Object.entries(requestedByProduct).find(
+      ([productId, quantity]) => quantity > Number(productsById[productId]?.availableForSale || 0),
+    );
+    if (overAvailableProduct) {
+      const [productId, quantity] = overAvailableProduct;
+      const product = productsById[productId];
+      setError(`${product?.name || "کالا"}: درخواستی ${formatNumber(quantity)}، قابل فروش ${formatNumber(product?.availableForSale || 0)}`);
+      return;
+    }
+    if (adjustments.some((item) => !item.title.trim())) {
+      setError("عنوان مورد سفارشی تخفیف/اضافه را وارد کنید.");
       return;
     }
 
@@ -460,13 +533,22 @@ export function QuotationForm({
           selectedPriceListId,
           notes,
           selectedValidUntil,
-          discountPercentage,
-          taxPercentage,
+          discountPercentage: 0,
+          taxPercentage: 0,
+          stockObjectId: effectiveStockObjectId,
+          adjustments: adjustments.map(({ title, percentage, type }) => ({ title, percentage, type })),
           status,
           rows: resolvedRows,
         }),
       );
     } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.code === "INSUFFICIENT_AVAILABLE_FOR_SALE") {
+        const shortages = (submitError.details as { shortages?: Array<{ productName?: string; requestedQuantity?: number; availableForSale?: number }> } | null)?.shortages || [];
+        if (shortages.length) {
+          setError(shortages.map((item) => `${item.productName || "کالا"}: درخواستی ${formatNumber(item.requestedQuantity || 0)}، قابل فروش ${formatNumber(item.availableForSale || 0)}`).join(" | "));
+          return;
+        }
+      }
       setError(getErrorMessage(submitError));
     }
   };
@@ -478,6 +560,7 @@ export function QuotationForm({
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
       <Card className="p-5">
+        {error ? <div className="mb-4"><InlineErrorMessage message={error} /></div> : null}
         <div className="grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
             <span>مشتری</span>
@@ -560,6 +643,17 @@ export function QuotationForm({
               disabled={!selectedCustomerId || priceListOptions.length === 0}
             />
           </label>
+          <label className="grid content-start gap-1.5 text-sm font-medium text-[#334155]">
+            <span>انبار درخواست</span>
+            <SearchableSelect
+              value={effectiveStockObjectId || undefined}
+              onValueChange={setSelectedStockObjectId}
+              options={stockOptions}
+              placeholder="انتخاب انبار"
+              searchPlaceholder="جستجو در انبارها"
+              emptyMessage="انبار مجازی برای این مشتری یافت نشد"
+            />
+          </label>
           <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
             <JalaliDateInput
               value={selectedValidUntil}
@@ -574,47 +668,41 @@ export function QuotationForm({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={3}
-              placeholder="یادداشت‌های پیش فاکتور"
+              placeholder="یادداشت‌های درخواست فروش"
             />
           </label>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
-            <span>درصد تخفیف کل</span>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={discountPercentage}
-              onChange={(event) => {
-                const value = Math.min(100, Math.max(0, toNumber(normalizeDigits(event.target.value))));
-                setDiscountPercentage(value);
-              }}
-              placeholder="0"
-              inputMode="numeric"
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
-            <span>درصد ارزش افزوده</span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              min={0}
-              max={100}
-              value={taxPercentage}
-              onChange={(event) => {
-                const value = Math.min(100, Math.max(0, toNumber(normalizeDigits(event.target.value))));
-                setTaxPercentage(value);
-              }}
-              placeholder="10"
-            />
-          </label>
+        <div className="mt-6 space-y-3 rounded-lg border border-[#E5E7EB] bg-[#FBFCFD] p-4 dark:border-slate-700 dark:bg-slate-900/40">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-[#1F3A5F] dark:text-slate-100">تخفیف‌ها، اضافات و کسورات</h3>
+              <p className="mt-1 text-xs text-[#64748B]">درصد هر مورد روی جمع مبلغ کالاها محاسبه می‌شود.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={() => setAdjustments((current) => [...current, { rowId: `adjustment-${Date.now()}`, title: ADJUSTMENT_PRESETS[0], percentage: 0, type: "deduction" }])}>
+              <PlusCircle className="ml-2 size-4" /> افزودن
+            </Button>
+          </div>
+          {adjustments.length === 0 ? <p className="rounded-md border border-dashed p-4 text-center text-sm text-[#64748B]">شرط مالی ثبت نشده است.</p> : null}
+          {adjustments.map((adjustment) => (
+            <div key={adjustment.rowId} className="grid gap-3 rounded-md border bg-white p-3 dark:border-slate-700 dark:bg-slate-950 sm:grid-cols-[1fr_150px_130px_40px]">
+              <div className="grid gap-2">
+                <SearchableSelect value={ADJUSTMENT_PRESETS.includes(adjustment.title) ? adjustment.title : "سایر"} onValueChange={(value) => setAdjustments((current) => current.map((item) => item.rowId === adjustment.rowId ? { ...item, title: value === "سایر" ? "" : value } : item))} options={ADJUSTMENT_PRESETS.map((title) => ({ value: title, label: title }))} placeholder="عنوان" searchPlaceholder="جستجوی عنوان" emptyMessage="عنوانی یافت نشد" />
+                {!ADJUSTMENT_PRESETS.includes(adjustment.title) || !adjustment.title ? <Input value={adjustment.title} onChange={(event) => setAdjustments((current) => current.map((item) => item.rowId === adjustment.rowId ? { ...item, title: event.target.value } : item))} placeholder="عنوان دلخواه" /> : null}
+              </div>
+              <Input type="number" min={0} max={100} value={adjustment.percentage} onChange={(event) => setAdjustments((current) => current.map((item) => item.rowId === adjustment.rowId ? { ...item, percentage: Math.min(100, Math.max(0, toNumber(normalizeDigits(event.target.value)))) } : item))} placeholder="درصد" />
+              <Button type="button" variant="outline" onClick={() => setAdjustments((current) => current.map((item) => item.rowId === adjustment.rowId ? { ...item, type: item.type === "deduction" ? "addition" : "deduction" } : item))}>
+                {adjustment.type === "deduction" ? <CircleMinus className="ml-2 size-4 text-red-600" /> : <CirclePlus className="ml-2 size-4 text-emerald-600" />}
+                {adjustment.type === "deduction" ? "کسورات" : "اضافات"}
+              </Button>
+              <Button type="button" variant="ghost" size="icon" onClick={() => setAdjustments((current) => current.filter((item) => item.rowId !== adjustment.rowId))}><Trash2 className="size-4" /></Button>
+            </div>
+          ))}
         </div>
 
         <div className="mt-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-[#1F3A5F]">اقلام پیش فاکتور</h3>
+            <h3 className="text-base font-semibold text-[#1F3A5F]">اقلام درخواست فروش</h3>
             <Button type="button" variant="outline" onClick={addRow}>
               <PlusCircle className="ml-2 size-4" />
               افزودن کالا
@@ -654,6 +742,7 @@ export function QuotationForm({
                         placeholder="تعداد"
                       />
                       <FieldError message={rowErrors[row.rowId]?.quantity} />
+                      {product ? <p className="mt-1 text-xs text-[#64748B]">قابل فروش: {formatNumber(product.availableForSale || 0)}</p> : null}
                     </div>
                     <Input value={formatCurrency(unitPrice)} readOnly disabled />
                     <Input value={formatCurrency(lineTotal)} readOnly disabled />
@@ -678,7 +767,7 @@ export function QuotationForm({
 
       <div className="space-y-4">
         <Card className="p-5">
-          <h3 className="text-base font-semibold text-[#1F3A5F]">خلاصه پیش فاکتور</h3>
+          <h3 className="text-base font-semibold text-[#1F3A5F]">خلاصه درخواست فروش</h3>
           <dl className="mt-4 space-y-3 text-sm">
             <SummaryRow label="مشتری" value={selectedCustomer?.fullName || "-"} />
             {selectedSalesTypeId ? (
@@ -702,15 +791,14 @@ export function QuotationForm({
             <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
             <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
             <SummaryRow label="جمع مبلغ اقلام" value={formatCurrency(subtotal)} />
-            <SummaryRow label="درصد تخفیف کل" value={`${formatNumber(discountPercentage)}%`} />
-            <SummaryRow label="مبلغ تخفیف" value={formatCurrency(discountAmount)} />
-            <SummaryRow label="مبلغ مشمول ارزش افزوده" value={formatCurrency(taxableAmount)} />
-            <SummaryRow label="ارزش افزوده ۱۰٪" value={formatCurrency(taxAmount)} />
-            <SummaryRow label="جمع کل" value={formatCurrency(total)} />
+            {calculatedAdjustments.map((item) => <SummaryRow key={item.rowId} label={`${item.type === "addition" ? "+" : "-"} ${item.title || "بدون عنوان"} ${formatNumber(item.percentage)}٪`} value={formatCurrency(item.amount)} />)}
+            <SummaryRow label="مجموع کسورات" value={formatCurrency(deductionTotal)} />
+            <SummaryRow label="مجموع اضافات" value={formatCurrency(additionTotal)} />
+            <SummaryRow label="مبلغ نهایی" value={formatCurrency(total)} />
           </dl>
         </Card>
 
-        <div className="flex flex-col gap-3">
+        <div className="sticky bottom-4 flex flex-col gap-3 rounded-lg border bg-white/95 p-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-950/95">
           {onCancel ? (
             <Button type="button" variant="outline" onClick={onCancel}>
               انصراف
@@ -720,7 +808,7 @@ export function QuotationForm({
             {submitLabel}
           </Button>
           <Button type="button" disabled={isSubmitting} variant="secondary" onClick={() => submit("finalized")}>
-            نهایی‌سازی
+            نهایی‌سازی درخواست
           </Button>
         </div>
       </div>
