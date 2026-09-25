@@ -22,6 +22,7 @@ import {
 } from "@/lib/services/pricing.service";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import type { RoleKey } from "@/lib/types";
 
 export default function GeneratedPriceListDetailPage({
   params,
@@ -29,6 +30,24 @@ export default function GeneratedPriceListDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  return (
+    <GeneratedPriceListDetailView
+      id={id}
+      role="support"
+      backHref="/support/pricing/generated-price-lists"
+    />
+  );
+}
+
+export function GeneratedPriceListDetailView({
+  id,
+  role,
+  backHref,
+}: {
+  id: string;
+  role: RoleKey;
+  backHref: string;
+}) {
   const [priceList, setPriceList] = useState<PriceList | null>(null);
   const [items, setItems] = useState<PriceListItem[]>([]);
   const [pagination, setPagination] = useState<PriceListItemsPagination>({
@@ -117,10 +136,10 @@ export default function GeneratedPriceListDetailPage({
   };
 
   return (
-    <DashboardLayout role="support" title="جزئیات لیست قیمت">
+    <DashboardLayout role={role} title="جزئیات لیست قیمت">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline">
-          <Link href="/support/pricing/generated-price-lists">بازگشت</Link>
+          <Link href={backHref}>بازگشت</Link>
         </Button>
         <Button
           type="button"

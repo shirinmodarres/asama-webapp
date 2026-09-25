@@ -128,7 +128,7 @@ export default function ManagerActivePriceListsPage() {
       render: (row) => (
         row.objectId || row.id ? (
           <Button asChild size="sm" variant="outline">
-            <Link href={`/support/pricing/generated-price-lists/${row.objectId || row.id}`}>
+            <Link href={`/manager/pricing/price-lists/${row.objectId || row.id}`}>
               جزئیات
             </Link>
           </Button>
