@@ -74,7 +74,9 @@ export default function SalesQuotationPdfPage() {
       dir="rtl"
       className="min-h-screen bg-[#E5E7EB] p-4 text-[#102034] print:bg-white print:p-0"
     >
-      <style jsx global>{PDF_PAGE_STYLES}</style>
+      <style jsx global>
+        {PDF_PAGE_STYLES}
+      </style>
 
       <div className="no-print mx-auto mb-4 flex max-w-[210mm] justify-end">
         <Button type="button" onClick={() => window.print()}>
@@ -95,7 +97,9 @@ export default function SalesQuotationPdfPage() {
           </PdfPage>
         ) : !quotation ? (
           <PdfPage>
-            <div className="space-y-3 text-sm text-[#6B7280]">درخواست فروش یافت نشد.</div>
+            <div className="space-y-3 text-sm text-[#6B7280]">
+              درخواست فروش یافت نشد.
+            </div>
           </PdfPage>
         ) : (
           <>
@@ -112,7 +116,9 @@ export default function SalesQuotationPdfPage() {
                       <div className="absolute left-0 top-[-6mm] border-r-2 border-[#7BC68A] bg-white/95 px-2.5 py-1 text-[9px] leading-5 text-[#334155]">
                         <InlineInfo
                           label="شماره درخواست فروش"
-                          value={formatFaDigits(quotation.quotationNumber) || "-"}
+                          value={
+                            formatFaDigits(quotation.quotationNumber) || "-"
+                          }
                         />
                         <InlineInfo
                           label="تاریخ صدور"
@@ -147,12 +153,17 @@ export default function SalesQuotationPdfPage() {
                           اطلاعات مشتری
                         </h2>
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                          <InlineInfo label="نام مشتری" value={quotation.customerName || "-"} />
+                          <InlineInfo
+                            label="نام مشتری"
+                            value={quotation.customerName || "-"}
+                          />
                           <InlineInfo
                             label="کد مشتری"
                             value={
                               quotation.customer?.sepidarCustomerCode
-                                ? formatFaDigits(quotation.customer.sepidarCustomerCode)
+                                ? formatFaDigits(
+                                    quotation.customer.sepidarCustomerCode,
+                                  )
                                 : "-"
                             }
                           />
@@ -198,10 +209,14 @@ export default function SalesQuotationPdfPage() {
                               key={row.key}
                               className="print-table-row odd:bg-white even:bg-[#F8FAFC]"
                             >
-                              <Cell className="px-1 text-center">{formatNumber(row.rowNumber)}</Cell>
+                              <Cell className="px-1 text-center">
+                                {formatNumber(row.rowNumber)}
+                              </Cell>
                               <Cell>{formatFaDigits(row.sku) || "-"}</Cell>
                               <Cell>{row.name}</Cell>
-                              <Cell className="px-1 text-center">{formatNumber(row.qty)}</Cell>
+                              <Cell className="px-1 text-center">
+                                {formatNumber(row.qty)}
+                              </Cell>
                               <Cell className="px-1 text-center">عدد</Cell>
                               <Cell>{formatCurrency(row.unitPrice)}</Cell>
                               <Cell>{formatCurrency(row.lineTotal)}</Cell>
@@ -213,11 +228,46 @@ export default function SalesQuotationPdfPage() {
 
                     {isLastPage ? (
                       <>
-                        <section className="mr-auto w-full max-w-[260px] overflow-hidden rounded-md border border-[#CBD5E1] bg-white/95 text-[11px]">
-                          <Total label="جمع مبلغ اقلام" value={quotation.subtotal} />
-                          <Total label="مجموع کسورات" value={quotation.deductionTotal} />
-                          <Total label="مجموع اضافات" value={quotation.additionTotal} />
-                          <Total label="مبلغ نهایی درخواست" value={quotation.finalTotal} emphasis />
+                        <section className="mr-auto w-full max-w-[320px] overflow-hidden rounded-md border border-[#CBD5E1] bg-white/95 text-[11px]">
+                          <Total
+                            label="جمع مبلغ اقلام"
+                            value={quotation.subtotal}
+                          />
+
+                          {quotation.adjustments?.map((adjustment, index) => {
+                            const amount =
+                              Number(quotation.subtotal || 0) *
+                              (Number(adjustment.percentage || 0) / 100);
+
+                            const isAddition = adjustment.type === "addition";
+
+                            return (
+                              <Total
+                                key={`${adjustment.title}-${index}`}
+                                label={`${isAddition ? "+" : "-"} ${
+                                  adjustment.title || "بدون عنوان"
+                                } (${formatNumber(adjustment.percentage || 0)}٪)`}
+                                value={amount}
+                                tone={isAddition ? "addition" : "deduction"}
+                              />
+                            );
+                          })}
+
+                          <Total
+                            label="مجموع کسورات"
+                            value={quotation.deductionTotal}
+                          />
+
+                          <Total
+                            label="مجموع اضافات"
+                            value={quotation.additionTotal}
+                          />
+
+                          <Total
+                            label="مبلغ نهایی درخواست"
+                            value={quotation.finalTotal}
+                            emphasis
+                          />
                         </section>
 
                         <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
@@ -232,7 +282,8 @@ export default function SalesQuotationPdfPage() {
                             {quotation.validUntil
                               ? formatQuotationDate(quotation.validUntil)
                               : "-"}{" "}
-                            معتبر بوده و پس از آن نیازمند استعلام مجدد قیمت می‌باشد.
+                            معتبر بوده و پس از آن نیازمند استعلام مجدد قیمت
+                            می‌باشد.
                           </p>
                         </section>
 
@@ -291,19 +342,35 @@ function Total({
   label,
   value,
   emphasis = false,
+  tone,
 }: {
   label: string;
   value: number | string;
   emphasis?: boolean;
+  tone?: "addition" | "deduction";
 }) {
+  const toneClass =
+    tone === "addition"
+      ? "text-[#15803D]"
+      : tone === "deduction"
+        ? "text-[#B91C1C]"
+        : "";
+
   return (
     <div
-      className={`flex items-center justify-between gap-2 border-b border-[#E5E7EB] px-3 py-2 last:border-b-0 ${
+      className={`flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-3 py-2 last:border-b-0 ${
         emphasis ? "bg-[#F8FAFC] font-bold text-[#102034]" : ""
       }`}
     >
-      <span>{label}</span>
-      <span>{formatCurrency(value)}</span>
+      <span className={toneClass}>{label}</span>
+
+      <span
+        className={
+          emphasis ? "font-bold text-[#102034]" : "font-semibold text-[#102034]"
+        }
+      >
+        {formatCurrency(value)}
+      </span>
     </div>
   );
 }

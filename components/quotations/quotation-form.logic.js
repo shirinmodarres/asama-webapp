@@ -1,12 +1,19 @@
 function getQuotationSalesTypeSnapshot(quotation) {
   if (!quotation) return null;
-  const objectId = quotation.salesTypeObjectId || quotation.salesType?.objectId || "";
+  const objectId =
+    quotation.salesTypeObjectId || quotation.salesType?.objectId || "";
   const title = quotation.salesTypeTitle || quotation.salesType?.title || "";
-  const internalCode = quotation.salesTypeInternalCode ?? quotation.salesType?.internalCode ?? null;
-  const sepidarCode = quotation.salesTypeSepidarCode ?? quotation.salesType?.sepidarCode ?? null;
-  if (!objectId && !title && internalCode === null && sepidarCode === null) return null;
+  const internalCode =
+    quotation.salesTypeInternalCode ??
+    quotation.salesType?.internalCode ??
+    null;
+  const sepidarCode =
+    quotation.salesTypeSepidarCode ?? quotation.salesType?.sepidarCode ?? null;
+  if (!objectId && !title && internalCode === null && sepidarCode === null)
+    return null;
   return {
-    objectId: objectId || `quotation-sales-type-${quotation.objectId || "fallback"}`,
+    objectId:
+      objectId || `quotation-sales-type-${quotation.objectId || "fallback"}`,
     title,
     internalCode,
     sepidarCode,
@@ -31,17 +38,16 @@ function getQuotationCustomerSnapshot(quotation) {
   return {
     ...quotation.customer,
     objectId: quotation.customerObjectId || quotation.customer.objectId,
-    id: quotation.customer.id || quotation.customerObjectId || quotation.customer.objectId,
-    fullName:
-      quotation.customer.fullName ||
+    id:
+      quotation.customer.id ||
       quotation.customerObjectId ||
-      "",
+      quotation.customer.objectId,
+    fullName: quotation.customer.fullName || quotation.customerObjectId || "",
   };
 }
 
 function buildQuotationSubmitPayload({
   selectedCustomerId,
-  selectedSalesTypeId,
   selectedSalesType,
   selectedPriceListId,
   notes,
@@ -55,7 +61,7 @@ function buildQuotationSubmitPayload({
 }) {
   return {
     customerObjectId: selectedCustomerId,
-    salesTypeObjectId: selectedSalesTypeId,
+    salesTypeObjectId: selectedSalesType?.objectId || "",
     salesTypeTitle: selectedSalesType?.title ?? null,
     salesTypeInternalCode: selectedSalesType?.internalCode ?? null,
     salesTypeSepidarCode: selectedSalesType?.sepidarCode ?? null,

@@ -539,6 +539,15 @@ export function QuotationForm({
       setError("لطفاً روش پرداخت را انتخاب کنید.");
       return;
     }
+    if (
+      !selectedSalesType?.objectId ||
+      selectedSalesType.objectId.startsWith("quotation-sales-type-")
+    ) {
+      setError(
+        "روش پرداخت انتخاب‌شده معتبر نیست. لطفاً یک روش پرداخت فعال انتخاب کنید.",
+      );
+      return;
+    }
     if (!selectedPriceListId) {
       setError("لطفاً لیست قیمت را انتخاب کنید.");
       return;
@@ -607,7 +616,6 @@ export function QuotationForm({
       await onSubmit(
         buildQuotationSubmitPayload({
           selectedCustomerId,
-          selectedSalesTypeId,
           selectedSalesType: selectedSalesType ?? null,
           selectedPriceListId,
           notes,
@@ -841,15 +849,21 @@ export function QuotationForm({
                       <FieldError message={rowErrors[row.rowId]?.productId} />
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-[120px_minmax(140px,1fr)_minmax(140px,1fr)_40px]">
-                      <div>
+                    <div className="grid gap-3 sm:grid-cols-[120px_minmax(160px,1fr)_minmax(160px,1fr)_40px] sm:items-start">
+                      <div className="grid gap-1.5">
+                        <span className="text-xs text-[var(--muted-foreground)]">
+                          تعداد
+                        </span>
+
                         <Input
-                          type="number"
-                          min={1}
-                          value={row.quantity}
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumber(row.quantity)}
                           onChange={(event) =>
                             updateRow(row.rowId, {
-                              quantity: toNumber(event.target.value),
+                              quantity: toNumber(
+                                normalizeDigits(event.target.value),
+                              ),
                             })
                           }
                           placeholder="تعداد"
@@ -858,7 +872,7 @@ export function QuotationForm({
                         <FieldError message={rowErrors[row.rowId]?.quantity} />
 
                         {product ? (
-                          <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
+                          <p className="text-xs text-[var(--muted-foreground)]">
                             قابل فروش:{" "}
                             {formatNumber(product.availableForSale || 0)}
                           </p>
@@ -887,7 +901,7 @@ export function QuotationForm({
                         />
                       </div>
 
-                      <div className="flex items-end">
+                      <div className="flex pt-[22px]">
                         <Button
                           type="button"
                           variant="ghost"
@@ -949,9 +963,14 @@ export function QuotationForm({
             {adjustments.map((adjustment) => (
               <div
                 key={adjustment.rowId}
-                className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[minmax(180px,1fr)_120px_130px_40px] sm:items-start"
+                className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[minmax(180px,1fr)_120px_130px_40px] sm:items-end"
               >
-                <div className="grid gap-2">
+                {/* عنوان */}
+                <div className="grid gap-1.5">
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    عنوان
+                  </span>
+
                   <SearchableSelect
                     value={
                       ADJUSTMENT_PRESETS.includes(adjustment.title)
@@ -974,13 +993,13 @@ export function QuotationForm({
                       value: title,
                       label: title,
                     }))}
-                    placeholder="عنوان"
+                    placeholder="انتخاب عنوان"
                     searchPlaceholder="جستجوی عنوان"
                     emptyMessage="عنوانی یافت نشد"
                   />
 
-                  {!ADJUSTMENT_PRESETS.includes(adjustment.title) ||
-                  !adjustment.title ? (
+                  {(!ADJUSTMENT_PRESETS.includes(adjustment.title) ||
+                    !adjustment.title) && (
                     <Input
                       value={adjustment.title}
                       onChange={(event) =>
@@ -997,18 +1016,19 @@ export function QuotationForm({
                       }
                       placeholder="عنوان دلخواه"
                     />
-                  ) : null}
+                  )}
                 </div>
 
+                {/* درصد */}
                 <div className="grid gap-1.5">
                   <span className="text-xs text-[var(--muted-foreground)]">
                     درصد
                   </span>
+
                   <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={adjustment.percentage}
+                    type="text"
+                    inputMode="decimal"
+                    value={formatNumber(adjustment.percentage)}
                     onChange={(event) =>
                       setAdjustments((current) =>
                         current.map((item) =>
@@ -1033,13 +1053,20 @@ export function QuotationForm({
                   />
                 </div>
 
+                {/* نوع */}
                 <div className="grid gap-1.5">
                   <span className="text-xs text-[var(--muted-foreground)]">
                     نوع
                   </span>
+
                   <Button
                     type="button"
                     variant="outline"
+                    className={
+                      adjustment.type === "deduction"
+                        ? "text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    }
                     onClick={() =>
                       setAdjustments((current) =>
                         current.map((item) =>
@@ -1066,7 +1093,8 @@ export function QuotationForm({
                   </Button>
                 </div>
 
-                <div className="flex items-end sm:pt-[22px]">
+                {/* حذف */}
+                <div className="flex h-10 items-center justify-center">
                   <Button
                     type="button"
                     variant="ghost"
@@ -1110,7 +1138,7 @@ export function QuotationForm({
               <SummaryRow
                 label="روش پرداخت"
                 value={
-                  salesTypes.find(
+                  mergedSalesTypes.find(
                     (salesType) =>
                       getSalesTypeOptionKey(salesType) === selectedSalesTypeId,
                   )?.title || selectedSalesTypeId
