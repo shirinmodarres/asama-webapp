@@ -39,11 +39,14 @@ export async function listSepidarCustomers(): Promise<Customer[]> {
   );
 }
 
-export async function listExpertCustomerAssignments(): Promise<
+export async function listExpertCustomerAssignments(filters?: { limit?: number; offset?: number }): Promise<
   ExpertCustomerAssignment[]
 > {
+  const params = new URLSearchParams();
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  if (filters?.offset) params.set("offset", String(filters.offset));
   const data = await httpClient.get<unknown>(
-    "/api/support/expert-customer-assignments",
+    `/api/support/expert-customer-assignments${params.size ? `?${params.toString()}` : ""}`,
   );
   return mapExpertCustomerAssignmentListDto(data);
 }
