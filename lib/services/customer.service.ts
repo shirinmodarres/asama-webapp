@@ -32,6 +32,16 @@ export async function listCustomers(
   return mapCustomerListDto(items);
 }
 
+export async function listCustomersPage(filters: CustomerFilters): Promise<{ items: Customer[]; total: number }> {
+  const data = await httpClient.get<unknown>(buildCustomersPath(filters));
+  const record = isRecord(data) ? data : null;
+  const items = Array.isArray(data) ? data : Array.isArray(record?.items) ? record.items : [];
+  return {
+    items: mapCustomerListDto(items),
+    total: Number(record?.total ?? items.length),
+  };
+}
+
 export async function getCustomer(objectId: string): Promise<Customer> {
   const data = await httpClient.get<unknown>(`/api/customers/${objectId}`);
   return mapCustomerDto(data);
@@ -111,6 +121,7 @@ function buildCustomersPath(filters?: CustomerFilters): string {
   if (filters.status) params.set("status", filters.status);
   if (typeof filters.limit === "number") params.set("limit", String(filters.limit));
   if (typeof filters.offset === "number") params.set("offset", String(filters.offset));
+  if (filters.assignmentStatus) params.set("assignmentStatus", filters.assignmentStatus);
 
   const query = params.toString();
   return query ? `/api/customers?${query}` : "/api/customers";

@@ -1,6 +1,6 @@
 import { getRoleLabel } from "@/lib/domain/roles";
 import type { AuthUser } from "@/lib/models/auth.model";
-import { toRecord, toStringValue } from "@/lib/mappers/mapper-utils";
+import { toNumberValue, toRecord, toStringValue } from "@/lib/mappers/mapper-utils";
 import { normalizePhone } from "@/lib/utils/number-format";
 
 export function mapAuthUserDto(dto: unknown): AuthUser {
@@ -22,5 +22,6 @@ export function mapAuthUserDto(dto: unknown): AuthUser {
       toStringValue(record.activeRoleLabel) || getRoleLabel(activeRole),
     canSwitchRole: Boolean(record.canSwitchRole) || role === "god",
     status: record.status === "inactive" ? "inactive" : "active",
+    assignedCustomerCount: toNumberValue(record.assignedCustomerCount),
   };
 }

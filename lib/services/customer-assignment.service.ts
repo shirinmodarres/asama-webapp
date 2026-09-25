@@ -51,6 +51,27 @@ export async function listExpertCustomerAssignments(filters?: { limit?: number; 
   return mapExpertCustomerAssignmentListDto(data);
 }
 
+export async function listExpertCustomerAssignmentsPage(filters: {
+  expertUserId?: string;
+  search?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ items: ExpertCustomerAssignment[]; total: number }> {
+  const params = new URLSearchParams({
+    status: "active",
+    limit: String(filters.limit),
+    offset: String(filters.offset),
+  });
+  if (filters.expertUserId) params.set("expertUserId", filters.expertUserId);
+  if (filters.search) params.set("search", filters.search);
+  const data = await httpClient.get<unknown>(`/api/support/expert-customer-assignments?${params.toString()}`);
+  const record = toRecord(data);
+  return {
+    items: mapExpertCustomerAssignmentListDto(record.items ?? []),
+    total: Number(record.total ?? 0),
+  };
+}
+
 export async function createExpertCustomerAssignment(
   payload: CreateExpertCustomerAssignmentPayload,
 ): Promise<ExpertCustomerAssignment> {

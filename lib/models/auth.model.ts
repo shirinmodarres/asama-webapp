@@ -15,6 +15,7 @@ export interface AuthUser {
   activeRoleLabel: string;
   canSwitchRole: boolean;
   status: UserStatus;
+  assignedCustomerCount?: number;
 }
 
 export interface LoginResponse {

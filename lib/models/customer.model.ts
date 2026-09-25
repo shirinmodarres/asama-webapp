@@ -77,6 +77,7 @@ export interface CustomerFilters {
   status?: CustomerStatus;
   limit?: number;
   offset?: number;
+  assignmentStatus?: "unassigned";
 }
 
 export interface CustomerPayload {
