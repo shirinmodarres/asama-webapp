@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CircleMinus, CirclePlus, PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -18,7 +18,6 @@ import type {
   CreateSalesQuotationPayload,
   SalesQuotation,
   SalesQuotationItem,
-  SalesRequestAdjustment,
 } from "@/lib/models/sales-quotation.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
@@ -65,22 +64,6 @@ interface SalesTypeOption {
   internalCode?: number | null;
   sepidarCode?: number | null;
 }
-
-interface DraftAdjustment extends SalesRequestAdjustment {
-  rowId: string;
-}
-
-const ADJUSTMENT_PRESETS = [
-  "تخفیف پایه",
-  "تخفیف سبد خرید",
-  "تخفیف خوش‌حسابی",
-  "کمک هزینه حمل",
-  "تخفیف تسویه زودتر",
-  "تخفیف خرید نقدی",
-  "پشت‌دست / مدیریت بازار",
-  "جایزه / کمک هزینه سفر",
-  "سایر",
-];
 
 export function QuotationForm({
   mode,
@@ -133,11 +116,10 @@ export function QuotationForm({
   const [rowErrors, setRowErrors] = useState<
     Record<string, { productId?: string; quantity?: string }>
   >({});
-  const [adjustments, setAdjustments] = useState<DraftAdjustment[]>(
-    (initialQuotation?.adjustments || []).map((item, index) => ({
-      ...item,
-      rowId: `adjustment-${index}`,
-    })),
+  const [discountPercentage, setDiscountPercentage] = useState(
+    initialQuotation?.adjustments?.find(
+      (item) => item.type === "deduction" && item.title === "تخفیف",
+    )?.percentage ?? initialQuotation?.discountPercentage ?? 0,
   );
   const quotationSalesTypeFallback = useMemo(
     () =>
@@ -481,17 +463,8 @@ export function QuotationForm({
   );
 
   const subtotal = resolvedRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const calculatedAdjustments = adjustments.map((item) => ({
-    ...item,
-    amount: subtotal * (item.percentage / 100),
-  }));
-  const deductionTotal = calculatedAdjustments
-    .filter((item) => item.type === "deduction")
-    .reduce((sum, item) => sum + item.amount, 0);
-  const additionTotal = calculatedAdjustments
-    .filter((item) => item.type === "addition")
-    .reduce((sum, item) => sum + item.amount, 0);
-  const total = Math.max(0, subtotal - deductionTotal + additionTotal);
+  const discountAmount = subtotal * (discountPercentage / 100);
+  const total = Math.max(0, subtotal - discountAmount);
   const itemCount = resolvedRows.length;
   const totalQuantity = resolvedRows.reduce(
     (sum, row) => sum + row.quantity,
@@ -607,11 +580,6 @@ export function QuotationForm({
       );
       return;
     }
-    if (adjustments.some((item) => !item.title.trim())) {
-      setError("عنوان مورد سفارشی تخفیف/اضافه را وارد کنید.");
-      return;
-    }
-
     try {
       await onSubmit(
         buildQuotationSubmitPayload({
@@ -620,14 +588,19 @@ export function QuotationForm({
           selectedPriceListId,
           notes,
           selectedValidUntil,
-          discountPercentage: 0,
+          discountPercentage,
           taxPercentage: 0,
           stockObjectId: effectiveStockObjectId,
-          adjustments: adjustments.map(({ title, percentage, type }) => ({
-            title,
-            percentage,
-            type,
-          })),
+          adjustments:
+            discountPercentage > 0
+              ? [
+                  {
+                    title: "تخفیف",
+                    percentage: discountPercentage,
+                    type: "deduction",
+                  },
+                ]
+              : [],
           status,
           rows: resolvedRows,
         }),
@@ -921,199 +894,25 @@ export function QuotationForm({
           </div>
         </div>
 
-        {/* تخفیف / اضافات / کسورات */}
+        {/* تخفیف */}
         <div className="mt-8 space-y-4 border-t border-[var(--border)] pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold text-[var(--foreground)]">
-                تخفیف‌ها، اضافات و کسورات
-              </h3>
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                درصد هر مورد روی جمع مبلغ کالاها محاسبه می‌شود.
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                setAdjustments((current) => [
-                  ...current,
-                  {
-                    rowId: `adjustment-${Date.now()}`,
-                    title: ADJUSTMENT_PRESETS[0],
-                    percentage: 0,
-                    type: "deduction",
-                  },
-                ])
+          <label className="grid max-w-xs gap-1.5 text-sm font-medium text-[var(--foreground)]">
+            <span>تخفیف (درصد)</span>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={formatNumber(discountPercentage)}
+              onChange={(event) =>
+                setDiscountPercentage(
+                  Math.min(
+                    100,
+                    Math.max(0, toNumber(normalizeDigits(event.target.value))),
+                  ),
+                )
               }
-            >
-              <PlusCircle className="size-4" />
-              افزودن
-            </Button>
-          </div>
-
-          {adjustments.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-6 text-center text-sm text-[var(--muted-foreground)]">
-              تخفیف، اضافه یا کسوراتی ثبت نشده است.
-            </div>
-          ) : null}
-
-          <div className="space-y-3">
-            {adjustments.map((adjustment) => (
-              <div
-                key={adjustment.rowId}
-                className="grid gap-3 rounded-lg border border-[var(--border)] bg-[var(--card)] p-4 sm:grid-cols-[minmax(180px,1fr)_120px_130px_40px] sm:items-end"
-              >
-                {/* عنوان */}
-                <div className="grid gap-1.5">
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    عنوان
-                  </span>
-
-                  <SearchableSelect
-                    value={
-                      ADJUSTMENT_PRESETS.includes(adjustment.title)
-                        ? adjustment.title
-                        : "سایر"
-                    }
-                    onValueChange={(value) =>
-                      setAdjustments((current) =>
-                        current.map((item) =>
-                          item.rowId === adjustment.rowId
-                            ? {
-                                ...item,
-                                title: value === "سایر" ? "" : value,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                    options={ADJUSTMENT_PRESETS.map((title) => ({
-                      value: title,
-                      label: title,
-                    }))}
-                    placeholder="انتخاب عنوان"
-                    searchPlaceholder="جستجوی عنوان"
-                    emptyMessage="عنوانی یافت نشد"
-                  />
-
-                  {(!ADJUSTMENT_PRESETS.includes(adjustment.title) ||
-                    !adjustment.title) && (
-                    <Input
-                      value={adjustment.title}
-                      onChange={(event) =>
-                        setAdjustments((current) =>
-                          current.map((item) =>
-                            item.rowId === adjustment.rowId
-                              ? {
-                                  ...item,
-                                  title: event.target.value,
-                                }
-                              : item,
-                          ),
-                        )
-                      }
-                      placeholder="عنوان دلخواه"
-                    />
-                  )}
-                </div>
-
-                {/* درصد */}
-                <div className="grid gap-1.5">
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    درصد
-                  </span>
-
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={formatNumber(adjustment.percentage)}
-                    onChange={(event) =>
-                      setAdjustments((current) =>
-                        current.map((item) =>
-                          item.rowId === adjustment.rowId
-                            ? {
-                                ...item,
-                                percentage: Math.min(
-                                  100,
-                                  Math.max(
-                                    0,
-                                    toNumber(
-                                      normalizeDigits(event.target.value),
-                                    ),
-                                  ),
-                                ),
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                    placeholder="درصد"
-                  />
-                </div>
-
-                {/* نوع */}
-                <div className="grid gap-1.5">
-                  <span className="text-xs text-[var(--muted-foreground)]">
-                    نوع
-                  </span>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={
-                      adjustment.type === "deduction"
-                        ? "text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                        : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                    }
-                    onClick={() =>
-                      setAdjustments((current) =>
-                        current.map((item) =>
-                          item.rowId === adjustment.rowId
-                            ? {
-                                ...item,
-                                type:
-                                  item.type === "deduction"
-                                    ? "addition"
-                                    : "deduction",
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  >
-                    {adjustment.type === "deduction" ? (
-                      <CircleMinus className="size-4" />
-                    ) : (
-                      <CirclePlus className="size-4" />
-                    )}
-
-                    {adjustment.type === "deduction" ? "کسورات" : "اضافات"}
-                  </Button>
-                </div>
-
-                {/* حذف */}
-                <div className="flex h-10 items-center justify-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    title="حذف"
-                    onClick={() =>
-                      setAdjustments((current) =>
-                        current.filter(
-                          (item) => item.rowId !== adjustment.rowId,
-                        ),
-                      )
-                    }
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              placeholder="درصد تخفیف"
+            />
+          </label>
         </div>
       </Card>
 
@@ -1166,24 +965,9 @@ export function QuotationForm({
               value={formatCurrency(subtotal)}
             />
 
-            {calculatedAdjustments.map((item) => (
-              <SummaryRow
-                key={item.rowId}
-                label={`${item.type === "addition" ? "+" : "-"} ${
-                  item.title || "بدون عنوان"
-                } ${formatNumber(item.percentage)}٪`}
-                value={formatCurrency(item.amount)}
-              />
-            ))}
-
             <SummaryRow
-              label="مجموع کسورات"
-              value={formatCurrency(deductionTotal)}
-            />
-
-            <SummaryRow
-              label="مجموع اضافات"
-              value={formatCurrency(additionTotal)}
+              label={`تخفیف ${formatNumber(discountPercentage)}٪`}
+              value={formatCurrency(discountAmount)}
             />
           </dl>
 
