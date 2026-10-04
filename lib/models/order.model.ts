@@ -128,7 +128,13 @@ export interface Order {
   reviewRemainingMs: number | null;
   financialApprovalStatus: "pending" | "approved" | "needs_correction" | null;
   financialApprovalStatusLabel: string | null;
-  financialApprovalStage: "sales_accountant" | "treasurer" | "systems_expert" | null;
+  financialApprovalStage:
+    | "sales_accountant"
+    | "treasurer"
+    | "systems_expert"
+    | "sales_manager"
+    | "systems_transfer"
+    | null;
   financialApprovalStageLabel: string | null;
   financialApprovedAt: string | null;
   financialApprovedBy: string | null;
@@ -227,7 +233,8 @@ export interface CancelOrderPayload {
 }
 
 export interface MarkOrderNeedsReviewPayload {
-  reasonCode: string;
+  reasonCode?: string;
+  reason?: string;
   requestedByName: string;
 }
 

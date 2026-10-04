@@ -81,7 +81,9 @@ export default function ManagerOrderReviewPage() {
   const [isRetryingQuotation, setIsRetryingQuotation] = useState(false);
   const [isFinancialActionSubmitting, setIsFinancialActionSubmitting] = useState(false);
   const [decision, setDecision] = useState<DecisionType>(null);
-  const [financialDecision, setFinancialDecision] = useState<"approve" | "return" | null>(null);
+  const [financialDecision, setFinancialDecision] = useState<
+    "approve" | "transfer_approve" | "return" | null
+  >(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [najaRejectReason, setNajaRejectReason] = useState("");
@@ -166,6 +168,12 @@ export default function ManagerOrderReviewPage() {
     0,
   );
   const isNajaOrder = order.orderType === "naja";
+  const workflowStage =
+    order.financialApprovalStage ??
+    (order.orderStatus === "pending_manager_approval" ? "sales_manager" : null);
+  const isSalesManagerUser = ["sales_manager", "manager", "salesManager", "sales-manager"].includes(
+    currentRole ?? "",
+  );
   const effectiveFinancialApprovalStatus =
     order.financialApprovalStatus ??
     (order.orderStatus === "pending_financial_approval" ? "pending" : null);
@@ -176,7 +184,14 @@ export default function ManagerOrderReviewPage() {
     order.orderStatus === "pending_financial_approval" &&
     effectiveFinancialApprovalStatus === "pending" &&
     order.financialApprovalStage === financialReviewerStage;
+  const canManageSystemsTransferDecision =
+    currentRole === "systems_expert" &&
+    order.orderStatus === "pending_manager_approval" &&
+    effectiveFinancialApprovalStatus === "approved" &&
+    workflowStage === "systems_transfer";
   const canApprove =
+    isSalesManagerUser &&
+    workflowStage === "sales_manager" &&
     financialGateOpen &&
     (isNajaOrder
       ? order.orderStatus === "pending_manager_approval"
@@ -187,10 +202,11 @@ export default function ManagerOrderReviewPage() {
     isNajaOrder &&
     order.orderStatus === "pending_manager_approval" &&
     financialGateOpen;
-  const canNeedReview = !isNajaOrder && order.orderStatus === "pending_manager_approval";
-  const shouldShowNeedReviewButton =
-    !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
+  const canNeedReview = false;
+  const shouldShowNeedReviewButton = false;
   const canCancel =
+    isSalesManagerUser &&
+    workflowStage === "sales_manager" &&
     !isNajaOrder &&
     ["pending_manager_approval", "needs_review", "review_resolved", "approved"].includes(
       order.orderStatus,
@@ -212,7 +228,10 @@ export default function ManagerOrderReviewPage() {
   const isNeedsReview = order.orderStatus === "needs_review";
   const isReviewResolved = order.orderStatus === "review_resolved";
   const isVoided = order.orderStatus === "voided";
-  const isFinancialReadOnly = isFinancialReviewer && !canManageFinancialDecision;
+  const isFinancialReadOnly =
+    isFinancialReviewer &&
+    !canManageFinancialDecision &&
+    !canManageSystemsTransferDecision;
   const pageTitle = isFinancialReviewer
     ? "بررسی سفارش مالی"
     : "بررسی جزئیات سفارش";
@@ -265,14 +284,15 @@ export default function ManagerOrderReviewPage() {
     setOrder((current) => {
       const refreshed = result.order ?? current;
       return refreshed
-        ? {
-            ...refreshed,
-            orderStatus: "approved",
-            orderStatusLabel: "تأیید شده",
-            quotationStatus: result.quotationStatus,
-          }
+        ? { ...refreshed, quotationStatus: result.quotationStatus }
         : refreshed;
     });
+    if (result.order?.financialApprovalStage === "systems_transfer") {
+      setMessageType("success");
+      setMessage("سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال شد.");
+      setDecision(null);
+      return;
+    }
     if (result.quotationStatus === "failed") {
       setMessageType("warning");
       setMessage(
@@ -405,15 +425,21 @@ export default function ManagerOrderReviewPage() {
           ? await approveFinancialOrder(order.objectId, {
               approvedByName: getStoredCurrentUser()?.fullName ?? "",
             })
+          : financialDecision === "transfer_approve"
+            ? (await approveOrder(order.objectId, {
+                approvedByName: getStoredCurrentUser()?.fullName ?? "",
+              })).order
           : await returnFinancialOrder(order.objectId, {
               returnedByName: getStoredCurrentUser()?.fullName ?? "",
               correctionReason: financialCorrectionReason,
             });
-      setOrder(updated);
+      if (updated) setOrder(updated);
       setMessageType("success");
       setMessage(
         financialDecision === "approve"
           ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال شد.`
+          : financialDecision === "transfer_approve"
+            ? "تأیید انتقال بار ثبت شد و سفارش وارد فرآیند انبار شد."
           : "سفارش برای اصلاح به کارشناس برگردانده شد.",
       );
       setFinancialDecision(null);
@@ -906,16 +932,25 @@ export default function ManagerOrderReviewPage() {
                   مرحله فعلی: {order.financialApprovalStageLabel}
                 </p>
               ) : null}
-              {canManageFinancialDecision ? (
+              {canManageFinancialDecision || canManageSystemsTransferDecision ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    disabled={isFinancialActionSubmitting || order.financialApprovalStatus === "approved"}
-                    onClick={() => setFinancialDecision("approve")}
+                    disabled={isFinancialActionSubmitting ||
+                      (!canManageSystemsTransferDecision && order.financialApprovalStatus === "approved")}
+                    onClick={() =>
+                      setFinancialDecision(
+                        canManageSystemsTransferDecision
+                          ? "transfer_approve"
+                          : "approve",
+                      )
+                    }
                     className="gap-2"
                   >
                     <CheckCircle2 className="size-4" />
-                    تأیید مالی
+                    {canManageSystemsTransferDecision
+                      ? "تأیید انتقال بار"
+                      : "تأیید مالی"}
                   </Button>
                   <Button
                     type="button"
@@ -923,7 +958,7 @@ export default function ManagerOrderReviewPage() {
                     disabled={
                       isFinancialActionSubmitting ||
                       order.financialApprovalStatus === "needs_correction" ||
-                      order.financialApprovalStatus === "approved"
+                      (!canManageSystemsTransferDecision && order.financialApprovalStatus === "approved")
                     }
                     onClick={() => setFinancialDecision("return")}
                     className="gap-2"
@@ -965,7 +1000,20 @@ export default function ManagerOrderReviewPage() {
                   className="w-full justify-center gap-2 sm:col-span-2"
                 >
                   <CheckCircle2 className="size-4" />
-                  تایید سفارش
+                  تایید و ارسال برای انتقال بار
+                </Button>
+              ) : null}
+
+              {canApprove ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => setFinancialDecision("return")}
+                  className="w-full justify-center gap-2 sm:col-span-2"
+                >
+                  <AlertTriangle className="size-4" />
+                  نیازمند اصلاح
                 </Button>
               ) : null}
 
@@ -1081,7 +1129,7 @@ export default function ManagerOrderReviewPage() {
         }
         message={
           decision === "approve"
-            ? "با تایید، سفارش وارد فرآیند انبار می شود."
+            ? "با تایید، سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال می‌شود."
             : decision === "reject"
               ? "با رد سفارش، رزرو احتمالی آن طبق منطق فعلی سفارش آزاد می‌شود."
             : decision === "needs_review"
@@ -1092,7 +1140,7 @@ export default function ManagerOrderReviewPage() {
         }
         confirmText={
           decision === "approve"
-            ? "تایید نهایی"
+            ? "تایید و ارسال"
             : decision === "reject"
               ? "ثبت رد سفارش"
             : decision === "needs_review"
@@ -1229,16 +1277,22 @@ export default function ManagerOrderReviewPage() {
         title={
           financialDecision === "approve"
             ? "تأیید مالی"
+            : financialDecision === "transfer_approve"
+              ? "تأیید انتقال بار"
             : "برگشت برای اصلاح"
         }
         message={
           financialDecision === "approve"
             ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال می‌شود.`
+            : financialDecision === "transfer_approve"
+              ? "با تأیید انتقال بار، سفارش وارد فرآیند موجود انبار می‌شود."
             : "لطفاً دلیل برگشت برای اصلاح را وارد کنید."
         }
         confirmText={
           financialDecision === "approve"
             ? "تأیید مالی"
+            : financialDecision === "transfer_approve"
+              ? "تأیید انتقال بار"
             : "ثبت برگشت"
         }
         tone={financialDecision === "return" ? "danger" : "success"}

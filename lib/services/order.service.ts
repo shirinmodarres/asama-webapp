@@ -315,6 +315,7 @@ function toNumberSnapshot(value: unknown): number | null {
 
 export interface ApproveOrderPayload {
   stockObjectId?: string;
+  approvedByName?: string;
 }
 
 export async function approveOrder(
@@ -461,7 +462,10 @@ function mapApprovalResult(
   const order = hasOrderData
     ? mapOrderDto({
         ...orderSource,
-        orderStatus: "approved",
+        orderStatus:
+          typeof orderSource.orderStatus === "string"
+            ? orderSource.orderStatus
+            : "approved",
         quotationStatus,
       })
     : null;

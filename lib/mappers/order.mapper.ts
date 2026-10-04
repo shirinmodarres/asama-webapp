@@ -363,6 +363,8 @@ export function mapOrderDto(dto: unknown): Order {
       | "sales_accountant"
       | "treasurer"
       | "systems_expert"
+      | "sales_manager"
+      | "systems_transfer"
       | null,
     financialApprovalStageLabel: toNullableString(record.financialApprovalStageLabel),
     financialApprovedAt: toNullableString(record.financialApprovedAt),

@@ -29,7 +29,9 @@ export type FinancialApprovalStatusCode = "pending" | "approved" | "needs_correc
 export type FinancialApprovalStageCode =
   | "sales_accountant"
   | "treasurer"
-  | "systems_expert";
+  | "systems_expert"
+  | "sales_manager"
+  | "systems_transfer";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   pending_approval: "در انتظار تایید",
@@ -77,7 +79,9 @@ export const FINANCIAL_APPROVAL_STATUS_LABELS: Record<FinancialApprovalStatusCod
 export const FINANCIAL_APPROVAL_STAGE_LABELS: Record<FinancialApprovalStageCode, string> = {
   sales_accountant: "حسابدار فروش",
   treasurer: "خزانه‌دار",
-  systems_expert: "کارشناس سامانه‌ها",
+  systems_expert: "کارشناس سامانه‌ها (بررسی اولیه)",
+  sales_manager: "مدیر فروش",
+  systems_transfer: "کارشناس سامانه‌ها (انتقال بار)",
 };
 
 export function getOrderStatusLabel(status: string | null | undefined): string {

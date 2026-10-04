@@ -123,7 +123,7 @@ export default function ExpertOrderDetailsPage() {
     try {
       const updated = await resubmitFinancialOrder(order.objectId);
       setOrder(updated);
-      setActionMessage("سفارش برطرف شد و دوباره برای بررسی مالی ارسال شد.");
+      setActionMessage("سفارش برطرف شد و دوباره برای بررسی ارسال شد.");
     } catch (resubmitError) {
       setActionError(getErrorMessage(resubmitError));
     } finally {
@@ -278,7 +278,7 @@ export default function ExpertOrderDetailsPage() {
               <div className="flex flex-wrap items-center gap-2 text-[#9A6C18]">
                 <AlertTriangle className="size-4" />
                 <h3 className="text-base font-semibold">
-                  این سفارش برای اصلاح از کنترل مالی برگشت خورده است.
+                  این سفارش برای اصلاح برگشت خورده است.
                 </h3>
                 <StatusBadge
                   type="financial"
@@ -311,7 +311,7 @@ export default function ExpertOrderDetailsPage() {
                   disabled={isSubmitting || !order.canEdit}
                   onClick={handleResubmitFinancialReview}
                 >
-                  برطرف شد و ارسال مجدد برای بررسی مالی
+                  ارسال مجدد برای بررسی
                 </Button>
               </div>
             </div>
