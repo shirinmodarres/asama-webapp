@@ -162,6 +162,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت مالی سفارش‌ها",
     },
     {
+      label: "تأیید مالی سفارش‌ها",
+      href: "/finance/financial-approvals",
+      icon: "clipboard-check",
+      description: "بررسی درخواست‌های در انتظار حسابدار فروش",
+    },
+    {
       label: "آماده فاکتور",
       href: "/finance/ready",
       icon: "layers",

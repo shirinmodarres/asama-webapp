@@ -290,6 +290,11 @@ export default function ExpertOrderDetailsPage() {
                 <span className="mt-2 block text-xs text-[#8A6A3A]">
                   وضعیت فعلی: {getFinancialApprovalStatusLabel(order.financialApprovalStatus)}
                 </span>
+                {order.financialApprovalStageLabel ? (
+                  <span className="mt-1 block text-xs text-[#8A6A3A]">
+                    مرحله درخواست‌کننده اصلاح: {order.financialApprovalStageLabel}
+                  </span>
+                ) : null}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {order.canEdit ? (

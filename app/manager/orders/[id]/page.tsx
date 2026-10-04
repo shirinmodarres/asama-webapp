@@ -124,10 +124,22 @@ export default function ManagerOrderReviewPage() {
     };
   }, [objectId]);
 
-  const currentRole = getStoredCurrentUser()?.role ?? null;
-  const layoutRole = ["financial_control", "systems_expert"].includes(currentRole ?? "")
-    ? "finance-control"
-    : "manager";
+  const currentUser = getStoredCurrentUser();
+  const currentRole = currentUser?.activeRole ?? currentUser?.role ?? null;
+  const financialReviewerStage =
+    currentRole === "finance"
+      ? "sales_accountant"
+      : currentRole === "financial_control"
+        ? "treasurer"
+        : currentRole === "systems_expert"
+          ? "systems_expert"
+          : null;
+  const isFinancialReviewer = financialReviewerStage !== null;
+  const layoutRole = currentRole === "finance"
+    ? "finance"
+    : isFinancialReviewer
+      ? "finance-control"
+      : "manager";
 
   if (isLoading) {
     return (
@@ -153,7 +165,6 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const isFinancialControlUser = currentRole === "financial_control";
   const isNajaOrder = order.orderType === "naja";
   const effectiveFinancialApprovalStatus =
     order.financialApprovalStatus ??
@@ -161,9 +172,10 @@ export default function ManagerOrderReviewPage() {
   const financialGateOpen =
     !effectiveFinancialApprovalStatus || effectiveFinancialApprovalStatus === "approved";
   const canManageFinancialDecision =
-    isFinancialControlUser &&
+    isFinancialReviewer &&
     order.orderStatus === "pending_financial_approval" &&
-    effectiveFinancialApprovalStatus === "pending";
+    effectiveFinancialApprovalStatus === "pending" &&
+    order.financialApprovalStage === financialReviewerStage;
   const canApprove =
     financialGateOpen &&
     (isNajaOrder
@@ -200,17 +212,25 @@ export default function ManagerOrderReviewPage() {
   const isNeedsReview = order.orderStatus === "needs_review";
   const isReviewResolved = order.orderStatus === "review_resolved";
   const isVoided = order.orderStatus === "voided";
-  const isFinancialReadOnly =
-    isFinancialControlUser && order.orderStatus !== "pending_financial_approval";
-  const pageTitle = isFinancialControlUser
+  const isFinancialReadOnly = isFinancialReviewer && !canManageFinancialDecision;
+  const pageTitle = isFinancialReviewer
     ? "بررسی سفارش مالی"
     : "بررسی جزئیات سفارش";
-  const pageDescription = isFinancialControlUser
+  const pageDescription = isFinancialReviewer
     ? "ثبت تأیید یا برگشت سفارش برای اصلاح"
     : "ثبت تصمیم نهایی مدیر فروش برای شروع یا توقف فرآیند انبار";
-  const managerActionVisible = !isFinancialControlUser;
-  const reviewSectionVisible = !isFinancialControlUser && (isNeedsReview || isReviewResolved);
-  const shipmentControlVisible = !isFinancialControlUser;
+  const managerActionVisible = !isFinancialReviewer;
+  const reviewSectionVisible = !isFinancialReviewer && (isNeedsReview || isReviewResolved);
+  const shipmentControlVisible = !isFinancialReviewer;
+  const financialBackPath = currentRole === "finance"
+    ? "/finance/financial-approvals"
+    : "/finance-control/orders";
+  const financialApprovalNextStepLabel =
+    order.financialApprovalStage === "sales_accountant"
+      ? "خزانه‌دار"
+      : order.financialApprovalStage === "treasurer"
+        ? "کارشناس سامانه‌ها"
+        : "مدیر فروش";
 
   const columns: DataTableColumn<OrderItem>[] = [
     {
@@ -393,7 +413,7 @@ export default function ManagerOrderReviewPage() {
       setMessageType("success");
       setMessage(
         financialDecision === "approve"
-          ? "تأیید مالی با موفقیت ثبت شد."
+          ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال شد.`
           : "سفارش برای اصلاح به کارشناس برگردانده شد.",
       );
       setFinancialDecision(null);
@@ -520,13 +540,13 @@ export default function ManagerOrderReviewPage() {
   };
 
   return (
-    <DashboardLayout role={layoutRole} title={isFinancialControlUser ? "کنترل مالی" : "سفارش‌ها"}>
+    <DashboardLayout role={layoutRole} title={isFinancialReviewer ? "کنترل مالی" : "سفارش‌ها"}>
       <SectionHeader
         title={pageTitle}
         description={pageDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {order.canEdit && !isFinancialControlUser ? (
+            {order.canEdit && !isFinancialReviewer ? (
               <Link
                 href={`/manager/orders/${order.objectId}/edit`}
                 className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white hover:text-white"
@@ -535,7 +555,7 @@ export default function ManagerOrderReviewPage() {
               </Link>
             ) : null}
             <Link
-              href={isFinancialControlUser ? "/finance-control/orders" : "/manager/order-tracking"}
+              href={isFinancialReviewer ? financialBackPath : "/manager/order-tracking"}
               className="rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm text-[#334155] hover:border-[#CBD5E1]"
             >
               بازگشت به لیست
@@ -558,7 +578,7 @@ export default function ManagerOrderReviewPage() {
         <InlineErrorMessage message={message} />
       ) : null}
 
-      {isFinancialControlUser && isFinancialReadOnly ? (
+      {isFinancialReviewer && isFinancialReadOnly ? (
         <div className="rounded-xl border border-[#D7E5F0] bg-[#F8FBFF] px-4 py-3 text-sm leading-7 text-[#1F3A5F]">
           این سفارش قبلاً در کنترل مالی بررسی شده است؛ در این صفحه فقط می‌توانید جزئیات را مشاهده کنید.
         </div>
@@ -822,7 +842,7 @@ export default function ManagerOrderReviewPage() {
                 </h3>
                 <div className="mt-3">{getQuotationStatusBadge(order)}</div>
               </div>
-              {order.quotationStatus === "failed" && !isFinancialControlUser ? (
+              {order.quotationStatus === "failed" && !isFinancialReviewer ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -873,7 +893,7 @@ export default function ManagerOrderReviewPage() {
             </div>
           </div>
 
-          {isFinancialControlUser ? (
+          {isFinancialReviewer ? (
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
               <p className="text-sm font-semibold text-[#1F3A5F]">
                 کنترل مالی
@@ -881,6 +901,11 @@ export default function ManagerOrderReviewPage() {
               <p className="mt-2 text-sm leading-7 text-[#64748B]">
                 وضعیت فعلی: {order.financialApprovalStatusLabel || getFinancialApprovalStatusLabel(effectiveFinancialApprovalStatus) || "-"}
               </p>
+              {order.financialApprovalStageLabel ? (
+                <p className="mt-1 text-sm leading-7 text-[#64748B]">
+                  مرحله فعلی: {order.financialApprovalStageLabel}
+                </p>
+              ) : null}
               {canManageFinancialDecision ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
@@ -918,13 +943,13 @@ export default function ManagerOrderReviewPage() {
           {managerActionVisible ? (
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <p className="text-sm leading-7 text-[#6B7280]">
-              {isFinancialControlUser
+              {isFinancialReviewer
                 ? "سفارش را در این مرحله تأیید یا برای اصلاح برگردانید."
                 : canApprove || canRejectNaja || canCancel || canNeedReview
                 ? "وضعیت سفارش را مشخص کنید."
                 : null}
             </p>
-            {!isFinancialControlUser &&
+            {!isFinancialReviewer &&
             effectiveFinancialApprovalStatus &&
             effectiveFinancialApprovalStatus !== "approved" ? (
               <p className="mt-3 rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] px-3 py-2 text-sm text-[#8A5A00]">
@@ -932,7 +957,7 @@ export default function ManagerOrderReviewPage() {
               </p>
             ) : null}
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {canApprove && !isFinancialControlUser ? (
+              {canApprove && !isFinancialReviewer ? (
                 <Button
                   type="button"
                   disabled={isSubmitting}
@@ -1208,7 +1233,7 @@ export default function ManagerOrderReviewPage() {
         }
         message={
           financialDecision === "approve"
-            ? "سفارش وارد مرحله تأیید مدیر فروش می‌شود."
+            ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال می‌شود.`
             : "لطفاً دلیل برگشت برای اصلاح را وارد کنید."
         }
         confirmText={

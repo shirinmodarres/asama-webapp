@@ -19,6 +19,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 type FinancialTabKey = "pending" | "needs_correction" | "approved";
@@ -26,6 +27,13 @@ type FinancialTabKey = "pending" | "needs_correction" | "approved";
 const PAGE_SIZE = 15;
 
 export default function FinancialControlOrdersPage() {
+  const currentUser = getStoredCurrentUser();
+  const currentRole = currentUser?.activeRole ?? currentUser?.role;
+  const isSalesAccountant = currentRole === "finance";
+  const layoutRole = isSalesAccountant ? "finance" : "finance-control";
+  const detailPath = isSalesAccountant
+    ? "/finance/orders"
+    : "/finance-control/orders";
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
   const [returnedOrders, setReturnedOrders] = useState<Order[]>([]);
   const [approvedOrders, setApprovedOrders] = useState<Order[]>([]);
@@ -131,7 +139,9 @@ export default function FinancialControlOrdersPage() {
       header: "عملیات",
       render: (row) => (
         <Link
-          href={`/finance-control/orders/${row.objectId}`}
+          href={`${detailPath}/${row.objectId}${
+            isSalesAccountant ? "/financial-approval" : ""
+          }`}
           className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs !text-white hover:text-white"
         >
           بررسی سفارش
@@ -143,7 +153,7 @@ export default function FinancialControlOrdersPage() {
   const hasFilters = search.trim().length > 0 || dateFrom.length > 0 || dateTo.length > 0;
 
   return (
-    <DashboardLayout role="finance-control" title="کنترل مالی">
+    <DashboardLayout role={layoutRole} title="کنترل مالی">
       <SectionHeader
         title="سفارش‌های کنترل مالی"
         description="سفارش‌های در انتظار تأیید مالی و سفارش‌های برگشتی برای اصلاح"
