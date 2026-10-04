@@ -15,6 +15,7 @@ interface OrderSummaryCardProps {
   totalAmount: number;
   status: string;
   warehouseStatus: string;
+  financialApprovalStageLabel?: string | null;
   saleTypeTitle?: string | null;
   priceListTitle?: string | null;
   stockTitles?: string[];
@@ -27,6 +28,7 @@ export function OrderSummaryCard({
   totalAmount,
   status,
   warehouseStatus,
+  financialApprovalStageLabel,
   saleTypeTitle,
   priceListTitle,
   stockTitles = [],
@@ -64,6 +66,9 @@ export function OrderSummaryCard({
           label="وضعیت سفارش"
           value={getDisplayOrderStatusLabel(status, warehouseStatus)}
         />
+        {financialApprovalStageLabel ? (
+          <SummaryRow label="مرحله تأیید مالی" value={financialApprovalStageLabel} />
+        ) : null}
         <SummaryRow
           label="وضعیت انبار"
           value={getWarehouseStatusLabel(warehouseStatus)}

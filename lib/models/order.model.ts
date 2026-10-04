@@ -128,6 +128,8 @@ export interface Order {
   reviewRemainingMs: number | null;
   financialApprovalStatus: "pending" | "approved" | "needs_correction" | null;
   financialApprovalStatusLabel: string | null;
+  financialApprovalStage: "sales_accountant" | "treasurer" | "systems_expert" | null;
+  financialApprovalStageLabel: string | null;
   financialApprovedAt: string | null;
   financialApprovedBy: string | null;
   financialCorrectionReason: string | null;

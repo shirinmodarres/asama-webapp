@@ -125,7 +125,9 @@ export default function ManagerOrderReviewPage() {
   }, [objectId]);
 
   const currentRole = getStoredCurrentUser()?.role ?? null;
-  const layoutRole = currentRole === "financial_control" ? "finance-control" : "manager";
+  const layoutRole = ["financial_control", "systems_expert"].includes(currentRole ?? "")
+    ? "finance-control"
+    : "manager";
 
   if (isLoading) {
     return (
@@ -594,6 +596,12 @@ export default function ManagerOrderReviewPage() {
                   "-"
                 }
               />
+              {order.financialApprovalStageLabel ? (
+                <InfoItem
+                  label="مرحله تأیید مالی"
+                  value={order.financialApprovalStageLabel}
+                />
+              ) : null}
               {order.orderType === "naja" ? (
                 <>
                   <InfoItem

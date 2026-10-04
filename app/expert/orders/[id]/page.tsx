@@ -24,7 +24,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { getFinancialApprovalStatusLabel } from "@/lib/domain/statuses";
+import {
+  getFinancialApprovalStageLabel,
+  getFinancialApprovalStatusLabel,
+} from "@/lib/domain/statuses";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -405,6 +408,10 @@ export default function ExpertOrderDetailsPage() {
               totalAmount={totalAmount}
               status={order.orderStatus}
               warehouseStatus={order.warehouseStatus}
+              financialApprovalStageLabel={
+                order.financialApprovalStageLabel ||
+                getFinancialApprovalStageLabel(order.financialApprovalStage)
+              }
               saleTypeTitle={paymentMethodTitle}
             />
           </section>

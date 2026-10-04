@@ -118,6 +118,11 @@ export default function FinancialControlOrdersPage() {
             type="financial"
             status={row.financialApprovalStatus ?? "pending"}
           />
+          {row.financialApprovalStageLabel ? (
+            <span className="text-xs text-muted-foreground">
+              {row.financialApprovalStageLabel}
+            </span>
+          ) : null}
         </div>
       ),
     },

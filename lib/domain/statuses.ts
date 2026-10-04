@@ -26,6 +26,10 @@ export type WarehouseStatusCode =
 export type ProductStatusCode = "active" | "inactive";
 export type InvoiceStatusCode = "issued" | "needs_follow_up";
 export type FinancialApprovalStatusCode = "pending" | "approved" | "needs_correction";
+export type FinancialApprovalStageCode =
+  | "sales_accountant"
+  | "treasurer"
+  | "systems_expert";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   pending_approval: "در انتظار تایید",
@@ -68,6 +72,12 @@ export const FINANCIAL_APPROVAL_STATUS_LABELS: Record<FinancialApprovalStatusCod
   pending: "در انتظار تأیید مالی",
   approved: "تأیید مالی شد",
   needs_correction: "نیازمند اصلاح مالی",
+};
+
+export const FINANCIAL_APPROVAL_STAGE_LABELS: Record<FinancialApprovalStageCode, string> = {
+  sales_accountant: "حسابدار فروش",
+  treasurer: "خزانه‌دار",
+  systems_expert: "کارشناس سامانه‌ها",
 };
 
 export function getOrderStatusLabel(status: string | null | undefined): string {
@@ -121,4 +131,11 @@ export function getFinancialApprovalStatusLabel(
     FINANCIAL_APPROVAL_STATUS_LABELS[status as FinancialApprovalStatusCode] ??
     status
   );
+}
+
+export function getFinancialApprovalStageLabel(
+  stage: string | null | undefined,
+): string {
+  if (!stage) return "";
+  return FINANCIAL_APPROVAL_STAGE_LABELS[stage as FinancialApprovalStageCode] ?? stage;
 }

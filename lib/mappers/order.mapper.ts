@@ -359,6 +359,12 @@ export function mapOrderDto(dto: unknown): Order {
       | "needs_correction"
       | null,
     financialApprovalStatusLabel: toNullableString(record.financialApprovalStatusLabel),
+    financialApprovalStage: toNullableString(record.financialApprovalStage) as
+      | "sales_accountant"
+      | "treasurer"
+      | "systems_expert"
+      | null,
+    financialApprovalStageLabel: toNullableString(record.financialApprovalStageLabel),
     financialApprovedAt: toNullableString(record.financialApprovedAt),
     financialApprovedBy: toNullableString(record.financialApprovedBy),
     financialCorrectionReason: toNullableString(record.financialCorrectionReason),

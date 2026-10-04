@@ -60,7 +60,7 @@ export const roles: Role[] = [
   },
   {
     key: "finance",
-    title: "حسابداری",
+    title: "حسابدار فروش",
     description:
       "کنترل سفارش های تحویل شده و نهایی سازی مالی با صدور فاکتور داخلی.",
     path: "/finance",
@@ -73,7 +73,7 @@ export const roles: Role[] = [
   },
   {
     key: "finance-control",
-    title: "کارشناس کنترل مالی",
+    title: "خزانه‌دار",
     description:
       "بررسی سفارش های در انتظار تایید مالی و بازگردانی موارد نیازمند اصلاح.",
     path: "/finance-control",
