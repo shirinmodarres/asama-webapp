@@ -369,6 +369,8 @@ export function mapOrderDto(dto: unknown): Order {
     financialApprovalStageLabel: toNullableString(record.financialApprovalStageLabel),
     financialApprovedAt: toNullableString(record.financialApprovedAt),
     financialApprovedBy: toNullableString(record.financialApprovedBy),
+    financialCorrectionReasonCode: toNullableString(record.financialCorrectionReasonCode),
+    financialCorrectionReasonLabel: toNullableString(record.financialCorrectionReasonLabel),
     financialCorrectionReason: toNullableString(record.financialCorrectionReason),
     financialReturnedAt: toNullableString(record.financialReturnedAt),
     financialReturnedBy: toNullableString(record.financialReturnedBy),

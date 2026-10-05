@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import {
+  getFinancialCorrectionReasons,
   REVIEW_REASONS,
   SHIPMENT_STOP_REASONS,
 } from "@/lib/domain/order-action-reasons";
@@ -87,6 +88,7 @@ export default function ManagerOrderReviewPage() {
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [najaRejectReason, setNajaRejectReason] = useState("");
+  const [financialCorrectionReasonCode, setFinancialCorrectionReasonCode] = useState("");
   const [financialCorrectionReason, setFinancialCorrectionReason] = useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [stockSelectionOptions, setStockSelectionOptions] = useState<
@@ -250,6 +252,7 @@ export default function ManagerOrderReviewPage() {
       : order.financialApprovalStage === "treasurer"
         ? "کارشناس سامانه‌ها"
         : "مدیر فروش";
+  const financialCorrectionReasons = getFinancialCorrectionReasons(workflowStage);
 
   const columns: DataTableColumn<OrderItem>[] = [
     {
@@ -408,9 +411,19 @@ export default function ManagerOrderReviewPage() {
   const confirmFinancialDecision = async () => {
     if (!financialDecision) return;
 
-    if (financialDecision === "return" && !financialCorrectionReason.trim()) {
+    if (financialDecision === "return" && !financialCorrectionReasonCode) {
       setDialogErrors({
-        financialCorrectionReason: "لطفاً دلیل برگشت برای اصلاح را وارد کنید.",
+        financialCorrectionReasonCode: "لطفاً دلیل برگشت برای اصلاح را انتخاب کنید.",
+      });
+      return;
+    }
+    if (
+      financialDecision === "return" &&
+      financialCorrectionReasonCode === "OTHER" &&
+      !financialCorrectionReason.trim()
+    ) {
+      setDialogErrors({
+        financialCorrectionReason: "لطفاً توضیحات دلیل «سایر» را وارد کنید.",
       });
       return;
     }
@@ -431,6 +444,7 @@ export default function ManagerOrderReviewPage() {
               })).order
           : await returnFinancialOrder(order.objectId, {
               returnedByName: getStoredCurrentUser()?.fullName ?? "",
+              correctionReasonCode: financialCorrectionReasonCode,
               correctionReason: financialCorrectionReason,
             });
       if (updated) setOrder(updated);
@@ -443,6 +457,7 @@ export default function ManagerOrderReviewPage() {
           : "سفارش برای اصلاح به کارشناس برگردانده شد.",
       );
       setFinancialDecision(null);
+      setFinancialCorrectionReasonCode("");
       setFinancialCorrectionReason("");
     } catch (error) {
       setMessageType("error");
@@ -1300,28 +1315,61 @@ export default function ManagerOrderReviewPage() {
         onConfirm={confirmFinancialDecision}
         onCancel={() => {
           setFinancialDecision(null);
+          setFinancialCorrectionReasonCode("");
           setFinancialCorrectionReason("");
           setDialogErrors({});
         }}
       >
         {financialDecision === "return" ? (
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>دلیل برگشت</span>
-            <Textarea
-              value={financialCorrectionReason}
-              onChange={(event) => {
-                setFinancialCorrectionReason(event.target.value);
-                setDialogErrors((current) => ({
-                  ...current,
-                  financialCorrectionReason: "",
-                }));
-              }}
-              placeholder="مثلاً: نیاز به اصلاح تعداد یا اطلاعات مشتری"
-              rows={4}
-              disabled={isFinancialActionSubmitting}
-            />
-            <FieldError message={dialogErrors.financialCorrectionReason} />
-          </label>
+          <div className="grid gap-4">
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>دلیل برگشت</span>
+              <Select
+                value={financialCorrectionReasonCode || undefined}
+                onValueChange={(value) => {
+                  setFinancialCorrectionReasonCode(value);
+                  setDialogErrors((current) => ({
+                    ...current,
+                    financialCorrectionReasonCode: "",
+                  }));
+                }}
+                disabled={isFinancialActionSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب دلیل" />
+                </SelectTrigger>
+                <SelectContent>
+                  {financialCorrectionReasons.map((reason) => (
+                    <SelectItem key={reason.code} value={reason.code}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError message={dialogErrors.financialCorrectionReasonCode} />
+            </label>
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>
+                {financialCorrectionReasonCode === "OTHER"
+                  ? "توضیحات دلیل"
+                  : "توضیحات (اختیاری)"}
+              </span>
+              <Textarea
+                value={financialCorrectionReason}
+                onChange={(event) => {
+                  setFinancialCorrectionReason(event.target.value);
+                  setDialogErrors((current) => ({
+                    ...current,
+                    financialCorrectionReason: "",
+                  }));
+                }}
+                placeholder="توضیحات تکمیلی برای کارشناس فروش"
+                rows={4}
+                disabled={isFinancialActionSubmitting}
+              />
+              <FieldError message={dialogErrors.financialCorrectionReason} />
+            </label>
+          </div>
         ) : null}
       </ConfirmationModal>
 

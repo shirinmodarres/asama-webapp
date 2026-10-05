@@ -142,11 +142,11 @@ export default function EditExpertOrderPage() {
           {editData.order.financialApprovalStatus === "needs_correction" ? (
             <div className="rounded-xl border border-[#F8D9A0] bg-[#FFF8E7] p-4 text-sm text-[#8A5A17] shadow-sm">
               <p className="font-semibold">
-                این سفارش از کنترل مالی برگشت خورده و نیازمند اصلاح است.
+                این سفارش برای اصلاح برگشت خورده است.
               </p>
               <p className="mt-2 leading-7">
                 وضعیت فعلی: {getFinancialApprovalStatusLabel(editData.order.financialApprovalStatus)}
-                . بعد از اصلاح و ذخیره، سفارش دوباره برای بررسی مالی ارسال می‌شود.
+                . بعد از اصلاح و ذخیره، برای ادامه فرایند از «ارسال مجدد برای بررسی» استفاده کنید.
               </p>
             </div>
           ) : null}

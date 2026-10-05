@@ -286,7 +286,14 @@ export default function ExpertOrderDetailsPage() {
                 />
               </div>
               <p className="mt-3 text-sm leading-7 text-[#5F4320]">
-                {order.financialCorrectionReason || "دلیل مشخصی ثبت نشده است."}
+                {order.financialCorrectionReasonLabel ||
+                  order.financialCorrectionReason ||
+                  "دلیل مشخصی ثبت نشده است."}
+                {order.financialCorrectionReason ? (
+                  <span className="mt-1 block text-xs text-[#8A6A3A]">
+                    توضیحات: {order.financialCorrectionReason}
+                  </span>
+                ) : null}
                 <span className="mt-2 block text-xs text-[#8A6A3A]">
                   وضعیت فعلی: {getFinancialApprovalStatusLabel(order.financialApprovalStatus)}
                 </span>

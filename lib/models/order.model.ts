@@ -138,6 +138,8 @@ export interface Order {
   financialApprovalStageLabel: string | null;
   financialApprovedAt: string | null;
   financialApprovedBy: string | null;
+  financialCorrectionReasonCode: string | null;
+  financialCorrectionReasonLabel: string | null;
   financialCorrectionReason: string | null;
   financialReturnedAt: string | null;
   financialReturnedBy: string | null;

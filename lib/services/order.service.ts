@@ -362,7 +362,8 @@ export interface FinancialApprovalPayload {
 export interface FinancialReturnPayload {
   returnedByName?: string;
   returnedBy?: string;
-  correctionReason: string;
+  correctionReasonCode: string;
+  correctionReason?: string;
   reason?: string;
 }
 

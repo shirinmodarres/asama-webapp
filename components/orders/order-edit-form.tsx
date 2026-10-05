@@ -136,11 +136,14 @@ export function OrderEditForm({
     "";
 
   const isExpertEdit = roleScope === "expert";
-  const canEditCustomerFields = !isExpertEdit;
+  // Backend owns permission. An expert who reached this form has an allowed
+  // correction/draft state and must be able to correct the same fields as the
+  // normal order form.
+  const canEditCustomerFields = true;
   const canEditItemSelection = true;
   const canEditItemQuantity = true;
-  const canEditRecipientFields = !isExpertEdit;
-  const canEditDescription = !isExpertEdit;
+  const canEditRecipientFields = true;
+  const canEditDescription = true;
 
   useEffect(() => {
     let mounted = true;
@@ -654,7 +657,7 @@ export function OrderEditForm({
               <h3 className="text-base font-semibold text-[#102034]">آیتم‌های سفارش</h3>
               <p className="mt-1 text-sm leading-7 text-[#6B7280]">
                 {isExpertEdit
-                  ? "کارشناس می‌تواند کالا اضافه کند و تعداد ردیف‌های سفارش را تغییر دهد."
+                  ? "کالاها و تعدادهای سفارش را بررسی و در صورت نیاز اصلاح کنید."
                   : "کالاها را بازبینی کنید، در صورت نیاز آیتم اضافه کنید و تغییر دهید."}
               </p>
             </div>
