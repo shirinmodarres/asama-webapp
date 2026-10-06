@@ -436,6 +436,12 @@ function buildOrdersPath(filters?: OrderFilters): string {
   if (filters.financialApprovalStatus) {
     params.set("financialApprovalStatus", filters.financialApprovalStatus);
   }
+  if (filters.financialApprovalStage) {
+    params.set("financialApprovalStage", filters.financialApprovalStage);
+  }
+  if (filters.warehouseStatus) {
+    params.set("warehouseStatus", filters.warehouseStatus);
+  }
 
   const query = params.toString();
   return query ? `/api/orders?${query}` : "/api/orders";

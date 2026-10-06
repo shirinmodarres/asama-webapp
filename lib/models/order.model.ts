@@ -177,6 +177,8 @@ export interface OrderFilters {
   status?: string;
   orderType?: OrderType;
   financialApprovalStatus?: "pending" | "approved" | "needs_correction";
+  financialApprovalStage?: Order["financialApprovalStage"];
+  warehouseStatus?: string;
 }
 
 export interface CreateOrderPayload {

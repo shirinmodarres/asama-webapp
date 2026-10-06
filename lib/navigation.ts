@@ -201,6 +201,14 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "تأیید یا برگشت برای اصلاح",
       group: "سفارش‌ها",
     },
+    {
+      label: "انتقال در سامانه مشتری",
+      href: "/finance-control/customer-system-transfers",
+      icon: "truck",
+      description: "ثبت انتقال بار و ارسال به صف انبار",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
   ],
   support: [
     {

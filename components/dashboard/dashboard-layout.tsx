@@ -85,7 +85,13 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
   return (
     <div className="h-screen overflow-hidden ">
       <div className="flex h-screen w-full min-w-0 flex-col gap-6 overflow-hidden px-4 py-5 xl:flex-row xl:px-6 xl:py-6">
-        <Sidebar items={sidebarByRole[role]} />
+        <Sidebar
+          items={sidebarByRole[role].filter(
+            (item) =>
+              !item.visibleToRoles ||
+              item.visibleToRoles.includes(getEffectiveRole(currentUser)),
+          )}
+        />
 
         {isSidebarOpen ? (
           <div className="fixed inset-0 z-40 xl:hidden">
@@ -96,7 +102,16 @@ export function DashboardLayout({ role, title, children }: DashboardLayoutProps)
               onClick={() => setIsSidebarOpen(false)}
             />
             <aside className="absolute inset-y-0 right-0 shrink-0">
-              <Sidebar items={sidebarByRole[role]} isMobile onClose={() => setIsSidebarOpen(false)} onNavigate={() => setIsSidebarOpen(false)} />
+              <Sidebar
+                items={sidebarByRole[role].filter(
+                  (item) =>
+                    !item.visibleToRoles ||
+                    item.visibleToRoles.includes(getEffectiveRole(currentUser)),
+                )}
+                isMobile
+                onClose={() => setIsSidebarOpen(false)}
+                onNavigate={() => setIsSidebarOpen(false)}
+              />
             </aside>
           </div>
         ) : null}

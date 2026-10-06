@@ -46,6 +46,7 @@ export interface SidebarItem {
   icon: SidebarIconName;
   description?: string;
   group?: string;
+  visibleToRoles?: string[];
 }
 
 export interface DashboardStat {
