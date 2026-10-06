@@ -404,8 +404,6 @@ export function mapOrderDto(dto: unknown): Order {
     sepidarLastError: toNullableString(record.sepidarLastError),
     canEdit: toBooleanValue(record.canEdit),
     canCancel: toBooleanValue(record.canCancel),
-    canCreateExitSlip: toBooleanValue(record.canCreateExitSlip),
-    exitSlipBlockedReason: toNullableString(record.blockedReason),
     editBlockedReason: toNullableString(record.editBlockedReason),
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),

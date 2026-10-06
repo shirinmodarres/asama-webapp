@@ -157,8 +157,6 @@ export interface Order {
   sepidarLastError: string | null;
   canEdit: boolean;
   canCancel?: boolean;
-  canCreateExitSlip?: boolean;
-  exitSlipBlockedReason?: string | null;
   editBlockedReason: string | null;
   createdAt: string;
   updatedAt: string;
