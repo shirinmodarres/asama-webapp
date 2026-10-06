@@ -71,6 +71,7 @@ export default function ExitSlipCreatePage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [draftMessage, setDraftMessage] = useState("");
+  const draftReadyRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -96,6 +97,7 @@ export default function ExitSlipCreatePage() {
 
   useEffect(() => {
     if (!order) return;
+    draftReadyRef.current = false;
     try {
       const raw = window.localStorage.getItem(getExitSlipDraftStorageKey(order.objectId));
       if (!raw) return;
@@ -123,11 +125,13 @@ export default function ExitSlipCreatePage() {
       }
     } catch {
       // اگر پیش‌نویس خراب باشد، بی‌سروصدا نادیده‌اش می‌گیریم.
+    } finally {
+      draftReadyRef.current = true;
     }
   }, [order]);
 
   useEffect(() => {
-    if (!order) return;
+    if (!order || !draftReadyRef.current) return;
     const payload: ExitSlipDraftState = {
       scanValues,
       scannedUnits,
@@ -203,15 +207,12 @@ export default function ExitSlipCreatePage() {
     return issues;
   }, [expectedRows, isFullyScanned, scannedUnits.length, totalItemCount]);
 
-  const canSubmit =
+  const canIssueSlip =
     scannedUnits.length > 0 &&
     expectedRows.length > 0 &&
-    isFullyScanned &&
     scannedUnits.every((unit) =>
       expectedRows.some((row) => unitMatchesOrderItem(unit, row.item)),
-    ) &&
-    scannedUnits.length ===
-      expectedRows.reduce((sum, row) => sum + row.item.quantity, 0);
+    );
 
   const expectedColumns: DataTableColumn<ExpectedRow>[] = [
     {
@@ -443,9 +444,9 @@ export default function ExitSlipCreatePage() {
       .map((unit) => unit.objectId)
       .filter(Boolean);
 
-    if (!canSubmit || unitObjectIds.length !== scannedUnits.length) {
+    if (!canIssueSlip || unitObjectIds.length !== scannedUnits.length) {
       setError(
-        submitIssues[0] || "ثبت مرحله‌ای هنوز کامل نشده است؛ لطفاً اول همه کالاها را تکمیل کنید.",
+        "حداقل یک کالای معتبر را برای صدور حواله خروج اسکن کنید.",
       );
       return;
     }
@@ -461,7 +462,11 @@ export default function ExitSlipCreatePage() {
       });
       window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId));
       setCreatedSlip(slip);
-      setMessage("حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.");
+      setMessage(
+        isFullyScanned
+          ? "حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد."
+          : "حواله خروج جزئی صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.",
+      );
     } catch (submitError) {
       setError(getErrorMessage(submitError));
     } finally {
@@ -743,14 +748,14 @@ export default function ExitSlipCreatePage() {
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting || Boolean(createdSlip)}
+                disabled={!canIssueSlip || isSubmitting || Boolean(createdSlip)}
               >
                 {isSubmitting ? "در حال ثبت..." : "ثبت حواله خروج"}
               </Button>
             </div>
-            {!canSubmit ? (
+            {!isFullyScanned && scannedUnits.length > 0 ? (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-800">
-                <p className="font-semibold">ثبت مرحله‌ای هنوز کامل نشده است.</p>
+                <p className="font-semibold">ثبت مرحله‌ای کامل نشده است؛ می‌توانید همین اقلام را به‌صورت حواله خروج جزئی صادر کنید.</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   {submitIssues.map((issue) => (
                     <li key={issue}>{issue}</li>
