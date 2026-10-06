@@ -126,9 +126,16 @@ export default function ExpertOrdersPage() {
     {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => (
-        <div className="space-y-1.5">
-          <StatusBadge type="order" status={row.orderStatus} />
+      render: (row) => {
+        const workflowLabel = getExpertWorkflowLabel(row);
+        return (
+          <div className="space-y-1.5">
+            <StatusBadge type="order" status={row.orderStatus} />
+            {workflowLabel ? (
+              <p className="text-xs leading-5 text-[#64748B]">
+                {workflowLabel}
+              </p>
+            ) : null}
           {row.financialApprovalStatus === "needs_correction" ? (
             <div className="space-y-0.5 text-xs leading-5 text-[#8A5A00]">
               <p>
@@ -141,8 +148,9 @@ export default function ExpertOrdersPage() {
               </p>
             </div>
           ) : null}
-        </div>
-      ),
+          </div>
+        );
+      },
     },
     {
       key: "review",
@@ -288,6 +296,22 @@ export default function ExpertOrdersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function getExpertWorkflowLabel(order: Order): string | null {
+  if (order.financialApprovalStage === "systems_transfer") {
+    return "در انتظار ثبت انتقال در سامانه مشتری";
+  }
+  if (order.financialApprovalStage === "systems_expert") {
+    return "در انتظار بررسی اولیه کارشناس سامانه‌ها";
+  }
+  if (order.financialApprovalStage === "treasurer") {
+    return "در انتظار بررسی خزانه‌دار";
+  }
+  if (order.financialApprovalStage === "sales_accountant") {
+    return "در انتظار بررسی حسابدار فروش";
+  }
+  return null;
 }
 
 function isWithinDateRange(
