@@ -126,7 +126,23 @@ export default function ExpertOrdersPage() {
     {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
+      render: (row) => (
+        <div className="space-y-1.5">
+          <StatusBadge type="order" status={row.orderStatus} />
+          {row.financialApprovalStatus === "needs_correction" ? (
+            <div className="space-y-0.5 text-xs leading-5 text-[#8A5A00]">
+              <p>
+                برگشت از: {row.financialApprovalStageLabel || "مرحله مالی"}
+              </p>
+              <p>
+                {row.financialCorrectionReasonLabel ||
+                  row.financialCorrectionReason ||
+                  "نیازمند اصلاح"}
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "review",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Pencil } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -91,7 +91,8 @@ export default function ExpertOrderDetailsPage() {
     0,
   );
   const paymentMethodTitle = order?.salesTypeTitle ?? null;
-  const needsFinancialCorrection = order?.financialApprovalStatus === "needs_correction";
+  const needsFinancialCorrection =
+    order?.financialApprovalStatus === "needs_correction";
 
   const handleResolveReview = async () => {
     if (!order) return;
@@ -159,7 +160,11 @@ export default function ExpertOrderDetailsPage() {
         <span className="font-medium text-[#1F3A5F]">{row.name}</span>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brandName || row.brand || "-" },
+    {
+      key: "brand",
+      header: "برند",
+      render: (row) => row.brandName || row.brand || "-",
+    },
     {
       key: "sku",
       header: "شناسه کالا",
@@ -237,12 +242,16 @@ export default function ExpertOrderDetailsPage() {
             </div>
           ) : null}
 
-          <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+          <Dialog
+            open={isCancelDialogOpen}
+            onOpenChange={setIsCancelDialogOpen}
+          >
             <DialogContent dir="rtl">
               <DialogHeader>
                 <DialogTitle>لغو سفارش</DialogTitle>
                 <DialogDescription>
-                  با لغو سفارش، موجودی رزروشده آن آزاد می‌شود. آیا از ادامه مطمئن هستید؟
+                  با لغو سفارش، موجودی رزروشده آن آزاد می‌شود. آیا از ادامه
+                  مطمئن هستید؟
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -276,7 +285,7 @@ export default function ExpertOrderDetailsPage() {
           {needsFinancialCorrection ? (
             <div className="rounded-xl border border-[#F8D9A0] bg-[#FFF8E7] p-5 shadow-sm">
               <div className="flex flex-wrap items-center gap-2 text-[#9A6C18]">
-                <AlertTriangle className="size-4" />
+                <AlertTriangle className="size-5" />
                 <h3 className="text-base font-semibold">
                   این سفارش برای اصلاح برگشت خورده است.
                 </h3>
@@ -295,11 +304,15 @@ export default function ExpertOrderDetailsPage() {
                   </span>
                 ) : null}
                 <span className="mt-2 block text-xs text-[#8A6A3A]">
-                  وضعیت فعلی: {getFinancialApprovalStatusLabel(order.financialApprovalStatus)}
+                  وضعیت فعلی:{" "}
+                  {getFinancialApprovalStatusLabel(
+                    order.financialApprovalStatus,
+                  )}
                 </span>
                 {order.financialApprovalStageLabel ? (
                   <span className="mt-1 block text-xs text-[#8A6A3A]">
-                    مرحله درخواست‌کننده اصلاح: {order.financialApprovalStageLabel}
+                    مرحله درخواست‌کننده اصلاح:{" "}
+                    {order.financialApprovalStageLabel}
                   </span>
                 ) : null}
               </p>
@@ -307,15 +320,16 @@ export default function ExpertOrderDetailsPage() {
                 {order.canEdit ? (
                   <Link
                     href={`/expert/orders/${order.objectId}/edit`}
-                    className="rounded-xl border border-[#D9A441] bg-white px-4 py-2 text-sm font-medium text-[#9A6C18] visited:text-[#9A6C18] hover:bg-[#FFF1D6] hover:text-[#7A520F]"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D9A441] bg-white px-4 text-sm font-medium text-[#9A6C18] shadow-sm transition-colors visited:text-[#9A6C18] hover:border-[#C7922E] hover:bg-[#FFF8E7] hover:text-[#7A520F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441]/30"
                   >
+                    <Pencil className="size-4" />
                     اصلاح سفارش
                   </Link>
                 ) : null}
                 <Button
                   type="button"
                   className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white hover:text-white"
-                  disabled={isSubmitting || !order.canEdit}
+                  disabled={isSubmitting}
                   onClick={handleResubmitFinancialReview}
                 >
                   ارسال مجدد برای بررسی
