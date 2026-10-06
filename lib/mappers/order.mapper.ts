@@ -241,6 +241,7 @@ export function mapOrderDto(dto: unknown): Order {
       record.najaOrderNumber ?? record.externalOrderNumber,
     ),
     najaPurchaseDate: toNullableString(record.najaPurchaseDate),
+    sepidarQuotationDate: toNullableString(record.sepidarQuotationDate),
     customerNationalId: normalizeNullableDigits(
       record.customerNationalId ??
         record.nationalId ??
