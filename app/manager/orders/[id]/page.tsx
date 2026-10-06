@@ -410,6 +410,8 @@ export default function ManagerOrderReviewPage() {
 
   const confirmFinancialDecision = async () => {
     if (!financialDecision) return;
+    const submittedFinancialDecision = financialDecision;
+    const financialStatusBeforeSubmit = order.financialApprovalStatus;
 
     if (financialDecision === "return" && !financialCorrectionReasonCode) {
       setDialogErrors({
@@ -460,6 +462,29 @@ export default function ManagerOrderReviewPage() {
       setFinancialCorrectionReasonCode("");
       setFinancialCorrectionReason("");
     } catch (error) {
+      // A mutation can succeed before a later response serialization failure.
+      // Refresh once so a successful correction return is not shown as an
+      // actionable pending order after the request reports an error.
+      try {
+        const refreshedOrder = await getOrder(order.objectId);
+        setOrder(refreshedOrder);
+        if (
+          refreshedOrder.financialApprovalStatus !== financialStatusBeforeSubmit
+        ) {
+          setFinancialDecision(null);
+          setFinancialCorrectionReasonCode("");
+          setFinancialCorrectionReason("");
+          setMessageType("warning");
+          setMessage(
+            submittedFinancialDecision === "return"
+              ? "سفارش برای اصلاح ثبت شد. وضعیت سفارش به‌روزرسانی شد."
+              : "تصمیم سفارش ثبت شد. وضعیت سفارش به‌روزرسانی شد.",
+          );
+          return;
+        }
+      } catch {
+        // Preserve the original error when refreshing the current state fails.
+      }
       setMessageType("error");
       setMessage(getErrorMessage(error));
     } finally {
