@@ -172,10 +172,7 @@ export default function WarehouseOutboundPage() {
           !row.stockObjectId ||
           row.stockObjectId === stockObjectId;
         const canCreateExitSlip =
-          row.orderStatus === "approved" &&
-          row.warehouseStatus === "reviewing" &&
-          row.fulfillmentStatus !== "onHold" &&
-          warehouseMatches;
+          row.canCreateExitSlip && warehouseMatches;
 
         return canCreateExitSlip ? (
           <Button asChild size="sm">
