@@ -193,7 +193,8 @@ export default function ManagerOrderReviewPage() {
     order.financialApprovalStage === financialReviewerStage;
   const canManageSystemsTransferDecision =
     currentRole === "systems_expert" &&
-    order.orderStatus === "pending_manager_approval" &&
+    order.orderStatus === "approved" &&
+    order.warehouseStatus === "awaitingSystemsTransfer" &&
     effectiveFinancialApprovalStatus === "approved" &&
     workflowStage === "systems_transfer";
   const canApprove =
@@ -226,6 +227,7 @@ export default function ManagerOrderReviewPage() {
     order.orderStatus !== "voided";
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
   const shipmentActionBlockedWarehouseStatuses = [
+    "awaitingSystemsTransfer",
     "dispatchIssued",
     "delivered",
   ];

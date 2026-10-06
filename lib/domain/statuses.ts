@@ -14,6 +14,7 @@ export type OrderStatusCode =
 
 export type WarehouseStatusCode =
   | "reserved"
+  | "awaitingSystemsTransfer"
   | "reviewing"
   | "dispatchIssued"
   | "completed"
@@ -50,6 +51,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
 
 export const WAREHOUSE_STATUS_LABELS: Record<WarehouseStatusCode, string> = {
   reserved: "رزرو موجودی",
+  awaitingSystemsTransfer: "در انتظار ثبت انتقال در سامانه مشتری",
   reviewing: "در بررسی انبار",
   dispatchIssued: "حواله خروج صادر شد",
   completed: "تکمیل شده",
