@@ -82,19 +82,33 @@ export default function FinancialControlOrdersPage() {
   const filteredOrders = useMemo(
     () =>
       [...activeOrders]
-        .sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt)))
+        .sort(
+          (a, b) =>
+            Number(new Date(b.createdAt)) - Number(new Date(a.createdAt)),
+        )
         .filter((order) => {
           const matchesSearch =
             order.code.toLowerCase().includes(search.toLowerCase()) ||
-            (order.customerName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-            (order.createdByName ?? "").toLowerCase().includes(search.toLowerCase());
-          return matchesSearch && isWithinDateRange(order.createdAt, dateFrom, dateTo);
+            (order.customerName ?? "")
+              .toLowerCase()
+              .includes(search.toLowerCase()) ||
+            (order.createdByName ?? "")
+              .toLowerCase()
+              .includes(search.toLowerCase());
+          return (
+            matchesSearch &&
+            isWithinDateRange(order.createdAt, dateFrom, dateTo)
+          );
         }),
     [activeOrders, dateFrom, dateTo, search],
   );
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
   const paginatedOrders = useMemo(
-    () => filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    () =>
+      filteredOrders.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE,
+      ),
     [currentPage, filteredOrders],
   );
 
@@ -107,27 +121,45 @@ export default function FinancialControlOrdersPage() {
     {
       key: "code",
       header: "کد سفارش",
-      render: (row) => <span className="font-semibold text-[#1F3A5F]">{formatFaDigits(row.code)}</span>,
+      render: (row) => (
+        <span className="font-semibold text-[#1F3A5F]">
+          {formatFaDigits(row.code)}
+        </span>
+      ),
     },
-    { key: "customer", header: "مشتری", render: (row) => row.customerName || "-" },
-    { key: "createdByName", header: "ثبت کننده", render: (row) => row.createdByName || "-" },
-    { key: "date", header: "تاریخ", render: (row) => formatDate(row.createdAt) },
+    {
+      key: "customer",
+      header: "مشتری",
+      render: (row) => row.customerName || "-",
+    },
+    {
+      key: "createdByName",
+      header: "ثبت کننده",
+      render: (row) => row.createdByName || "-",
+    },
+    {
+      key: "date",
+      header: "تاریخ",
+      render: (row) => formatDate(row.createdAt),
+    },
     {
       key: "items",
       header: "تعداد آیتم",
-      render: (row) => formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
+      render: (row) =>
+        formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
     },
     {
       key: "status",
       header: "وضعیت مالی",
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <StatusBadge
             type="financial"
             status={row.financialApprovalStatus ?? "pending"}
           />
+
           {row.financialApprovalStageLabel ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="inline-flex items-center rounded-full border border-[#D8E2EC] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium leading-4 text-[#475569]">
               {row.financialApprovalStageLabel}
             </span>
           ) : null}
@@ -150,7 +182,8 @@ export default function FinancialControlOrdersPage() {
     },
   ];
 
-  const hasFilters = search.trim().length > 0 || dateFrom.length > 0 || dateTo.length > 0;
+  const hasFilters =
+    search.trim().length > 0 || dateFrom.length > 0 || dateTo.length > 0;
 
   return (
     <DashboardLayout role={layoutRole} title="کنترل مالی">
@@ -291,7 +324,11 @@ function TabButton({
       </span>
       <span className="grid gap-0.5">
         <span className="text-sm font-semibold leading-6">{label}</span>
-        <span className={active ? "text-xs text-white/80" : "text-xs text-[#64748B]"}>
+        <span
+          className={
+            active ? "text-xs text-white/80" : "text-xs text-[#64748B]"
+          }
+        >
           {description}
         </span>
       </span>
@@ -299,11 +336,16 @@ function TabButton({
   );
 }
 
-function isWithinDateRange(value: string, dateFrom: string, dateTo: string): boolean {
+function isWithinDateRange(
+  value: string,
+  dateFrom: string,
+  dateTo: string,
+): boolean {
   if (!dateFrom && !dateTo) return true;
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return false;
   if (dateFrom && timestamp < new Date(dateFrom).getTime()) return false;
-  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59.999`).getTime()) return false;
+  if (dateTo && timestamp > new Date(`${dateTo}T23:59:59.999`).getTime())
+    return false;
   return true;
 }

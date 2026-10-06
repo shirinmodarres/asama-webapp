@@ -15,8 +15,17 @@ import type { Order, OrderItem } from "@/lib/models/order.model";
 import type { Product } from "@/lib/models/product.model";
 import { listOrderProductsByPriceList } from "@/lib/services/product.service";
 import { listActiveSalesTypes } from "@/lib/services/sales-type.service";
-import { formatDeliveryAddress, getReceiverName } from "@/lib/utils/address-format";
-import { formatFaDigits, normalizeDigits, normalizePhone, toNumber, formatFaCurrency } from "@/lib/utils/number-format";
+import {
+  formatDeliveryAddress,
+  getReceiverName,
+} from "@/lib/utils/address-format";
+import {
+  formatFaDigits,
+  normalizeDigits,
+  normalizePhone,
+  toNumber,
+  formatFaCurrency,
+} from "@/lib/utils/number-format";
 
 export interface OrderEditFormSubmitPayload {
   customerName?: string;
@@ -95,7 +104,9 @@ export function OrderEditForm({
   onSubmit,
   header,
 }: OrderEditFormProps) {
-  const [customers] = useState<Customer[]>(() => mergeCustomers(initialCustomers, order));
+  const [customers] = useState<Customer[]>(() =>
+    mergeCustomers(initialCustomers, order),
+  );
   const [products, setProducts] = useState<Product[]>(() =>
     mergeProducts(getSelectableProducts(initialProducts), order),
   );
@@ -108,32 +119,41 @@ export function OrderEditForm({
     order.priceListId || order.priceList?.objectId || "",
   );
   const [selectedSalesTypeId, setSelectedSalesTypeId] = useState(
-    order.salesTypeObjectId ||
-      order.saleTypeObjectId ||
-      "",
+    order.salesTypeObjectId || order.saleTypeObjectId || "",
   );
   const [selectedAddressId, setSelectedAddressId] = useState(
     getOrderCustomerAddressKey(order) || "",
   );
   const customerName = order.customerName || "";
-  const [recipientFirstName, setRecipientFirstName] = useState(order.recipientFirstName || "");
-  const [recipientLastName, setRecipientLastName] = useState(order.recipientLastName || "");
-  const [recipientNationalId, setRecipientNationalId] = useState(order.recipientNationalId || "");
-  const [recipientMobile, setRecipientMobile] = useState(order.recipientMobile || "");
+  const [recipientFirstName, setRecipientFirstName] = useState(
+    order.recipientFirstName || "",
+  );
+  const [recipientLastName, setRecipientLastName] = useState(
+    order.recipientLastName || "",
+  );
+  const [recipientNationalId, setRecipientNationalId] = useState(
+    order.recipientNationalId || "",
+  );
+  const [recipientMobile, setRecipientMobile] = useState(
+    order.recipientMobile || "",
+  );
   const [najaOrderNumber, setNajaOrderNumber] = useState(
     order.najaOrderNumber || order.externalOrderNumber || "",
   );
-  const [najaPurchaseDate, setNajaPurchaseDate] = useState(order.najaPurchaseDate?.slice(0, 10) || "");
+  const [najaPurchaseDate, setNajaPurchaseDate] = useState(
+    order.najaPurchaseDate?.slice(0, 10) || "",
+  );
   const [notes, setNotes] = useState(order.notes || "");
-  const [items, setItems] = useState<EditDraftItem[]>(() => mapOrderItems(order.items, products));
+  const [items, setItems] = useState<EditDraftItem[]>(() =>
+    mapOrderItems(order.items, products),
+  );
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [rowErrors, setRowErrors] = useState<Record<string, { productObjectId?: string; quantity?: string }>>({});
+  const [rowErrors, setRowErrors] = useState<
+    Record<string, { productObjectId?: string; quantity?: string }>
+  >({});
   const resolvedOrderPriceListId =
-    selectedPriceListId ||
-    order.priceListId ||
-    order.priceList?.objectId ||
-    "";
+    selectedPriceListId || order.priceListId || order.priceList?.objectId || "";
 
   const isExpertEdit = roleScope === "expert";
   // Backend owns permission. An expert who reached this form has an allowed
@@ -198,17 +218,23 @@ export function OrderEditForm({
     let mounted = true;
 
     async function loadProducts() {
-      const seededProducts = mergeProducts(getSelectableProducts(initialProducts), order);
+      const seededProducts = mergeProducts(
+        getSelectableProducts(initialProducts),
+        order,
+      );
       if (!resolvedOrderPriceListId) {
         if (mounted) setProducts(seededProducts);
         return;
       }
 
       try {
-        const fetchedProducts = await listOrderProductsByPriceList(resolvedOrderPriceListId, {
-          customerObjectId: selectedCustomerId || undefined,
-          expertUserId: order.expertUserId || undefined,
-        });
+        const fetchedProducts = await listOrderProductsByPriceList(
+          resolvedOrderPriceListId,
+          {
+            customerObjectId: selectedCustomerId || undefined,
+            expertUserId: order.expertUserId || undefined,
+          },
+        );
         if (!mounted) return;
         if (process.env.NODE_ENV === "development") {
           console.info("[ORDER_EDIT_PRICE_LIST_PRODUCTS]", {
@@ -218,7 +244,9 @@ export function OrderEditForm({
             seededCount: seededProducts.length,
           });
         }
-        setProducts(mergeProducts([...seededProducts, ...fetchedProducts], order));
+        setProducts(
+          mergeProducts([...seededProducts, ...fetchedProducts], order),
+        );
       } catch {
         if (!mounted) return;
         setProducts(seededProducts);
@@ -229,7 +257,14 @@ export function OrderEditForm({
     return () => {
       mounted = false;
     };
-  }, [initialProducts, order, order.expertUserId, resolvedOrderPriceListId, selectedCustomerId, selectedPriceListId]);
+  }, [
+    initialProducts,
+    order,
+    order.expertUserId,
+    resolvedOrderPriceListId,
+    selectedCustomerId,
+    selectedPriceListId,
+  ]);
 
   const selectableProducts = useMemo(
     () => getSelectableProducts(products),
@@ -243,17 +278,22 @@ export function OrderEditForm({
 
   const selectedAddresses = getResolvedSepidarAddresses(selectedCustomer);
   const resolvedAddressKey =
-    selectedAddressId ||
-    getOrderCustomerAddressKey(order) ||
-    "";
+    selectedAddressId || getOrderCustomerAddressKey(order) || "";
   const selectedAddress =
-    selectedAddresses.find((address) => getCustomerAddressKey(address) === resolvedAddressKey) ||
+    selectedAddresses.find(
+      (address) => getCustomerAddressKey(address) === resolvedAddressKey,
+    ) ||
     resolveMainCustomerAddress(selectedCustomer) ||
     (selectedAddresses.length ? selectedAddresses[0] : null);
 
-  const resolvedSalesTypeKey = selectedSalesTypeId || resolveOrderSalesTypeOption(order, salesTypes)?.objectId || "";
+  const resolvedSalesTypeKey =
+    selectedSalesTypeId ||
+    resolveOrderSalesTypeOption(order, salesTypes)?.objectId ||
+    "";
   const selectedSalesType =
-    salesTypes.find((item) => getSalesTypeKey(item.objectId) === resolvedSalesTypeKey) ||
+    salesTypes.find(
+      (item) => getSalesTypeKey(item.objectId) === resolvedSalesTypeKey,
+    ) ||
     resolveOrderSalesTypeOption(order, salesTypes) ||
     getOrderSalesTypeSnapshot(order);
   const selectedSalesTypeForSubmit =
@@ -283,10 +323,13 @@ export function OrderEditForm({
   );
   const selectableProductMap = useMemo(
     () =>
-      selectableProducts.reduce<Record<string, Product>>((accumulator, product) => {
-        accumulator[product.objectId] = product;
-        return accumulator;
-      }, {}),
+      selectableProducts.reduce<Record<string, Product>>(
+        (accumulator, product) => {
+          accumulator[product.objectId] = product;
+          return accumulator;
+        },
+        {},
+      ),
     [selectableProducts],
   );
   const originalQuantityByProductId = useMemo(
@@ -300,7 +343,10 @@ export function OrderEditForm({
   );
 
   const totalItems = items.length;
-  const totalQuantity = items.reduce((sum, item) => sum + (Number.isFinite(item.quantity) ? item.quantity : 0), 0);
+  const totalQuantity = items.reduce(
+    (sum, item) => sum + (Number.isFinite(item.quantity) ? item.quantity : 0),
+    0,
+  );
   const totalAmount = items.reduce((sum, item) => {
     const product = productMap[item.productObjectId];
     return sum + item.quantity * (product?.unitPrice ?? 0);
@@ -315,9 +361,9 @@ export function OrderEditForm({
     order.orderType === "naja" ||
     Boolean(
       order.recipientFirstName ||
-        order.recipientLastName ||
-        order.recipientNationalId ||
-        order.recipientMobile,
+      order.recipientLastName ||
+      order.recipientNationalId ||
+      order.recipientMobile,
     );
 
   const updateRow = (rowId: string, patch: Partial<EditDraftItem>) => {
@@ -330,19 +376,29 @@ export function OrderEditForm({
       },
     }));
     setItems((current) =>
-      current.map((item) => (item.rowId === rowId ? { ...item, ...patch } : item)),
+      current.map((item) =>
+        item.rowId === rowId ? { ...item, ...patch } : item,
+      ),
     );
   };
 
   const addRow = () => {
     setItems((current) => [
       ...current,
-      { rowId: `row-${Date.now()}-${current.length}`, productObjectId: "", quantity: 1 },
+      {
+        rowId: `row-${Date.now()}-${current.length}`,
+        productObjectId: "",
+        quantity: 1,
+      },
     ]);
   };
 
   const removeRow = (rowId: string) => {
-    setItems((current) => (current.length > 1 ? current.filter((item) => item.rowId !== rowId) : current));
+    setItems((current) =>
+      current.length > 1
+        ? current.filter((item) => item.rowId !== rowId)
+        : current,
+    );
   };
 
   const handleSubmit = async () => {
@@ -355,11 +411,15 @@ export function OrderEditForm({
       return;
     }
     if (!selectedSalesType) {
-      setFieldErrors({ selectedSalesTypeId: "لطفاً روش پرداخت را انتخاب کنید." });
+      setFieldErrors({
+        selectedSalesTypeId: "لطفاً روش پرداخت را انتخاب کنید.",
+      });
       return;
     }
     if (!selectedPriceList) {
-      setFieldErrors({ selectedPriceListId: "لطفاً لیست قیمت را انتخاب کنید." });
+      setFieldErrors({
+        selectedPriceListId: "لطفاً لیست قیمت را انتخاب کنید.",
+      });
       return;
     }
     if (selectedAddresses.length > 0 && !selectedAddress) {
@@ -371,14 +431,19 @@ export function OrderEditForm({
       return;
     }
 
-    const nextRowErrors: Record<string, { productObjectId?: string; quantity?: string }> = {};
+    const nextRowErrors: Record<
+      string,
+      { productObjectId?: string; quantity?: string }
+    > = {};
     for (const item of items) {
       const rowError: { productObjectId?: string; quantity?: string } = {};
-      if (!item.productObjectId) rowError.productObjectId = "لطفاً کالا را انتخاب کنید.";
+      if (!item.productObjectId)
+        rowError.productObjectId = "لطفاً کالا را انتخاب کنید.";
       if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
         rowError.quantity = "تعداد باید بزرگ‌تر از صفر باشد.";
       }
-      if (Object.keys(rowError).length > 0) nextRowErrors[item.rowId] = rowError;
+      if (Object.keys(rowError).length > 0)
+        nextRowErrors[item.rowId] = rowError;
     }
     if (Object.keys(nextRowErrors).length > 0) {
       setRowErrors(nextRowErrors);
@@ -388,8 +453,10 @@ export function OrderEditForm({
     const addressPayload = selectedAddress
       ? {
           customerAddressObjectId: selectedAddress.objectId || undefined,
-          customerAddressId: getCustomerAddressNumericId(selectedAddress) ?? undefined,
-          selectedCustomerAddressId: getCustomerAddressNumericId(selectedAddress) ?? undefined,
+          customerAddressId:
+            getCustomerAddressNumericId(selectedAddress) ?? undefined,
+          selectedCustomerAddressId:
+            getCustomerAddressNumericId(selectedAddress) ?? undefined,
           customerAddressTitle: selectedAddress.title ?? null,
           customerAddressText: getCustomerAddressText(selectedAddress),
           customerAddressZipCode: getCustomerAddressZipCode(selectedAddress),
@@ -404,16 +471,22 @@ export function OrderEditForm({
       customerName: selectedCustomer?.fullName || customerName || undefined,
       recipientFirstName: trimOrUndefined(recipientFirstName),
       recipientLastName: trimOrUndefined(recipientLastName),
-      recipientNationalId: normalizeDigits(recipientNationalId.trim()) || undefined,
+      recipientNationalId:
+        normalizeDigits(recipientNationalId.trim()) || undefined,
       recipientMobile: normalizePhone(recipientMobile.trim()) || undefined,
       najaOrderNumber:
-        order.orderType === "naja" ? normalizeDigits(najaOrderNumber.trim()) || undefined : undefined,
-      najaPurchaseDate: order.orderType === "naja" ? (najaPurchaseDate || null) : undefined,
+        order.orderType === "naja"
+          ? normalizeDigits(najaOrderNumber.trim()) || undefined
+          : undefined,
+      najaPurchaseDate:
+        order.orderType === "naja" ? najaPurchaseDate || null : undefined,
       notes: trimOrUndefined(notes),
       salesTypeObjectId: selectedSalesTypeForSubmit?.objectId || undefined,
       salesTypeTitle: selectedSalesTypeForSubmit?.title || undefined,
-      salesTypeInternalCode: selectedSalesTypeForSubmit?.internalCode ?? undefined,
-      salesTypeSepidarCode: selectedSalesTypeForSubmit?.sepidarCode ?? undefined,
+      salesTypeInternalCode:
+        selectedSalesTypeForSubmit?.internalCode ?? undefined,
+      salesTypeSepidarCode:
+        selectedSalesTypeForSubmit?.sepidarCode ?? undefined,
       priceListId: selectedPriceList?.objectId || undefined,
       ...addressPayload,
       items: items.map((item) => {
@@ -423,7 +496,8 @@ export function OrderEditForm({
           quantity: item.quantity,
           unitPrice: product?.unitPrice,
           priceNoteItemId: product?.priceNoteItemId ?? null,
-          priceListId: product?.priceListId ?? selectedPriceList?.objectId ?? null,
+          priceListId:
+            product?.priceListId ?? selectedPriceList?.objectId ?? null,
           priceListItemId: product?.priceListItemId ?? null,
           pricingSource: product?.pricingSource ?? null,
         };
@@ -463,11 +537,16 @@ export function OrderEditForm({
               }}
               options={customers.map((customer) => ({
                 value: customer.objectId,
-                label: [customer.sepidarCustomerCode || customer.id, customer.fullName]
+                label: [
+                  customer.sepidarCustomerCode || customer.id,
+                  customer.fullName,
+                ]
                   .filter(Boolean)
                   .join(" - "),
               }))}
-              placeholder={order.orderType === "naja" ? "انتخاب مرکز ناجا" : "انتخاب مشتری"}
+              placeholder={
+                order.orderType === "naja" ? "انتخاب مرکز ناجا" : "انتخاب مشتری"
+              }
               searchPlaceholder="جستجو بر اساس نام"
               emptyMessage="موردی یافت نشد"
               disabled={lockCustomer || !canEditCustomerFields}
@@ -490,7 +569,11 @@ export function OrderEditForm({
               options={salesTypes.map((salesType) => ({
                 value: getSalesTypeKey(salesType.objectId),
                 label: salesType.title,
-                searchText: [salesType.title, salesType.internalCode, salesType.sepidarCode]
+                searchText: [
+                  salesType.title,
+                  salesType.internalCode,
+                  salesType.sepidarCode,
+                ]
                   .filter(Boolean)
                   .join(" "),
               }))}
@@ -517,7 +600,9 @@ export function OrderEditForm({
               options={priceListOptions.map((priceList) => ({
                 value: priceList.objectId,
                 label: priceList.title,
-                searchText: [priceList.title, priceList.brandName].filter(Boolean).join(" "),
+                searchText: [priceList.title, priceList.brandName]
+                  .filter(Boolean)
+                  .join(" "),
               }))}
               placeholder="انتخاب لیست قیمت"
               searchPlaceholder="جستجو در لیست قیمت‌ها"
@@ -537,8 +622,12 @@ export function OrderEditForm({
                 {selectedCustomer.fullName || "-"}
               </span>
               <span>
-                {order.orderType === "naja" ? "کد مرکز در سپیدار: " : "کد مشتری: "}
-                {selectedCustomer.sepidarCustomerCode || selectedCustomer.id || "-"}
+                {order.orderType === "naja"
+                  ? "کد مرکز در سپیدار: "
+                  : "کد مشتری: "}
+                {selectedCustomer.sepidarCustomerCode ||
+                  selectedCustomer.id ||
+                  "-"}
               </span>
               {currentStockTitles.length ? (
                 <span className="sm:col-span-2">
@@ -581,8 +670,15 @@ export function OrderEditForm({
 
             {selectedAddress && order.orderType !== "naja" ? (
               <div className="mt-2 space-y-1 text-[#6B7280]">
-                <p>گیرنده بار: {getReceiverName(selectedAddress, selectedCustomer) || "-"}</p>
-                <p>آدرس کامل: {getCustomerAddressText(selectedAddress) || formatDeliveryAddress(selectedAddress)}</p>
+                <p>
+                  گیرنده بار:{" "}
+                  {getReceiverName(selectedAddress, selectedCustomer) || "-"}
+                </p>
+                <p>
+                  آدرس کامل:{" "}
+                  {getCustomerAddressText(selectedAddress) ||
+                    formatDeliveryAddress(selectedAddress)}
+                </p>
               </div>
             ) : null}
           </div>
@@ -590,13 +686,17 @@ export function OrderEditForm({
 
         {canShowRecipientSection ? (
           <div className="mt-5 rounded-xl border border-[#E7EDF3] bg-[#FBFCFD] p-4">
-            <h3 className="text-base font-semibold text-[#102034]">اطلاعات تحویل‌گیرنده</h3>
+            <h3 className="text-base font-semibold text-[#102034]">
+              اطلاعات تحویل‌گیرنده
+            </h3>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium text-[#334155]">
                 <span>نام</span>
                 <Input
                   value={recipientFirstName}
-                  onChange={(event) => setRecipientFirstName(event.target.value)}
+                  onChange={(event) =>
+                    setRecipientFirstName(event.target.value)
+                  }
                   readOnly={!canEditRecipientFields}
                   disabled={!canEditRecipientFields}
                 />
@@ -614,7 +714,9 @@ export function OrderEditForm({
                 <span>کد ملی</span>
                 <Input
                   value={recipientNationalId}
-                  onChange={(event) => setRecipientNationalId(event.target.value)}
+                  onChange={(event) =>
+                    setRecipientNationalId(event.target.value)
+                  }
                   readOnly={!canEditRecipientFields}
                   disabled={!canEditRecipientFields}
                 />
@@ -654,7 +756,9 @@ export function OrderEditForm({
         <div className="mt-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-base font-semibold text-[#102034]">آیتم‌های سفارش</h3>
+              <h3 className="text-base font-semibold text-[#102034]">
+                آیتم‌های سفارش
+              </h3>
               <p className="mt-1 text-sm leading-7 text-[#6B7280]">
                 {isExpertEdit
                   ? "کالاها و تعدادهای سفارش را بررسی و در صورت نیاز اصلاح کنید."
@@ -666,24 +770,39 @@ export function OrderEditForm({
           <div className="mt-5 grid gap-4">
             {items.map((item, index) => {
               const product = productMap[item.productObjectId];
-              const inventoryProduct = selectableProductMap[item.productObjectId] ?? product ?? null;
+              const inventoryProduct =
+                selectableProductMap[item.productObjectId] ?? product ?? null;
+
               const originalQuantity =
-                originalQuantityByProductId.get(item.productObjectId) ?? item.quantity;
+                originalQuantityByProductId.get(item.productObjectId) ??
+                item.quantity;
+
               const editableAvailableQuantity = inventoryProduct
                 ? Math.max(
                     0,
-                    (inventoryProduct.availableForSale ?? inventoryProduct.availableSalesQuantity ?? 0) +
-                      originalQuantity,
+                    (inventoryProduct.availableForSale ??
+                      inventoryProduct.availableSalesQuantity ??
+                      0) + originalQuantity,
                   )
                 : 0;
+
               return (
-                <div key={item.rowId} className="rounded-2xl border border-[#E7EDF3] bg-white p-4">
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                    <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <div
+                  key={item.rowId}
+                  className="rounded-2xl border border-[#E7EDF3] bg-white p-4"
+                >
+                  {/* کالا + حذف ردیف */}
+                  <div className="flex items-end gap-2">
+                    <label className="grid min-w-0 flex-1 gap-2 text-sm font-medium text-[#334155]">
                       <span>کالا</span>
+
                       <SearchableSelect
                         value={item.productObjectId || undefined}
-                        onValueChange={(value) => updateRow(item.rowId, { productObjectId: value })}
+                        onValueChange={(value) =>
+                          updateRow(item.rowId, {
+                            productObjectId: value,
+                          })
+                        }
                         options={selectableProducts.map((productOption) => ({
                           value: productOption.objectId,
                           label: productIdentityLabel(productOption),
@@ -699,17 +818,22 @@ export function OrderEditForm({
                         searchPlaceholder="جستجو در کالاها"
                         emptyMessage="کالایی یافت نشد"
                         disabled={!canEditItemSelection}
-                        invalid={Boolean(rowErrors[item.rowId]?.productObjectId)}
+                        invalid={Boolean(
+                          rowErrors[item.rowId]?.productObjectId,
+                        )}
                       />
-                      <FieldError message={rowErrors[item.rowId]?.productObjectId} />
+
+                      <FieldError
+                        message={rowErrors[item.rowId]?.productObjectId}
+                      />
                     </label>
 
-                    {canEditItemSelection && items.length > 1 ? (
+                    {canEditItemSelection ? (
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="self-end text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
+                        className="shrink-0 text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
                         onClick={() => removeRow(item.rowId)}
                         aria-label="حذف کالا"
                       >
@@ -718,58 +842,67 @@ export function OrderEditForm({
                     ) : null}
                   </div>
 
+                  {/* اطلاعات کالا */}
                   {product ? (
                     <div className="mt-3 grid gap-3 md:grid-cols-3">
                       <div className="rounded-2xl border border-[#EEF2F6] bg-[#FBFCFD] px-3 py-2.5">
                         <p className="text-xs text-[#6B7280]">قیمت واحد</p>
+
                         <p className="mt-1 font-semibold text-[#102034]">
                           {formatFaCurrency(product.unitPrice)}
                         </p>
                       </div>
+
                       <div className="rounded-2xl border border-[#EEF2F6] bg-[#FBFCFD] px-3 py-2.5">
-                        <p className="text-xs text-[#6B7280]">موجودی قابل ویرایش</p>
+                        <p className="text-xs text-[#6B7280]">موجودی فروش</p>
+
                         <p className="mt-1 font-semibold text-[#102034]">
                           {formatFaDigits(editableAvailableQuantity)}
                         </p>
                       </div>
+
                       <div className="rounded-2xl border border-[#EEF2F6] bg-[#FBFCFD] px-3 py-2.5">
                         <p className="text-xs text-[#6B7280]">مبلغ ردیف</p>
+
                         <p className="mt-1 font-semibold text-[#102034]">
-                          {formatFaCurrency(item.quantity * (product.unitPrice ?? 0))}
+                          {formatFaCurrency(
+                            item.quantity * (product.unitPrice ?? 0),
+                          )}
                         </p>
                       </div>
                     </div>
                   ) : null}
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)] md:items-start">
-                    <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                  {/* تعداد */}
+                  <div className="mt-4">
+                    <label className="grid max-w-[180px] gap-2 text-sm font-medium text-[#334155]">
                       <span>تعداد</span>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9۰-۹٠-٩]*"
-                          max={editableAvailableQuantity}
-                          value={item.quantity}
-                          onChange={(event) =>
-                            updateRow(item.rowId, { quantity: toNumber(normalizeDigits(event.target.value)) })
-                          }
-                          disabled={!canEditItemQuantity}
-                          readOnly={!canEditItemQuantity}
+
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9۰-۹٠-٩]*"
+                        max={editableAvailableQuantity}
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateRow(item.rowId, {
+                            quantity: toNumber(
+                              normalizeDigits(event.target.value),
+                            ),
+                          })
+                        }
+                        disabled={!canEditItemQuantity}
+                        readOnly={!canEditItemQuantity}
                         aria-invalid={Boolean(rowErrors[item.rowId]?.quantity)}
-                        />
+                      />
+
                       <FieldError message={rowErrors[item.rowId]?.quantity} />
                     </label>
-
-                    <div className="grid gap-2 text-sm text-[#64748B]">
-                      <span className="font-medium text-[#334155]">توضیحات ردیف</span>
-                      <div className="rounded-2xl border border-[#EEF2F6] bg-[#FBFCFD] px-3 py-2.5 leading-7">
-                        {inventoryProduct?.name || product?.name || "کالا انتخاب نشده است."}
-                      </div>
-                    </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-[#64748B]">
                     <span>ردیف {formatFaDigits(index + 1)}</span>
+
                     <span>
                       {isExpertEdit
                         ? "فقط تعداد هر ردیف قابل ویرایش است."
@@ -783,7 +916,12 @@ export function OrderEditForm({
 
           {canEditItemSelection ? (
             <div className="mt-4">
-              <Button type="button" variant="outline" onClick={addRow} className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addRow}
+                className="gap-2"
+              >
                 <PackageSearch className="size-4" />
                 افزودن آیتم
               </Button>
@@ -812,7 +950,11 @@ export function OrderEditForm({
         ) : null}
 
         <div className="mt-6 flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => window.history.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => window.history.back()}
+          >
             <ChevronLeft className="size-4" />
             بازگشت
           </Button>
@@ -830,22 +972,14 @@ export function OrderEditForm({
           totalAmount={totalAmount}
           status={order.orderStatus}
           warehouseStatus={order.warehouseStatus}
-          saleTypeTitle={selectedSalesType?.title || order.salesTypeTitle || null}
-          priceListTitle={selectedPriceList?.title || order.priceListTitle || null}
+          saleTypeTitle={
+            selectedSalesType?.title || order.salesTypeTitle || null
+          }
+          priceListTitle={
+            selectedPriceList?.title || order.priceListTitle || null
+          }
           stockTitles={currentStockTitles}
         />
-
-        <Card className="p-5">
-          <h3 className="text-base font-semibold text-[#102034]">جزئیات انتخاب‌شده</h3>
-          <dl className="mt-4 space-y-3 text-sm">
-            <SummaryRow label="مشتری" value={selectedCustomer?.fullName || customerName || "-"} />
-            <SummaryRow label="روش پرداخت" value={selectedSalesType?.title || order.salesTypeTitle || "-"} />
-            <SummaryRow label="لیست قیمت" value={selectedPriceList?.title || order.priceListTitle || "-"} />
-            <SummaryRow label="تعداد آیتم" value={formatFaDigits(totalItems)} />
-            <SummaryRow label="جمع تعداد" value={formatFaDigits(totalQuantity)} />
-            <SummaryRow label="مبلغ تقریبی" value={formatFaCurrency(totalAmount)} />
-          </dl>
-        </Card>
       </div>
     </section>
   );
@@ -861,20 +995,16 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 function getOrderSalesTypeSnapshot(order: Order): SalesTypeOption | null {
-  const legacySaleTypeCode = (order as Order & { saleTypeCode?: number | null }).saleTypeCode ?? null;
+  const legacySaleTypeCode =
+    (order as Order & { saleTypeCode?: number | null }).saleTypeCode ?? null;
   const objectId =
     order.salesTypeObjectId ||
     order.saleTypeObjectId ||
     order.salesType?.objectId ||
     "";
-  const title =
-    order.salesTypeTitle ||
-    order.salesType?.title ||
-    "";
+  const title = order.salesTypeTitle || order.salesType?.title || "";
   const internalCode =
-    order.salesTypeInternalCode ??
-    order.salesType?.internalCode ??
-    null;
+    order.salesTypeInternalCode ?? order.salesType?.internalCode ?? null;
   const sepidarCode =
     order.salesTypeSepidarCode ??
     order.sepidarSaleTypeId ??
@@ -900,7 +1030,8 @@ function resolveOrderSalesTypeOption(
 ): SalesTypeOption | null {
   if (!salesTypes.length) return getOrderSalesTypeSnapshot(order);
 
-  const legacySaleTypeCode = (order as Order & { saleTypeCode?: number | null }).saleTypeCode ?? null;
+  const legacySaleTypeCode =
+    (order as Order & { saleTypeCode?: number | null }).saleTypeCode ?? null;
   const snapshot = getOrderSalesTypeSnapshot(order);
   const matched =
     (order.salesTypeObjectId
@@ -909,8 +1040,11 @@ function resolveOrderSalesTypeOption(
     (order.saleTypeObjectId
       ? salesTypes.find((item) => item.objectId === order.saleTypeObjectId)
       : null) ||
-    (order.salesTypeSepidarCode !== null && order.salesTypeSepidarCode !== undefined
-      ? salesTypes.find((item) => item.sepidarCode === order.salesTypeSepidarCode)
+    (order.salesTypeSepidarCode !== null &&
+    order.salesTypeSepidarCode !== undefined
+      ? salesTypes.find(
+          (item) => item.sepidarCode === order.salesTypeSepidarCode,
+        )
       : null) ||
     (order.sepidarSaleTypeId !== null && order.sepidarSaleTypeId !== undefined
       ? salesTypes.find((item) => item.sepidarCode === order.sepidarSaleTypeId)
@@ -918,8 +1052,11 @@ function resolveOrderSalesTypeOption(
     (legacySaleTypeCode !== null && legacySaleTypeCode !== undefined
       ? salesTypes.find((item) => item.sepidarCode === legacySaleTypeCode)
       : null) ||
-    (order.salesTypeInternalCode !== null && order.salesTypeInternalCode !== undefined
-      ? salesTypes.find((item) => item.internalCode === order.salesTypeInternalCode)
+    (order.salesTypeInternalCode !== null &&
+    order.salesTypeInternalCode !== undefined
+      ? salesTypes.find(
+          (item) => item.internalCode === order.salesTypeInternalCode,
+        )
       : null) ||
     (order.salesTypeTitle
       ? salesTypes.find((item) => item.title === order.salesTypeTitle)
@@ -930,7 +1067,11 @@ function resolveOrderSalesTypeOption(
 
 function getOrderPriceListSnapshot(order: Order): PriceListOption | null {
   const objectId = order.priceListId || order.priceList?.objectId || "";
-  const title = order.priceListTitle || order.priceList?.title || order.priceList?.name || "";
+  const title =
+    order.priceListTitle ||
+    order.priceList?.title ||
+    order.priceList?.name ||
+    "";
   const brandName = order.priceListBrand || order.priceList?.brandName || null;
 
   if (!objectId && !title && !brandName) return null;
@@ -960,7 +1101,9 @@ function getCustomerPriceListOptions(
   return items;
 }
 
-function getResolvedSepidarAddresses(customer: Customer | null): CustomerAddress[] {
+function getResolvedSepidarAddresses(
+  customer: Customer | null,
+): CustomerAddress[] {
   if (!customer) return [];
   const addresses = customer.sepidarAddresses?.length
     ? customer.sepidarAddresses
@@ -974,7 +1117,9 @@ function getResolvedSepidarAddresses(customer: Customer | null): CustomerAddress
   return dedupeCustomerAddresses(addresses);
 }
 
-function resolveMainCustomerAddress(customer: Customer | null): CustomerAddress | null {
+function resolveMainCustomerAddress(
+  customer: Customer | null,
+): CustomerAddress | null {
   if (!customer) return null;
   const addresses = getResolvedSepidarAddresses(customer);
   return (
@@ -986,7 +1131,9 @@ function resolveMainCustomerAddress(customer: Customer | null): CustomerAddress 
   );
 }
 
-function dedupeCustomerAddresses(addresses: CustomerAddress[]): CustomerAddress[] {
+function dedupeCustomerAddresses(
+  addresses: CustomerAddress[],
+): CustomerAddress[] {
   const seen = new Set<string>();
   return addresses.filter((address) => {
     const key = getCustomerAddressKey(address);
@@ -1006,7 +1153,9 @@ function getCustomerAddressKey(address: CustomerAddress): string {
   ).trim();
 }
 
-function getCustomerAddressNumericId(address: CustomerAddress | null): number | null {
+function getCustomerAddressNumericId(
+  address: CustomerAddress | null,
+): number | null {
   if (!address) return null;
   const raw = address.customerAddressId ?? address.sepidarAddressId;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
@@ -1014,7 +1163,9 @@ function getCustomerAddressNumericId(address: CustomerAddress | null): number | 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getCustomerAddressText(address: CustomerAddress | null): string | null {
+function getCustomerAddressText(
+  address: CustomerAddress | null,
+): string | null {
   if (!address) return null;
   return (
     address.Address ||
@@ -1025,12 +1176,16 @@ function getCustomerAddressText(address: CustomerAddress | null): string | null 
   );
 }
 
-function getCustomerAddressZipCode(address: CustomerAddress | null): string | null {
+function getCustomerAddressZipCode(
+  address: CustomerAddress | null,
+): string | null {
   if (!address) return null;
   return address.ZipCode || address.zipCode || address.postalCode || null;
 }
 
-function getCustomerAddressCityRef(address: CustomerAddress | null): number | null {
+function getCustomerAddressCityRef(
+  address: CustomerAddress | null,
+): number | null {
   if (!address) return null;
   const value = address.cityRef;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -1038,7 +1193,11 @@ function getCustomerAddressCityRef(address: CustomerAddress | null): number | nu
 }
 
 function formatCustomerAddressLabel(address: CustomerAddress): string {
-  const parts = [address.title, getCustomerAddressText(address), getCustomerAddressZipCode(address)]
+  const parts = [
+    address.title,
+    getCustomerAddressText(address),
+    getCustomerAddressZipCode(address),
+  ]
     .filter(Boolean)
     .map((value) => String(value));
   return parts.join(" - ") || address.objectId || "-";
@@ -1062,7 +1221,11 @@ function getAllowedStockTitles(customer: Customer): string[] {
 }
 
 function productIdentityLabel(product: Product): string {
-  const parts = [product.sepidarCode, product.name, product.brandName || product.brand]
+  const parts = [
+    product.sepidarCode,
+    product.name,
+    product.brandName || product.brand,
+  ]
     .filter(Boolean)
     .map((value) => String(value));
   return parts.join(" - ");
@@ -1073,9 +1236,15 @@ function trimOrUndefined(value: string): string | undefined {
   return text ? text : undefined;
 }
 
-function mergeCustomers(initialCustomers: Customer[], order: Order): Customer[] {
+function mergeCustomers(
+  initialCustomers: Customer[],
+  order: Order,
+): Customer[] {
   const list = [...initialCustomers];
-  if (order.customer && !list.some((customer) => customer.objectId === order.customer?.objectId)) {
+  if (
+    order.customer &&
+    !list.some((customer) => customer.objectId === order.customer?.objectId)
+  ) {
     list.push(order.customer);
   }
   return list;
@@ -1094,7 +1263,9 @@ function getSelectableProducts(products: Product[]): Product[] {
 
 function mergeProducts(initialProducts: Product[], order: Order): Product[] {
   const list = [...initialProducts];
-  const productMap = new Map(list.map((product) => [product.objectId, product]));
+  const productMap = new Map(
+    list.map((product) => [product.objectId, product]),
+  );
   order.items.forEach((item) => {
     if (productMap.has(item.productId)) return;
     const fallback = createProductFromOrderItem(item);
@@ -1154,8 +1325,13 @@ function createProductFromOrderItem(item: OrderItem): Product | null {
   };
 }
 
-function mapOrderItems(items: OrderItem[], products: Product[]): EditDraftItem[] {
-  const productMap = new Map(products.map((product) => [product.objectId, product]));
+function mapOrderItems(
+  items: OrderItem[],
+  products: Product[],
+): EditDraftItem[] {
+  const productMap = new Map(
+    products.map((product) => [product.objectId, product]),
+  );
   return items.map((item, index) => {
     if (!productMap.has(item.productId)) {
       const fallback = createProductFromOrderItem(item);

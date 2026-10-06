@@ -32,21 +32,24 @@ interface CustomerInfoCardProps {
   >;
 }
 
-export function CustomerInfoCard({ order, hideDeliveryInfo = false }: CustomerInfoCardProps) {
+export function CustomerInfoCard({
+  order,
+  hideDeliveryInfo = false,
+}: CustomerInfoCardProps) {
   const hasCustomerData = Boolean(
     order.customerName ||
-      order.customerPhone ||
-      order.customerNationalId ||
-      order.customerAddressText ||
-      order.customerAddress ||
-      (!hideDeliveryInfo &&
-        (order.deliveryFullAddress ||
-          order.receiverFullName ||
-          order.receiverPhone ||
-          order.recipientFirstName ||
-          order.recipientLastName ||
-          order.recipientNationalId ||
-          order.recipientMobile)),
+    order.customerPhone ||
+    order.customerNationalId ||
+    order.customerAddressText ||
+    order.customerAddress ||
+    (!hideDeliveryInfo &&
+      (order.deliveryFullAddress ||
+        order.receiverFullName ||
+        order.receiverPhone ||
+        order.recipientFirstName ||
+        order.recipientLastName ||
+        order.recipientNationalId ||
+        order.recipientMobile)),
   );
 
   return (
@@ -61,48 +64,67 @@ export function CustomerInfoCard({ order, hideDeliveryInfo = false }: CustomerIn
       ) : (
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
           <InfoItem label="نام مشتری" value={order.customerName || "-"} />
-          <InfoItem label="شماره موبایل" value={order.customerPhone ? formatFaDigits(order.customerPhone) : "-"} />
+          <InfoItem
+            label="شماره موبایل"
+            value={
+              order.customerPhone ? formatFaDigits(order.customerPhone) : "-"
+            }
+          />
           {order.customerNationalId ? (
-            <InfoItem label="کد ملی" value={formatFaDigits(order.customerNationalId)} />
+            <InfoItem
+              label="کد ملی"
+              value={formatFaDigits(order.customerNationalId)}
+            />
           ) : null}
           {!hideDeliveryInfo ? (
-            <>
-              <InfoItem
-                label="آدرس تحویل"
-                value={formatDeliveryAddress(order)}
-                className="sm:col-span-2"
-              />
-              {order.recipientFirstName ||
-              order.recipientLastName ||
-              order.recipientNationalId ||
-              order.recipientMobile ||
-              order.receiverFullName ||
-              order.receiverPhone ? (
-                <>
-                  <InfoItem
-                    label="گیرنده بار"
-                    value={
-                      [order.recipientFirstName, order.recipientLastName]
-                        .filter(Boolean)
-                        .join(" ") ||
-                      order.receiverFullName ||
-                      "-"
-                    }
-                  />
-                  <InfoItem
-                    label="موبایل گیرنده"
-                    value={
-                      order.recipientMobile
-                        ? formatFaDigits(order.recipientMobile)
-                        : order.receiverPhone
-                          ? formatFaDigits(order.receiverPhone)
-                          : "-"
-                    }
-                  />
-                </>
-              ) : null}
-            </>
-          ) : null}
+            <InfoItem
+              label="آدرس تحویل"
+              value={
+                order.selectedCustomerAddressText ||
+                order.customerAddressText ||
+                order.deliveryFullAddress ||
+                order.customerAddress ||
+                "-"
+              }
+              className="sm:col-span-2"
+            />
+          ) : // <>
+          //   <InfoItem
+          //     label="آدرس تحویل"
+          //     value={formatDeliveryAddress(order)}
+          //     className="sm:col-span-2"
+          //   />
+          //   {order.recipientFirstName ||
+          //   order.recipientLastName ||
+          //   order.recipientNationalId ||
+          //   order.recipientMobile ||
+          //   order.receiverFullName ||
+          //   order.receiverPhone ? (
+          //     <>
+          //       <InfoItem
+          //         label="گیرنده بار"
+          //         value={
+          //           [order.recipientFirstName, order.recipientLastName]
+          //             .filter(Boolean)
+          //             .join(" ") ||
+          //           order.receiverFullName ||
+          //           "-"
+          //         }
+          //       />
+          //       <InfoItem
+          //         label="موبایل گیرنده"
+          //         value={
+          //           order.recipientMobile
+          //             ? formatFaDigits(order.recipientMobile)
+          //             : order.receiverPhone
+          //               ? formatFaDigits(order.receiverPhone)
+          //               : "-"
+          //         }
+          //       />
+          //     </>
+          //   ) : null}
+          // </>
+          null}
         </dl>
       )}
     </Card>
@@ -119,7 +141,9 @@ function InfoItem({
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 ${className}`}>
+    <div
+      className={`rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 ${className}`}
+    >
       <dt className="text-xs text-[#6B7280]">{label}</dt>
       <dd className="mt-1 whitespace-normal text-sm font-medium leading-7 text-[#1F3A5F]">
         {value}
