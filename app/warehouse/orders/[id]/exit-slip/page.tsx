@@ -35,6 +35,7 @@ import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
 interface ExpectedRow {
   item: OrderItem;
+  previouslyDispatchedQuantity: number;
   scannedQuantity: number;
   remainingQuantity: number;
 }
@@ -157,6 +158,8 @@ export default function ExitSlipCreatePage() {
       const existing = itemsByProduct.get(key);
       if (existing) {
         existing.quantity += item.quantity;
+        existing.dispatchedQuantity =
+          (existing.dispatchedQuantity ?? 0) + (item.dispatchedQuantity ?? 0);
       } else {
         itemsByProduct.set(key, { ...item });
       }
@@ -168,13 +171,25 @@ export default function ExitSlipCreatePage() {
       ).length;
       return {
         item,
+        previouslyDispatchedQuantity: Math.max(
+          0,
+          Math.min(item.dispatchedQuantity ?? 0, item.quantity),
+        ),
         scannedQuantity,
-        remainingQuantity: item.quantity - scannedQuantity,
+        remainingQuantity: Math.max(
+          item.quantity - (item.dispatchedQuantity ?? 0) - scannedQuantity,
+          0,
+        ),
       };
     });
   }, [order, scannedUnits]);
   const totalItemCount = useMemo(
-    () => expectedRows.reduce((sum, row) => sum + row.item.quantity, 0),
+    () =>
+      expectedRows.reduce(
+        (sum, row) =>
+          sum + Math.max(row.item.quantity - row.previouslyDispatchedQuantity, 0),
+        0,
+      ),
     [expectedRows],
   );
   const totalScannedCount = useMemo(
@@ -187,10 +202,10 @@ export default function ExitSlipCreatePage() {
   const submitIssues = useMemo(() => {
     const issues: string[] = [];
     expectedRows.forEach((row) => {
-      if (row.scannedQuantity < row.item.quantity) {
+      if (row.remainingQuantity > 0) {
         issues.push(
           `${row.item.productName || row.item.productSku}: ${formatNumber(
-            row.item.quantity - row.scannedQuantity,
+            row.remainingQuantity,
           )} مورد باقی مانده`,
         );
       }
@@ -227,6 +242,11 @@ export default function ExitSlipCreatePage() {
       key: "ordered",
       header: "تعداد سفارش",
       render: (row) => formatNumber(row.item.quantity),
+    },
+    {
+      key: "previouslyDispatched",
+      header: "قبلاً خارج‌شده",
+      render: (row) => formatNumber(row.previouslyDispatchedQuantity),
     },
     {
       key: "scanned",
@@ -411,7 +431,7 @@ export default function ExitSlipCreatePage() {
         focusScanField("trackingCode");
         return;
       }
-      if (expectedRow.scannedQuantity >= expectedRow.item.quantity) {
+      if (expectedRow.remainingQuantity <= 0) {
         setFieldErrors({
           trackingCode: "تعداد کالاهای ثبت‌شده بیشتر از تعداد سفارش است.",
         });

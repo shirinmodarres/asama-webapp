@@ -15,6 +15,7 @@ export interface OrderItem {
   brand: string;
   brandName: string | null;
   quantity: number;
+  dispatchedQuantity?: number;
   unitPrice: number;
   priceListId?: string | null;
   priceListItemId?: string | null;
