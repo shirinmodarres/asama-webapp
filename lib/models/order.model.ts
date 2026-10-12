@@ -144,6 +144,10 @@ export interface Order {
   financialReturnedAt: string | null;
   financialReturnedBy: string | null;
   sourceLabel: string | null;
+  salesRequestSubtotal: number;
+  salesRequestDiscountTotal: number;
+  salesRequestTaxAmount: number;
+  salesRequestTotalWithTax: number;
   notes: string | null;
   editedByUserId: string | null;
   editedByName: string | null;

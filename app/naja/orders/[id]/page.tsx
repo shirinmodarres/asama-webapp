@@ -286,6 +286,8 @@ export default function NajaOrderDetailsPage() {
             itemCount={detailRows.length}
             totalQuantity={detailRows.reduce((sum, item) => sum + item.quantity, 0)}
             totalAmount={totalAmount}
+            discountAmount={order.salesRequestDiscountTotal}
+            notes={order.notes}
             status={order.orderStatus as never}
             warehouseStatus={order.warehouseStatus as never}
             saleTypeTitle={order.salesTypeTitle || null}

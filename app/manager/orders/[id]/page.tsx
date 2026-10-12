@@ -15,6 +15,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
+import { OrderNoteCard } from "@/components/orders/order-note-card";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -60,6 +61,7 @@ import {
   stopShipment,
 } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 type DecisionType = "approve" | "reject" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
@@ -169,6 +171,12 @@ export default function ManagerOrderReviewPage() {
   const totalAmount = order.items.reduce(
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
+  );
+  const orderFinancials = calculateSalesRequestFinancials(
+    totalAmount,
+    totalAmount > 0
+      ? (Number(order.salesRequestDiscountTotal || 0) / totalAmount) * 100
+      : 0,
   );
   const isNajaOrder = order.orderType === "naja";
   const workflowStage =
@@ -927,6 +935,7 @@ export default function ManagerOrderReviewPage() {
           ) : null}
 
           <CustomerInfoCard order={order} />
+          <OrderNoteCard notes={order.notes} />
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -969,6 +978,10 @@ export default function ManagerOrderReviewPage() {
             <p className="mt-2 text-lg font-semibold text-[#102034]">
               {formatCurrency(totalAmount)}
             </p>
+            <p className="mt-4 text-sm text-[#6B7280]">مبلغ با مالیات</p>
+            <p className="mt-1 text-base font-semibold text-[#102034]">
+              {formatCurrency(orderFinancials.total)}
+            </p>
           </div>
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
@@ -981,6 +994,14 @@ export default function ManagerOrderReviewPage() {
               <InfoItem
                 label="لیست قیمت"
                 value={order.priceListTitle || order.priceList?.title || "-"}
+              />
+              <InfoItem
+                label="شماره پیش‌فاکتور سپیدار"
+                value={
+                  order.sepidarQuotationNumber
+                    ? formatFaDigits(order.sepidarQuotationNumber)
+                    : "ثبت نشده"
+                }
               />
             </div>
           </div>

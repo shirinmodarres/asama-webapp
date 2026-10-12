@@ -55,7 +55,7 @@ type SalesTypeOption = {
   sepidarCode: number | null;
 };
 
-const NAJA_PAYMENT_METHOD_CODES = new Set([22003, 22004]);
+const NAJA_PAYMENT_METHOD_CODES = new Set([22003]);
 
 export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
   const router = useRouter();

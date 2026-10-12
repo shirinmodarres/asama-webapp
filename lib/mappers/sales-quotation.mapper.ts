@@ -58,17 +58,6 @@ export function mapSalesQuotationDto(dto: unknown): SalesQuotation {
     orderObjectId: toNullableString(record.orderObjectId),
     stockObjectId: toNullableString(record.stockObjectId),
     subtotal: toNumberValue(record.subtotal),
-    adjustments: toArray(record.adjustments).map((value) => {
-      const adjustment = toRecord(value);
-      return {
-        title: toStringValue(adjustment.title),
-        percentage: toNumberValue(adjustment.percentage),
-        type: adjustment.type === "addition" ? "addition" : "deduction",
-        amount: toNumberValue(adjustment.amount),
-      };
-    }),
-    deductionTotal: toNumberValue(record.deductionTotal),
-    additionTotal: toNumberValue(record.additionTotal),
     finalTotal: toNumberValue(record.finalTotal ?? record.total),
     discountPercentage: toNumberValue(record.discountPercentage),
     discountAmount: toNumberValue(record.discountAmount ?? record.discount),

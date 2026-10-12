@@ -9,6 +9,7 @@ import {
   mapExitSlipListDto,
   mapProductWarehouseInventoryListDto,
   mapWarehouseInboundReceiptDto,
+  mapWarehouseInboundReceiptPageDto,
   mapWarehouseInboundReceiptListDto,
   mapWarehouseItemUnitDto,
   mapWarehouseItemUnitListDto,
@@ -33,6 +34,7 @@ import type {
   UpdateInboundReceiptPayload,
   ValidateExitSlipScanPayload,
   WarehouseInboundReceipt,
+  WarehouseInboundReceiptPage,
   WarehouseInventoryUnitRow,
   WarehouseItemUnit,
   WarehouseStockUnitDetail,
@@ -266,15 +268,22 @@ export async function createInboundReceipt(
   return mapWarehouseInboundReceiptDto(data);
 }
 
-export async function listInboundReceipts(): Promise<WarehouseInboundReceipt[]> {
-  const data = await httpClient.get<unknown>("/api/warehouse/inbound");
-  return mapWarehouseInboundReceiptListDto(data);
+export async function listInboundReceipts(
+  { page = 1, pageSize = 25 }: { page?: number; pageSize?: number } = {},
+): Promise<WarehouseInboundReceiptPage> {
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/inbound?page=${page}&pageSize=${pageSize}`,
+  );
+  return mapWarehouseInboundReceiptPageDto(data);
 }
 
 export async function getInboundReceipt(
   objectId: string,
+  { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {},
 ): Promise<WarehouseInboundReceipt> {
-  const data = await httpClient.get<unknown>(`/api/warehouse/inbound/${objectId}`);
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/inbound/${objectId}?page=${page}&pageSize=${pageSize}`,
+  );
   return mapWarehouseInboundReceiptDto(data);
 }
 

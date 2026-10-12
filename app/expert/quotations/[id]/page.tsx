@@ -28,6 +28,7 @@ import {
   getSalesQuotation,
 } from "@/lib/services/sales-quotation.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 export default function ExpertQuotationDetailPage() {
   const params = useParams<{ id: string }>();
@@ -266,24 +267,17 @@ export default function ExpertQuotationDetailPage() {
                     label="جمع مبلغ اقلام"
                     value={formatCurrency(quotation.subtotal)}
                   />
-                  {quotation.adjustments.map((item, index) => (
-                    <InfoRow
-                      key={`${item.title}-${index}`}
-                      label={`${item.type === "addition" ? "+" : "-"} ${item.title} (${formatNumber(item.percentage)}٪)`}
-                      value={formatCurrency(item.amount || 0)}
-                    />
-                  ))}
                   <InfoRow
-                    label="مجموع کسورات"
-                    value={formatCurrency(quotation.deductionTotal)}
+                    label={`تخفیف (${formatNumber(quotation.discountPercentage)}٪)`}
+                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).discountAmount)}
                   />
                   <InfoRow
-                    label="مجموع اضافات"
-                    value={formatCurrency(quotation.additionTotal)}
+                    label="مالیات (۱۰٪)"
+                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).taxAmount)}
                   />
                   <InfoRow
-                    label="مبلغ نهایی درخواست"
-                    value={formatCurrency(quotation.finalTotal)}
+                    label="مبلغ با مالیات"
+                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).total)}
                   />
                 </dl>
               </Card>

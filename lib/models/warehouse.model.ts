@@ -64,8 +64,24 @@ export interface WarehouseInboundReceipt {
   notes: string | null;
   items: WarehouseInboundReceiptItemGroup[];
   units: WarehouseItemUnit[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WarehouseInboundReceiptPage {
+  items: WarehouseInboundReceipt[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface WarehouseInboundReceiptItemUnit {

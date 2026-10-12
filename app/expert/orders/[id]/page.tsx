@@ -432,6 +432,8 @@ export default function ExpertOrderDetailsPage() {
                 0,
               )}
               totalAmount={totalAmount}
+              discountAmount={order.salesRequestDiscountTotal}
+              notes={order.notes}
               status={order.orderStatus}
               warehouseStatus={order.warehouseStatus}
               financialApprovalStageLabel={

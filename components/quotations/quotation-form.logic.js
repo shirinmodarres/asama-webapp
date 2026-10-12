@@ -55,7 +55,6 @@ function buildQuotationSubmitPayload({
   discountPercentage,
   taxPercentage,
   stockObjectId,
-  adjustments,
   status,
   rows,
 }) {
@@ -71,7 +70,6 @@ function buildQuotationSubmitPayload({
     discountPercentage,
     taxPercentage,
     stockObjectId,
-    adjustments,
     status,
     items: rows.map((row) => ({
       productObjectId: row.productId,

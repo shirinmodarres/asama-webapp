@@ -30,6 +30,7 @@ import {
   POSITIVE_NUMBER_MESSAGE,
 } from "@/lib/utils/form-validation";
 import { jalaliToIso, todayJalaliParts } from "@/lib/utils/jalali-date";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 import {
   buildQuotationSubmitPayload,
   getQuotationCustomerSnapshot,
@@ -117,9 +118,7 @@ export function QuotationForm({
     Record<string, { productId?: string; quantity?: string }>
   >({});
   const [discountPercentage, setDiscountPercentage] = useState(
-    initialQuotation?.adjustments?.find(
-      (item) => item.type === "deduction" && item.title === "تخفیف",
-    )?.percentage ?? initialQuotation?.discountPercentage ?? 0,
+    initialQuotation?.discountPercentage ?? 0,
   );
   const quotationSalesTypeFallback = useMemo(
     () =>
@@ -463,8 +462,7 @@ export function QuotationForm({
   );
 
   const subtotal = resolvedRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const discountAmount = subtotal * (discountPercentage / 100);
-  const total = Math.max(0, subtotal - discountAmount);
+  const financials = calculateSalesRequestFinancials(subtotal, discountPercentage);
   const itemCount = resolvedRows.length;
   const totalQuantity = resolvedRows.reduce(
     (sum, row) => sum + row.quantity,
@@ -589,18 +587,8 @@ export function QuotationForm({
           notes,
           selectedValidUntil,
           discountPercentage,
-          taxPercentage: 0,
+          taxPercentage: financials.taxPercentage,
           stockObjectId: effectiveStockObjectId,
-          adjustments:
-            discountPercentage > 0
-              ? [
-                  {
-                    title: "تخفیف",
-                    percentage: discountPercentage,
-                    type: "deduction",
-                  },
-                ]
-              : [],
           status,
           rows: resolvedRows,
         }),
@@ -967,8 +955,10 @@ export function QuotationForm({
 
             <SummaryRow
               label={`تخفیف ${formatNumber(discountPercentage)}٪`}
-              value={formatCurrency(discountAmount)}
+              value={formatCurrency(financials.discountAmount)}
             />
+
+            <SummaryRow label="مالیات (۱۰٪)" value={formatCurrency(financials.taxAmount)} />
           </dl>
 
           <div className="mt-5 flex items-center justify-between gap-4 rounded-lg bg-[var(--muted)] px-4 py-4">
@@ -977,7 +967,7 @@ export function QuotationForm({
             </span>
 
             <span className="text-base font-bold text-[var(--foreground)]">
-              {formatCurrency(total)}
+              {formatCurrency(financials.total)}
             </span>
           </div>
 

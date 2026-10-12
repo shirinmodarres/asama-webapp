@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type {
@@ -25,6 +26,7 @@ export default function WarehouseInboundReceiptDetailPage() {
   const [receipt, setReceipt] = useState<WarehouseInboundReceipt | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,7 +35,7 @@ export default function WarehouseInboundReceiptDetailPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await getInboundReceipt(params.id);
+        const data = await getInboundReceipt(params.id, { page, pageSize: 50 });
         if (isMounted) setReceipt(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -46,7 +48,7 @@ export default function WarehouseInboundReceiptDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [page, params.id]);
   const groupedItems = useMemo(() => groupReceiptItems(receipt), [receipt]);
 
   return (
@@ -104,13 +106,19 @@ export default function WarehouseInboundReceiptDetailPage() {
                   </div>
                 </div>
 
-                <DataTable
-                  columns={columns}
-                  rows={item.units as WarehouseItemUnit[]}
-                  rowKey={(row) => row.objectId || row.id}
-                />
               </section>
             ))}
+            <DataTable
+              columns={columns}
+              rows={receipt.units}
+              rowKey={(row) => row.objectId || row.id}
+            />
+            <PaginationBar
+              currentPage={receipt.pagination?.page ?? 1}
+              totalPages={receipt.pagination?.totalPages ?? 1}
+              totalItems={receipt.pagination?.total ?? receipt.units.length}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       )}

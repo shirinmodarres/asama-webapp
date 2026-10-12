@@ -7,12 +7,15 @@ import {
 } from "@/lib/domain/statuses";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import { PaymentMethodRow } from "@/components/shared/payment-method-row";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 interface OrderSummaryCardProps {
   customerName: string | null;
   itemCount: number;
   totalQuantity: number;
   totalAmount: number;
+  discountAmount?: number;
+  notes?: string | null;
   status: string;
   warehouseStatus: string;
   financialApprovalStageLabel?: string | null;
@@ -26,6 +29,8 @@ export function OrderSummaryCard({
   itemCount,
   totalQuantity,
   totalAmount,
+  discountAmount = 0,
+  notes,
   status,
   warehouseStatus,
   financialApprovalStageLabel,
@@ -33,6 +38,10 @@ export function OrderSummaryCard({
   priceListTitle,
   stockTitles = [],
 }: OrderSummaryCardProps) {
+  const financials = calculateSalesRequestFinancials(
+    totalAmount,
+    totalAmount > 0 ? (discountAmount / totalAmount) * 100 : 0,
+  );
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4">
@@ -54,6 +63,10 @@ export function OrderSummaryCard({
         <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
         <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
         <SummaryRow label="مبلغ تقریبی" value={formatCurrency(totalAmount)} />
+        {discountAmount > 0 ? (
+          <SummaryRow label="تخفیف" value={formatCurrency(discountAmount)} />
+        ) : null}
+        <SummaryRow label="مبلغ با مالیات" value={formatCurrency(financials.total)} />
         <PaymentMethodRow value={saleTypeTitle} />
         {priceListTitle ? (
           <SummaryRow label="لیست قیمت" value={priceListTitle} />
@@ -73,6 +86,7 @@ export function OrderSummaryCard({
           label="وضعیت انبار"
           value={getWarehouseStatusLabel(warehouseStatus)}
         />
+        {notes ? <SummaryRow label="توضیحات سفارش" value={notes} /> : null}
       </dl>
     </Card>
   );

@@ -1,15 +1,6 @@
 import type { Customer } from "@/lib/models/customer.model";
 
 export type SalesQuotationStatus = "draft" | "finalized" | "cancelled";
-export type SalesRequestAdjustmentType = "deduction" | "addition";
-
-export interface SalesRequestAdjustment {
-  title: string;
-  percentage: number;
-  type: SalesRequestAdjustmentType;
-  amount?: number;
-}
-
 export interface SalesQuotationItem {
   rowNumber?: number;
   productObjectId: string;
@@ -58,9 +49,6 @@ export interface SalesQuotation {
   orderObjectId: string | null;
   stockObjectId: string | null;
   subtotal: number;
-  adjustments: SalesRequestAdjustment[];
-  deductionTotal: number;
-  additionTotal: number;
   finalTotal: number;
   discountPercentage: number;
   discountAmount: number;
@@ -132,7 +120,6 @@ export interface CreateSalesQuotationPayload {
   discountPercentage?: number;
   taxPercentage?: number;
   stockObjectId?: string | null;
-  adjustments?: SalesRequestAdjustment[];
   status?: SalesQuotationStatus;
   items: Array<{
     productObjectId: string;

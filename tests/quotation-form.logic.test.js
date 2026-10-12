@@ -22,7 +22,6 @@ test("buildQuotationSubmitPayload preserves edit fields and items", () => {
     discountPercentage: 10,
     taxPercentage: 10,
     stockObjectId: "stock-1",
-    adjustments: [],
     status: "draft",
     rows: [{ productId: "prod-1", quantity: 2 }],
   });
@@ -39,7 +38,6 @@ test("buildQuotationSubmitPayload preserves edit fields and items", () => {
     discountPercentage: 10,
     taxPercentage: 10,
     stockObjectId: "stock-1",
-    adjustments: [],
     status: "draft",
     items: [{ productObjectId: "prod-1", quantity: 2 }],
   });

@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { SalesQuotation } from "@/lib/models/sales-quotation.model";
 import { getSalesQuotationPdfData } from "@/lib/services/sales-quotation.service";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 import { PDF_PAGE_STYLES, PdfPage } from "@/components/pdf/pdf-shell";
 import { chunkRowsByPage } from "@/components/pdf/pdf-pagination";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -234,38 +235,17 @@ export default function SalesQuotationPdfPage() {
                             value={quotation.subtotal}
                           />
 
-                          {quotation.adjustments?.map((adjustment, index) => {
-                            const amount =
-                              Number(quotation.subtotal || 0) *
-                              (Number(adjustment.percentage || 0) / 100);
-
-                            const isAddition = adjustment.type === "addition";
-
-                            return (
-                              <Total
-                                key={`${adjustment.title}-${index}`}
-                                label={`${isAddition ? "+" : "-"} ${
-                                  adjustment.title || "بدون عنوان"
-                                } (${formatNumber(adjustment.percentage || 0)}٪)`}
-                                value={amount}
-                                tone={isAddition ? "addition" : "deduction"}
-                              />
-                            );
-                          })}
-
                           <Total
-                            label="مجموع کسورات"
-                            value={quotation.deductionTotal}
+                            label={`تخفیف (${formatNumber(quotation.discountPercentage)}٪)`}
+                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).discountAmount}
                           />
-
                           <Total
-                            label="مجموع اضافات"
-                            value={quotation.additionTotal}
+                            label="مالیات (۱۰٪)"
+                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).taxAmount}
                           />
-
                           <Total
-                            label="مبلغ نهایی درخواست"
-                            value={quotation.finalTotal}
+                            label="مبلغ با مالیات"
+                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).total}
                             emphasis
                           />
                         </section>
