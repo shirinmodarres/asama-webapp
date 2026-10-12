@@ -75,6 +75,7 @@ export function normalizeOrderEditPayload(
       ? normalizeDigits(String(editPayload.najaOrderNumber).trim())
       : editPayload.najaOrderNumber,
     najaPurchaseDate: trimOrNull(editPayload.najaPurchaseDate),
+    sepidarQuotationDate: trimOrNull(editPayload.sepidarQuotationDate),
     notes: trimOrNull(editPayload.notes),
     items,
   });
