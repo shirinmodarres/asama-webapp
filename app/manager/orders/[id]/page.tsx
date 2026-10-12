@@ -651,6 +651,14 @@ export default function ManagerOrderReviewPage() {
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem
+                label="تاریخ پیش‌فاکتور سپیدار"
+                value={
+                  order.sepidarQuotationDate
+                    ? formatDate(order.sepidarQuotationDate)
+                    : "-"
+                }
+              />
+              <InfoItem
                 label="وضعیت سفارش"
                 value={
                   <StatusBadge
