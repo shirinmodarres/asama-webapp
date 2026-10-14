@@ -209,6 +209,14 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       group: "سفارش‌ها",
       visibleToRoles: ["systems_expert"],
     },
+    {
+      label: "حواله‌های انتقال",
+      href: "/finance-control/stock-transfers",
+      icon: "file-check",
+      description: "مشاهده انتقال‌های تأییدشده و حواله‌های تکمیل‌شده",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
   ],
   support: [
     {
