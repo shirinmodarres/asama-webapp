@@ -307,6 +307,14 @@ export function mapWarehouseInboundReceiptDto(
           record.units ? mapWarehouseItemUnitListDto(record.units) : [],
         ),
     units: mapWarehouseItemUnitListDto(record.units),
+    pagination: record.pagination
+      ? {
+          page: toNumberValue(toRecord(record.pagination).page),
+          pageSize: toNumberValue(toRecord(record.pagination).pageSize),
+          total: toNumberValue(toRecord(record.pagination).total),
+          totalPages: toNumberValue(toRecord(record.pagination).totalPages),
+        }
+      : undefined,
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
   };
@@ -316,6 +324,20 @@ export function mapWarehouseInboundReceiptListDto(
   dto: unknown,
 ): WarehouseInboundReceipt[] {
   return toArray(dto).map(mapWarehouseInboundReceiptDto);
+}
+
+export function mapWarehouseInboundReceiptPageDto(dto: unknown): import("@/lib/models/warehouse.model").WarehouseInboundReceiptPage {
+  const record = toRecord(dto);
+  const pagination = toRecord(record.pagination);
+  return {
+    items: toArray(record.items).map(mapWarehouseInboundReceiptDto),
+    pagination: {
+      page: toNumberValue(pagination.page),
+      pageSize: toNumberValue(pagination.pageSize),
+      total: toNumberValue(pagination.total),
+      totalPages: toNumberValue(pagination.totalPages),
+    },
+  };
 }
 
 export function mapExitSlipDto(dto: unknown): ExitSlip {

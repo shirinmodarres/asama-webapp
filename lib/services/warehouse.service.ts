@@ -9,7 +9,7 @@ import {
   mapExitSlipListDto,
   mapProductWarehouseInventoryListDto,
   mapWarehouseInboundReceiptDto,
-  mapWarehouseInboundReceiptListDto,
+  mapWarehouseInboundReceiptPageDto,
   mapWarehouseItemUnitDto,
   mapWarehouseItemUnitListDto,
 } from "@/lib/mappers/warehouse.mapper";
@@ -33,6 +33,7 @@ import type {
   UpdateInboundReceiptPayload,
   ValidateExitSlipScanPayload,
   WarehouseInboundReceipt,
+  WarehouseInboundReceiptPage,
   WarehouseInventoryUnitRow,
   WarehouseItemUnit,
   WarehouseStockUnitDetail,
@@ -76,8 +77,9 @@ export async function listWarehouseInventoryUnits(filters?: {
   return toArray(data).map(mapWarehouseInventoryUnitRow);
 }
 
-export async function listWarehouseStocksWithUnits(): Promise<WarehouseStockUnitSummary[]> {
-  const data = await httpClient.get<unknown>("/api/warehouse/stocks");
+export async function listWarehouseStocksWithUnits(search = ""): Promise<WarehouseStockUnitSummary[]> {
+  const suffix = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+  const data = await httpClient.get<unknown>(`/api/warehouse/stocks${suffix}`);
   return toArray(data).map(mapWarehouseStockUnitSummary);
 }
 
@@ -165,6 +167,10 @@ export async function listWarehouseStockProductUnits(
   const data = await httpClient.get<unknown>(
     `/api/warehouse/stocks/${stockObjectId}/products/${productObjectId}/units?${params.toString()}`,
   );
+  return mapWarehouseStockProductUnitsPage(data);
+}
+
+function mapWarehouseStockProductUnitsPage(data: unknown): WarehouseStockProductUnitsPage {
   const record = toRecord(data);
   const pagination = toRecord(record.pagination);
   return {
@@ -175,6 +181,8 @@ export async function listWarehouseStockProductUnits(
       return {
         objectId: toStringValue(unit.objectId),
         id: toStringValue(unit.id) || toStringValue(unit.objectId),
+        productCode: toStringValue(unit.productCode),
+        productName: toStringValue(unit.productName),
         trackingCode: toStringValue(unit.trackingCode),
         serialNumber: toStringValue(unit.serialNumber),
         productIdentifier: toStringValue(unit.productIdentifier),
@@ -193,6 +201,19 @@ export async function listWarehouseStockProductUnits(
       totalPages: toNumberValue(pagination.totalPages),
     },
   };
+}
+
+export async function listWarehouseStockUnitsByTrackingCode(
+  stockObjectId: string,
+  trackingCode: string,
+  page = 1,
+  pageSize = 25,
+): Promise<WarehouseStockProductUnitsPage> {
+  const params = new URLSearchParams({ trackingCode, page: String(page), pageSize: String(pageSize) });
+  const data = await httpClient.get<unknown>(
+    `/api/warehouse/stocks/${stockObjectId}/units?${params.toString()}`,
+  );
+  return mapWarehouseStockProductUnitsPage(data);
 }
 
 function mapWarehouseStockUnitSummary(dto: unknown): WarehouseStockUnitSummary {
@@ -266,15 +287,18 @@ export async function createInboundReceipt(
   return mapWarehouseInboundReceiptDto(data);
 }
 
-export async function listInboundReceipts(): Promise<WarehouseInboundReceipt[]> {
-  const data = await httpClient.get<unknown>("/api/warehouse/inbound");
-  return mapWarehouseInboundReceiptListDto(data);
+export async function listInboundReceipts(
+  { page = 1, pageSize = 25 }: { page?: number; pageSize?: number } = {},
+): Promise<WarehouseInboundReceiptPage> {
+  const data = await httpClient.get<unknown>(`/api/warehouse/inbound?page=${page}&pageSize=${pageSize}`);
+  return mapWarehouseInboundReceiptPageDto(data);
 }
 
 export async function getInboundReceipt(
   objectId: string,
+  { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {},
 ): Promise<WarehouseInboundReceipt> {
-  const data = await httpClient.get<unknown>(`/api/warehouse/inbound/${objectId}`);
+  const data = await httpClient.get<unknown>(`/api/warehouse/inbound/${objectId}?page=${page}&pageSize=${pageSize}`);
   return mapWarehouseInboundReceiptDto(data);
 }
 

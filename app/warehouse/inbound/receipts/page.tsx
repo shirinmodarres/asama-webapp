@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { DateRangeFilter } from "@/components/shared/date-range-filter";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -25,6 +26,8 @@ export default function WarehouseInboundReceiptsPage() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
 
   useEffect(() => {
     let isMounted = true;
@@ -33,8 +36,11 @@ export default function WarehouseInboundReceiptsPage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await listInboundReceipts();
-        if (isMounted) setReceipts(data);
+        const data = await listInboundReceipts({ page, pageSize: 25 });
+        if (isMounted) {
+          setReceipts(data.items);
+          setPagination(data.pagination);
+        }
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       } finally {
@@ -46,7 +52,7 @@ export default function WarehouseInboundReceiptsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [page]);
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -99,6 +105,11 @@ export default function WarehouseInboundReceiptsPage() {
       key: "stockTitle",
       header: "انبار",
       render: (row) => row.stockTitle || "-",
+    },
+    {
+      key: "supplierName",
+      header: "تامین کننده",
+      render: (row) => row.supplierName || "-",
     },
     {
       key: "quantity",
@@ -194,6 +205,14 @@ export default function WarehouseInboundReceiptsPage() {
           description="پس از ثبت ورود کالا، رسیدهای ورود در این بخش نمایش داده می‌شوند."
         />
       )}
+      {!isLoading && !error ? (
+        <PaginationBar
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.total}
+          onPageChange={setPage}
+        />
+      ) : null}
     </DashboardLayout>
   );
 }

@@ -64,8 +64,24 @@ export interface WarehouseInboundReceipt {
   notes: string | null;
   items: WarehouseInboundReceiptItemGroup[];
   units: WarehouseItemUnit[];
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WarehouseInboundReceiptPage {
+  items: WarehouseInboundReceipt[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface WarehouseInboundReceiptItemUnit {
@@ -165,6 +181,8 @@ export interface WarehouseStockProductUnitsPage {
 export interface WarehouseStockProductUnit {
   objectId: string;
   id: string;
+  productCode?: string;
+  productName?: string;
   trackingCode: string;
   serialNumber: string;
   productIdentifier: string;
@@ -321,6 +339,7 @@ export interface CreateInboundReceiptPayload {
     }>;
   }>;
   notes?: string;
+  supplierName?: string;
   createdByName?: string;
 }
 
