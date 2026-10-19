@@ -70,11 +70,6 @@ export interface SepidarSyncOperationSummary {
   logId: string | null;
 }
 
-interface SepidarCustomerSyncBatch extends SepidarSyncOperationSummary {
-  hasMore: boolean;
-  nextOffset: number | null;
-}
-
 export async function getSepidarSettings(): Promise<SepidarSettings> {
   const data = await httpClient.get<unknown>("/api/integrations/sepidar/settings");
   return mapSepidarSettings(data);
@@ -110,33 +105,16 @@ export async function syncSepidarItems(): Promise<SepidarSyncOperationSummary> {
 }
 
 export async function syncSepidarCustomers(): Promise<SepidarSyncOperationSummary> {
-  const total = emptySyncSummary("customers");
-  let offset = 0;
-  let hasMore = true;
-
-  // Each request is deliberately bounded. A full customer catalog can take
-  // longer than the reverse proxy timeout, while consecutive short requests
-  // keep the same user-visible sync operation reliable.
-  while (hasMore) {
-    const data = await httpClient.post<unknown>(
-      "/api/integrations/sepidar/sync/customers",
-      { limit: 100, offset, maxPages: 1 },
-    );
-    const batch = mapSepidarCustomerSyncBatch(data);
-    total.total = Math.max(total.total, batch.total);
-    total.processed += batch.processed;
-    total.created += batch.created;
-    total.updated += batch.updated;
-    total.skipped += batch.skipped;
-    total.failed += batch.failed;
-    total.logId = batch.logId;
-    hasMore = batch.hasMore;
-    if (hasMore && (batch.nextOffset === null || batch.nextOffset <= offset)) {
-      throw new Error("Customer sync did not advance to the next batch.");
-    }
-    offset = batch.nextOffset ?? offset;
-  }
-  return total;
+  const data = await httpClient.post<unknown>(
+    "/api/integrations/sepidar/sync/customers",
+    {
+      limit: 100,
+      offset: 0,
+      maxPages: 1,
+      orderByDesc: "CustomerID",
+    },
+  );
+  return mapSepidarSyncOperationSummary(data);
 }
 
 export async function syncSepidarSaleTypes(): Promise<SepidarSyncOperationSummary> {
@@ -236,30 +214,6 @@ function mapSepidarSyncOperationSummary(dto: unknown): SepidarSyncOperationSumma
     skipped: toNumberValue(record.skipped ?? record.skippedCount),
     failed: toNumberValue(record.failed ?? record.failedCount ?? record.errorCount),
     logId: toStringValue(record.logId) || null,
-  };
-}
-
-function mapSepidarCustomerSyncBatch(dto: unknown): SepidarCustomerSyncBatch {
-  const record = toRecord(dto);
-  return {
-    ...mapSepidarSyncOperationSummary(dto),
-    hasMore: toBooleanValue(record.hasMore),
-    nextOffset: record.nextOffset === null || record.nextOffset === undefined
-      ? null
-      : toNumberValue(record.nextOffset),
-  };
-}
-
-function emptySyncSummary(syncType: string): SepidarSyncOperationSummary {
-  return {
-    syncType,
-    total: 0,
-    processed: 0,
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    failed: 0,
-    logId: null,
   };
 }
 
