@@ -122,6 +122,9 @@ function buildCustomersPath(filters?: CustomerFilters): string {
   if (typeof filters.limit === "number") params.set("limit", String(filters.limit));
   if (typeof filters.offset === "number") params.set("offset", String(filters.offset));
   if (filters.assignmentStatus) params.set("assignmentStatus", filters.assignmentStatus);
+  if (filters.grouping) params.set("grouping", filters.grouping);
+  if (filters.channel) params.set("channel", filters.channel);
+  if (filters.subChannel) params.set("subChannel", filters.subChannel);
 
   const query = params.toString();
   return query ? `/api/customers?${query}` : "/api/customers";

@@ -22,6 +22,41 @@ export async function listAssignedCustomersForExpert(
   );
 }
 
+export async function listAssignedCustomersPageForExpert(filters: {
+  search?: string;
+  grouping?: string;
+  channel?: string;
+  subChannel?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ items: Customer[]; total: number }> {
+  const params = new URLSearchParams({
+    limit: String(filters.limit),
+    offset: String(filters.offset),
+  });
+  if (filters.search) params.set("search", filters.search);
+  if (filters.grouping) params.set("grouping", filters.grouping);
+  if (filters.channel) params.set("channel", filters.channel);
+  if (filters.subChannel) params.set("subChannel", filters.subChannel);
+  const data = await httpClient.get<unknown>(
+    `/api/expert/assigned-customers?${params.toString()}`,
+  );
+  const record = toRecord(data);
+  const items = mapCustomerListDto(
+    toArray(record.items).map(normalizeAssignedCustomerDto),
+  );
+  return { items, total: Number(record.total ?? items.length) };
+}
+
+export async function getAssignedCustomerDetailsForExpert(
+  customerObjectId: string,
+): Promise<Customer> {
+  const data = await httpClient.get<unknown>(
+    `/api/expert/assigned-customers/${customerObjectId}`,
+  );
+  return mapCustomerListDto([normalizeAssignedCustomerDto(data)])[0]!;
+}
+
 export async function getAssignedCustomerForExpert(
   customerObjectId: string,
   expertUserId?: string,

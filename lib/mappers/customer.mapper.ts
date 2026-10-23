@@ -12,6 +12,7 @@ import type {
   Customer,
   CustomerAddress,
   CustomerAddressStatus,
+  CustomerGrouping,
   CustomerStatus,
   ReceiverType,
 } from "@/lib/models/customer.model";
@@ -91,6 +92,10 @@ export function mapCustomerDto(dto: unknown): Customer {
       ? normalizeDigits(toStringValue(record.nationalId))
       : null,
     assignedExpertName: toNullableString(record.assignedExpertName),
+    grouping: mapCustomerGroupingDto(record.grouping),
+    channel: toNullableString(record.channel),
+    subChannel: toNullableString(record.subChannel),
+    lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
     status,
     statusLabel: toStringValue(record.statusLabel) || STATUS_LABELS[status],
     defaultAddress,
@@ -99,6 +104,23 @@ export function mapCustomerDto(dto: unknown): Customer {
     sepidarAddresses,
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+function mapCustomerGroupingDto(value: unknown): CustomerGrouping | null {
+  const record = toRecord(value);
+  if (!Object.keys(record).length) return null;
+  return {
+    objectId: toStringValue(record.objectId),
+    sepidarGroupingId:
+      record.sepidarGroupingId === undefined || record.sepidarGroupingId === null
+        ? null
+        : toNumberValue(record.sepidarGroupingId),
+    code: toNullableString(record.code),
+    title: toNullableString(record.title),
+    channel: toNullableString(record.channel),
+    subChannel: toNullableString(record.subChannel),
+    lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
   };
 }
 

@@ -62,6 +62,10 @@ export interface Customer {
   mobile: string | null;
   nationalId: string | null;
   assignedExpertName: string | null;
+  grouping?: CustomerGrouping | null;
+  channel?: string | null;
+  subChannel?: string | null;
+  lastSepidarSyncAt?: string | null;
   status: CustomerStatus;
   statusLabel: string;
   defaultAddress: CustomerAddress | null;
@@ -72,12 +76,25 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface CustomerGrouping {
+  objectId: string;
+  sepidarGroupingId: number | null;
+  code: string | null;
+  title: string | null;
+  channel: string | null;
+  subChannel: string | null;
+  lastSepidarSyncAt: string | null;
+}
+
 export interface CustomerFilters {
   search?: string;
   status?: CustomerStatus;
   limit?: number;
   offset?: number;
   assignmentStatus?: "unassigned";
+  grouping?: string;
+  channel?: string;
+  subChannel?: string;
 }
 
 export interface CustomerPayload {
