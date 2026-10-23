@@ -1,7 +1,7 @@
 "use client";
 
 import { ListFilter, Search, X } from "lucide-react";
-import { useDeferredValue, useEffect, useState, type ReactNode } from "react";
+import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CustomerList } from "@/components/customer/customer-list";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,7 +26,16 @@ export default function ExpertCustomersPage() {
   const [grouping, setGrouping] = useState("");
   const [channel, setChannel] = useState("");
   const [subChannel, setSubChannel] = useState("");
-  const deferredFilters = useDeferredValue({ search: search.trim(), grouping: grouping.trim(), channel: channel.trim(), subChannel: subChannel.trim() });
+  const filters = useMemo(
+    () => ({
+      search: search.trim(),
+      grouping: grouping.trim(),
+      channel: channel.trim(),
+      subChannel: subChannel.trim(),
+    }),
+    [search, grouping, channel, subChannel],
+  );
+  const deferredFilters = useDeferredValue(filters);
 
   useEffect(() => {
     let isMounted = true;
