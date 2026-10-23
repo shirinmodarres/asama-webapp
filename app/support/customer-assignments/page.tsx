@@ -9,9 +9,8 @@ import {
   type ReactNode,
 } from "react";
 import { Check, Pencil, Search, UserMinus, X } from "lucide-react";
+import { CustomerList } from "@/components/customer/customer-list";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
@@ -40,10 +39,7 @@ import {
   listSupportExperts,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
-import {
-  listCustomers,
-  listCustomersPage,
-} from "@/lib/services/customer.service";
+import { listSupportCustomersPage } from "@/lib/services/customer.service";
 import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
 import { listSepidarStocks } from "@/lib/services/stock.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
@@ -79,6 +75,12 @@ export default function SupportCustomerAssignmentsPage() {
   const [rows, setRows] = useState<DetailRow[]>([]);
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search.trim());
+  const [grouping, setGrouping] = useState("");
+  const [channel, setChannel] = useState("");
+  const [subChannel, setSubChannel] = useState("");
+  const deferredGrouping = useDeferredValue(grouping.trim());
+  const deferredChannel = useDeferredValue(channel.trim());
+  const deferredSubChannel = useDeferredValue(subChannel.trim());
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
@@ -98,7 +100,7 @@ export default function SupportCustomerAssignmentsPage() {
         listSupportExperts(),
         listGeneratedPriceLists({ activeOnly: true }),
         listSepidarStocks(),
-        listCustomersPage({
+        listSupportCustomersPage({
           status: "active",
           assignmentStatus: "unassigned",
           limit: 1,
@@ -134,10 +136,13 @@ export default function SupportCustomerAssignmentsPage() {
     const offset = (page - 1) * PAGE_SIZE;
     const request =
       selectedMaster === "unassigned"
-        ? listCustomersPage({
+        ? listSupportCustomersPage({
             status: "active",
             assignmentStatus: "unassigned",
             search: deferredSearch || undefined,
+            grouping: deferredGrouping || undefined,
+            channel: deferredChannel || undefined,
+            subChannel: deferredSubChannel || undefined,
             limit: PAGE_SIZE,
             offset,
           }).then((result) => ({
@@ -150,6 +155,9 @@ export default function SupportCustomerAssignmentsPage() {
         : listExpertCustomerAssignmentsPage({
             expertUserId: selectedMaster === "all" ? undefined : selectedMaster,
             search: deferredSearch || undefined,
+            grouping: deferredGrouping || undefined,
+            channel: deferredChannel || undefined,
+            subChannel: deferredSubChannel || undefined,
             limit: PAGE_SIZE,
             offset,
           }).then((result) => ({
@@ -173,7 +181,7 @@ export default function SupportCustomerAssignmentsPage() {
     return () => {
       mounted = false;
     };
-  }, [deferredSearch, page, refreshKey, selectedMaster]);
+  }, [deferredChannel, deferredGrouping, deferredSearch, deferredSubChannel, page, refreshKey, selectedMaster]);
 
   const expertOptions = useMemo(
     () =>
@@ -220,7 +228,7 @@ export default function SupportCustomerAssignmentsPage() {
   );
 
   const loadCustomerOptions = useCallback(async (query: string) => {
-    const customers = await listCustomers({
+    const { items: customers } = await listSupportCustomersPage({
       search: query || undefined,
       status: "active",
       limit: 25,
@@ -435,95 +443,6 @@ export default function SupportCustomerAssignmentsPage() {
     !selectedCustomerId ||
     !selectedPriceListIds.length ||
     !selectedStockIds.length;
-  const columns: DataTableColumn<DetailRow>[] = [
-    {
-      key: "select",
-      header: "انتخاب",
-      className: "w-20",
-      render: ({ customer }) => (
-        <input
-          aria-label={`انتخاب ${customer.fullName}`}
-          type="checkbox"
-          checked={selectedCustomerIds.includes(customer.objectId)}
-          onChange={() =>
-            setSelectedCustomerIds((current) =>
-              current.includes(customer.objectId)
-                ? current.filter((id) => id !== customer.objectId)
-                : [...current, customer.objectId],
-            )
-          }
-          className="size-4 accent-[var(--primary)]"
-        />
-      ),
-    },
-    {
-      key: "customer",
-      header: "مشتری",
-      cellClassName: "min-w-56",
-      render: ({ customer }) => (
-        <div>
-          <p className="font-semibold text-[var(--foreground)]">
-            {customer.fullName || "مشتری"}
-          </p>
-          {customer.phone ? (
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              {formatFaDigits(customer.phone)}
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      key: "code",
-      header: "کد مشتری",
-      render: ({ customer }) =>
-        formatFaDigits(customer.sepidarCustomerCode || customer.id),
-    },
-    {
-      key: "expert",
-      header: "کارشناس فعلی",
-      render: ({ assignment }) =>
-        assignment ? (
-          <Badge variant="brand" dot>
-            {assignment.expertName || "اختصاص‌یافته"}
-          </Badge>
-        ) : (
-          <Badge variant="neutral">بدون کارشناس</Badge>
-        ),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: ({ assignment }) =>
-        assignment ? (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              title="ویرایش اختصاص"
-              onClick={() => startEdit(assignment)}
-              disabled={isSubmitting}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              title="حذف اختصاص"
-              onClick={() => deactivateAssignment(assignment)}
-              disabled={deactivatingId === assignment.objectId}
-            >
-              <UserMinus className="size-4" />
-            </Button>
-          </div>
-        ) : (
-          "-"
-        ),
-    },
-  ];
-
   return (
     <DashboardLayout role="support" title="اختصاص مشتری به کارشناس">
       <SectionHeader
@@ -731,6 +650,11 @@ export default function SupportCustomerAssignmentsPage() {
                     </span>
                   </Field>
                 </div>
+                <div className="mt-3 grid gap-3 border-t border-[var(--border)] pt-3 md:grid-cols-3">
+                  <Field label="گروه مشتری"><Input value={grouping} onChange={(event) => { setGrouping(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="عنوان یا کد گروه" /></Field>
+                  <Field label="کانال"><Input value={channel} onChange={(event) => { setChannel(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="مثلاً بازار" /></Field>
+                  <Field label="زیرکانال"><Input value={subChannel} onChange={(event) => { setSubChannel(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="مثلاً خرده فروش" /></Field>
+                </div>
                 {rows.length ? (
                   <div className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
                     <label className="flex items-center gap-2 font-medium text-[var(--foreground)]">
@@ -772,10 +696,15 @@ export default function SupportCustomerAssignmentsPage() {
               {isLoadingRows ? (
                 <LoadingState title="در حال دریافت این صفحه" />
               ) : rows.length ? (
-                <DataTable
-                  columns={columns}
-                  rows={rows}
-                  rowKey={(row) => row.customer.objectId}
+                <CustomerList
+                  customers={rows.map((row) => row.customer)}
+                  detailsHref={(customer) => `/support/customer-assignments/${customer.objectId}`}
+                  assignedExpertName={(customer) => rows.find((row) => row.customer.objectId === customer.objectId)?.assignment?.expertName || customer.assignedExpertName}
+                  renderSelection={(customer) => <input aria-label={`انتخاب ${customer.fullName}`} type="checkbox" checked={selectedCustomerIds.includes(customer.objectId)} onChange={() => setSelectedCustomerIds((current) => current.includes(customer.objectId) ? current.filter((id) => id !== customer.objectId) : [...current, customer.objectId])} className="size-4 accent-[var(--primary)]" />}
+                  renderActions={(customer) => {
+                    const assignment = rows.find((row) => row.customer.objectId === customer.objectId)?.assignment;
+                    return assignment ? <><Button type="button" size="icon" variant="outline" title="ویرایش اختصاص" onClick={() => startEdit(assignment)} disabled={isSubmitting}><Pencil className="size-4" /></Button><Button type="button" size="icon" variant="ghost" title="حذف اختصاص" onClick={() => deactivateAssignment(assignment)} disabled={deactivatingId === assignment.objectId}><UserMinus className="size-4" /></Button></> : null;
+                  }}
                 />
               ) : (
                 <EmptyState

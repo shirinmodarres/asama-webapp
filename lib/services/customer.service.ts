@@ -42,8 +42,20 @@ export async function listCustomersPage(filters: CustomerFilters): Promise<{ ite
   };
 }
 
+export async function listSupportCustomersPage(filters: CustomerFilters): Promise<{ items: Customer[]; total: number }> {
+  const data = await httpClient.get<unknown>(buildCustomersPath(filters, "/api/support/customers"));
+  const record = isRecord(data) ? data : null;
+  const items = Array.isArray(data) ? data : Array.isArray(record?.items) ? record.items : [];
+  return { items: mapCustomerListDto(items), total: Number(record?.total ?? items.length) };
+}
+
 export async function getCustomer(objectId: string): Promise<Customer> {
   const data = await httpClient.get<unknown>(`/api/customers/${objectId}`);
+  return mapCustomerDto(data);
+}
+
+export async function getSupportCustomer(objectId: string): Promise<Customer> {
+  const data = await httpClient.get<unknown>(`/api/support/customers/${objectId}`);
   return mapCustomerDto(data);
 }
 
@@ -113,8 +125,8 @@ export async function deleteCustomerAddress(
   return mapCustomerAddressDto(data);
 }
 
-function buildCustomersPath(filters?: CustomerFilters): string {
-  if (!filters) return "/api/customers";
+function buildCustomersPath(filters?: CustomerFilters, basePath = "/api/customers"): string {
+  if (!filters) return basePath;
 
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
@@ -127,7 +139,7 @@ function buildCustomersPath(filters?: CustomerFilters): string {
   if (filters.subChannel) params.set("subChannel", filters.subChannel);
 
   const query = params.toString();
-  return query ? `/api/customers?${query}` : "/api/customers";
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 function normalizeCustomerPayload(

@@ -1,28 +1,23 @@
 "use client";
 
-import Link from "next/link";
-import { Eye, ListFilter, Search, X } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ListFilter, Search, X } from "lucide-react";
+import { useDeferredValue, useEffect, useState, type ReactNode } from "react";
+import { CustomerList } from "@/components/customer/customer-list";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
-import type { Customer } from "@/lib/models/customer.model";
 import { listAssignedCustomersPageForExpert } from "@/lib/services/expert-customer.service";
-import { formatFaDigits } from "@/lib/utils/number-format";
 
 const PAGE_SIZE = 20;
 
 export default function ExpertCustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<import("@/lib/models/customer.model").Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,17 +51,6 @@ export default function ExpertCustomersPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasActiveFilters = Boolean(search.trim() || grouping.trim() || channel.trim() || subChannel.trim());
-  const columns: DataTableColumn<Customer>[] = useMemo(() => [
-    { key: "name", header: "نام مشتری", render: (row) => <span className="font-medium text-[#1F3A5F]">{row.fullName || "-"}</span> },
-    { key: "code", header: "کد سپیدار", render: (row) => row.sepidarCustomerCode ? formatFaDigits(row.sepidarCustomerCode) : "-" },
-    { key: "phone", header: "موبایل/تلفن", render: (row) => row.phone ? formatFaDigits(row.phone) : "-" },
-    { key: "grouping", header: "گروه مشتری", render: (row) => row.grouping?.title || "-" },
-    { key: "channel", header: "کانال", render: (row) => row.channel || "-" },
-    { key: "sub-channel", header: "زیرکانال", render: (row) => row.subChannel || "-" },
-    { key: "status", header: "وضعیت", render: (row) => <Badge variant={row.status === "active" ? "success" : "neutral"} dot>{row.status === "active" ? "فعال" : "غیرفعال"}</Badge> },
-    { key: "actions", header: "عملیات", sticky: "left", render: (row) => <Button asChild type="button" size="sm" variant="outline"><Link href={`/expert/customers/${row.objectId}`}><Eye className="size-4" />جزئیات</Link></Button> },
-  ], []);
-
   return <DashboardLayout role="expert" title="مشتری‌ها">
     <SectionHeader title="مشتری‌های اختصاص‌یافته" description="مشتری‌های اختصاص‌یافته به شما و دسته‌بندی فروش آن‌ها را مشاهده کنید." />
     <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
@@ -78,7 +62,7 @@ export default function ExpertCustomersPage() {
         {hasActiveFilters ? <div className="flex items-end"><Button type="button" variant="outline" className="gap-2" onClick={() => { setSearch(""); setGrouping(""); setChannel(""); setSubChannel(""); setPage(1); }}><X className="size-4" />حذف فیلترها</Button></div> : null}
       </div>
     </section>
-    {isLoading ? <LoadingState title="در حال دریافت مشتری‌ها" /> : error ? <PageErrorMessage title="دریافت مشتری‌ها انجام نشد" message={error} /> : customers.length ? <><DataTable columns={columns} rows={customers} rowKey={(row) => row.objectId} /><PaginationBar currentPage={page} totalPages={totalPages} totalItems={total} onPageChange={setPage} /></> : <EmptyState title="مشتری‌ای با این شرایط پیدا نشد" description="فیلترها را تغییر دهید یا تخصیص مشتری را بررسی کنید." />}
+    {isLoading ? <LoadingState title="در حال دریافت مشتری‌ها" /> : error ? <PageErrorMessage title="دریافت مشتری‌ها انجام نشد" message={error} /> : customers.length ? <><CustomerList customers={customers} detailsHref={(customer) => `/expert/customers/${customer.objectId}`} assignedExpertName={(customer) => customer.assignedExpertName} /><PaginationBar currentPage={page} totalPages={totalPages} totalItems={total} onPageChange={setPage} /></> : <EmptyState title="مشتری‌ای با این شرایط پیدا نشد" description="فیلترها را تغییر دهید یا تخصیص مشتری را بررسی کنید." />}
   </DashboardLayout>;
 }
 

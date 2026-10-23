@@ -53,7 +53,11 @@ export async function listExpertCustomerAssignments(filters?: { limit?: number; 
 
 export async function listExpertCustomerAssignmentsPage(filters: {
   expertUserId?: string;
+  customerObjectId?: string;
   search?: string;
+  grouping?: string;
+  channel?: string;
+  subChannel?: string;
   limit: number;
   offset: number;
 }): Promise<{ items: ExpertCustomerAssignment[]; total: number }> {
@@ -63,7 +67,11 @@ export async function listExpertCustomerAssignmentsPage(filters: {
     offset: String(filters.offset),
   });
   if (filters.expertUserId) params.set("expertUserId", filters.expertUserId);
+  if (filters.customerObjectId) params.set("customerObjectId", filters.customerObjectId);
   if (filters.search) params.set("search", filters.search);
+  if (filters.grouping) params.set("grouping", filters.grouping);
+  if (filters.channel) params.set("channel", filters.channel);
+  if (filters.subChannel) params.set("subChannel", filters.subChannel);
   const data = await httpClient.get<unknown>(`/api/support/expert-customer-assignments?${params.toString()}`);
   const record = toRecord(data);
   return {
