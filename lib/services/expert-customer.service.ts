@@ -29,7 +29,7 @@ export async function listAssignedCustomersPageForExpert(filters: {
   subChannel?: string;
   limit: number;
   offset: number;
-}): Promise<{ items: Customer[]; total: number }> {
+}, signal?: AbortSignal): Promise<{ items: Customer[]; total: number }> {
   const params = new URLSearchParams({
     limit: String(filters.limit),
     offset: String(filters.offset),
@@ -40,6 +40,7 @@ export async function listAssignedCustomersPageForExpert(filters: {
   if (filters.subChannel) params.set("subChannel", filters.subChannel);
   const data = await httpClient.get<unknown>(
     `/api/expert/assigned-customers?${params.toString()}`,
+    { signal },
   );
   const record = toRecord(data);
   const items = mapCustomerListDto(

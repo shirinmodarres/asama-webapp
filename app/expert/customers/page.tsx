@@ -39,11 +39,15 @@ export default function ExpertCustomersPage() {
 
   useEffect(() => {
     let isMounted = true;
+    const abortController = new AbortController();
     async function loadCustomers() {
       setIsLoading(true);
       setError("");
       try {
-        const result = await listAssignedCustomersPageForExpert({ ...deferredFilters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+        const result = await listAssignedCustomersPageForExpert(
+          { ...deferredFilters, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE },
+          abortController.signal,
+        );
         if (isMounted) {
           setCustomers(result.items);
           setTotal(result.total);
@@ -55,7 +59,10 @@ export default function ExpertCustomersPage() {
       }
     }
     void loadCustomers();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [deferredFilters, page]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));

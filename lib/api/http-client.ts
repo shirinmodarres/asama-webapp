@@ -32,6 +32,7 @@ const ASAMA_AUTH_ERROR_CODES = new Set([
 interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
+  signal?: AbortSignal;
 }
 
 export async function httpRequest<T>(
@@ -62,6 +63,7 @@ export async function httpRequest<T>(
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       cache: "no-store",
+      signal: options.signal,
     });
   } catch (error) {
     throw new ApiError({
@@ -96,7 +98,8 @@ export async function httpRequest<T>(
 }
 
 export const httpClient = {
-  get: <T>(path: string) => httpRequest<T>(path),
+  get: <T>(path: string, options?: Pick<RequestOptions, "signal">) =>
+    httpRequest<T>(path, options),
   post: <T>(path: string, body?: unknown) =>
     httpRequest<T>(path, { method: "POST", body }),
   patch: <T>(path: string, body?: unknown) =>
