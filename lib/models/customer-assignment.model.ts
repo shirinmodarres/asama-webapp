@@ -35,7 +35,6 @@ export interface CreateExpertCustomerAssignmentPayload {
   customerObjectId: string;
   priceListId?: string;
   priceListIds?: string[];
-  allowedStockObjectIds: string[];
   assignedByName: string;
 }
 
@@ -44,7 +43,6 @@ export interface UpdateExpertCustomerAssignmentPayload {
   customerObjectId: string;
   priceListId?: string;
   priceListIds?: string[];
-  allowedStockObjectIds: string[];
   updatedByName: string;
 }
 

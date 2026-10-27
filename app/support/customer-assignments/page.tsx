@@ -30,7 +30,6 @@ import type { AuthUser } from "@/lib/models/auth.model";
 import type { ExpertCustomerAssignment } from "@/lib/models/customer-assignment.model";
 import type { Customer } from "@/lib/models/customer.model";
 import type { PriceList } from "@/lib/models/pricing.model";
-import type { SepidarStock } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   createExpertCustomerAssignment,
@@ -41,7 +40,6 @@ import {
 } from "@/lib/services/customer-assignment.service";
 import { listSupportCustomersPage } from "@/lib/services/customer.service";
 import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
-import { listSepidarStocks } from "@/lib/services/stock.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 const PAGE_SIZE = 20;
@@ -54,7 +52,6 @@ type DetailRow = {
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
-  const [stocks, setStocks] = useState<SepidarStock[]>([]);
   const [unassignedCount, setUnassignedCount] = useState(0);
 
   const [selectedExpertId, setSelectedExpertId] = useState("");
@@ -66,7 +63,6 @@ export default function SupportCustomerAssignmentsPage() {
   const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>(
     [],
   );
-  const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -95,11 +91,10 @@ export default function SupportCustomerAssignmentsPage() {
   const [message, setMessage] = useState("");
 
   const loadBaseData = useCallback(async () => {
-    const [expertData, priceListData, stockData, unassigned] =
+    const [expertData, priceListData, unassigned] =
       await Promise.all([
         listSupportExperts(),
         listGeneratedPriceLists({ activeOnly: true }),
-        listSepidarStocks(),
         listSupportCustomersPage({
           status: "active",
           assignmentStatus: "unassigned",
@@ -109,7 +104,6 @@ export default function SupportCustomerAssignmentsPage() {
       ]);
     setExperts(expertData.filter((expert) => expert.status === "active"));
     setPriceLists(priceListData);
-    setStocks(stockData);
     setUnassignedCount(unassigned.total);
   }, []);
 
@@ -199,16 +193,6 @@ export default function SupportCustomerAssignmentsPage() {
       })),
     [priceLists],
   );
-  const stockOptions = useMemo(
-    () =>
-      stocks
-        .filter((item) => item.isActive)
-        .map((item) => ({
-          value: item.objectId,
-          label: `${formatFaDigits(item.code || "-")} - ${item.title}`,
-        })),
-    [stocks],
-  );
   const masterOptions = useMemo(
     () => [
       {
@@ -254,7 +238,6 @@ export default function SupportCustomerAssignmentsPage() {
     setSelectedCustomerId("");
     setSelectedCustomerOption(null);
     setSelectedPriceListIds([]);
-    setSelectedStockIds([]);
     setFieldErrors({});
   };
 
@@ -271,8 +254,6 @@ export default function SupportCustomerAssignmentsPage() {
       nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
     if (!selectedPriceListIds.length)
       nextErrors.selectedPriceListIds = "حداقل یک لیست قیمت انتخاب کنید.";
-    if (!selectedStockIds.length)
-      nextErrors.selectedStockIds = "حداقل یک انبار مجاز انتخاب کنید.";
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -284,7 +265,6 @@ export default function SupportCustomerAssignmentsPage() {
       expertUserId: selectedExpertId,
       customerObjectId: selectedCustomerId,
       priceListIds: selectedPriceListIds,
-      allowedStockObjectIds: selectedStockIds,
     };
     setIsSubmitting(true);
     setError("");
@@ -353,7 +333,6 @@ export default function SupportCustomerAssignmentsPage() {
           ? [assignment.priceListId]
           : [],
     );
-    setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -379,11 +358,10 @@ export default function SupportCustomerAssignmentsPage() {
     if (
       !selectedCustomerIds.length ||
       !targetExpertId ||
-      !selectedPriceListIds.length ||
-      !selectedStockIds.length
+      !selectedPriceListIds.length
     ) {
       setError(
-        "مشتری‌ها، کارشناس مقصد، لیست قیمت و انبار مجاز را کامل انتخاب کنید.",
+        "مشتری‌ها، کارشناس مقصد و لیست قیمت را کامل انتخاب کنید.",
       );
       return;
     }
@@ -402,7 +380,6 @@ export default function SupportCustomerAssignmentsPage() {
             expertUserId: targetExpertId,
             customerObjectId: customerId,
             priceListIds: selectedPriceListIds,
-            allowedStockObjectIds: selectedStockIds,
             updatedByName: actorName,
           });
         } else {
@@ -410,7 +387,6 @@ export default function SupportCustomerAssignmentsPage() {
             expertUserId: targetExpertId,
             customerObjectId: customerId,
             priceListIds: selectedPriceListIds,
-            allowedStockObjectIds: selectedStockIds,
             assignedByName: actorName,
           });
         }
@@ -441,8 +417,7 @@ export default function SupportCustomerAssignmentsPage() {
     isSubmitting ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    !selectedPriceListIds.length ||
-    !selectedStockIds.length;
+    !selectedPriceListIds.length;
   return (
     <DashboardLayout role="support" title="اختصاص مشتری به کارشناس">
       <SectionHeader
@@ -465,7 +440,7 @@ export default function SupportCustomerAssignmentsPage() {
                   {editingAssignmentId ? "ویرایش اختصاص" : "اختصاص سریع مشتری"}
                 </h2>
                 <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                  مشتری، کارشناس، لیست قیمت و انبار مجاز را مشخص کنید.
+                  مشتری، کارشناس و لیست قیمت را مشخص کنید. انبارهای مجاز از گروه مشتری تعیین می‌شوند.
                 </p>
               </div>
               {editingAssignmentId ? (
@@ -481,7 +456,7 @@ export default function SupportCustomerAssignmentsPage() {
                 </Button>
               ) : null}
             </div>
-            <div className="grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-4">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-3">
               <Field label="کارشناس" error={fieldErrors.selectedExpertId}>
                 <SearchableSelect
                   value={selectedExpertId || undefined}
@@ -542,23 +517,6 @@ export default function SupportCustomerAssignmentsPage() {
                   searchPlaceholder="جستجوی لیست قیمت"
                   emptyMessage="لیست فعالی پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedPriceListIds)}
-                />
-              </Field>
-              <Field label="انبارهای مجاز" error={fieldErrors.selectedStockIds}>
-                <SearchableMultiSelect
-                  values={selectedStockIds}
-                  onValuesChange={(values) => {
-                    setSelectedStockIds(values);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      selectedStockIds: "",
-                    }));
-                  }}
-                  options={stockOptions}
-                  placeholder="انتخاب انبار"
-                  searchPlaceholder="جستجوی انبار"
-                  emptyMessage="انباری پیدا نشد"
-                  invalid={Boolean(fieldErrors.selectedStockIds)}
                 />
               </Field>
             </div>
@@ -735,7 +693,7 @@ export default function SupportCustomerAssignmentsPage() {
                       پاک کردن
                     </Button>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_minmax(220px,1fr)_auto] xl:items-end">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_auto] xl:items-end">
                     <Field label="کارشناس مقصد">
                       <SearchableSelect
                         value={targetExpertId || undefined}
@@ -754,16 +712,6 @@ export default function SupportCustomerAssignmentsPage() {
                         placeholder="انتخاب لیست قیمت"
                         searchPlaceholder="جستجو"
                         emptyMessage="لیستی پیدا نشد"
-                      />
-                    </Field>
-                    <Field label="انبارهای مجاز">
-                      <SearchableMultiSelect
-                        values={selectedStockIds}
-                        onValuesChange={setSelectedStockIds}
-                        options={stockOptions}
-                        placeholder="انتخاب انبار"
-                        searchPlaceholder="جستجو"
-                        emptyMessage="انباری پیدا نشد"
                       />
                     </Field>
                     <Button
