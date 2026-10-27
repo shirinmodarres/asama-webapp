@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -30,11 +30,11 @@ export function WarehouseStocksView({ role, basePath }: WarehouseStocksViewProps
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
 
-  const loadRows = async () => {
+  const loadRows = async (query = "") => {
     setIsLoading(true);
     setError("");
     try {
-      setRows(await listWarehouseStocksWithUnits());
+      setRows(await listWarehouseStocksWithUnits(query));
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -44,20 +44,10 @@ export function WarehouseStocksView({ role, basePath }: WarehouseStocksViewProps
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      void loadRows();
-    }, 0);
+      void loadRows(search);
+    }, 250);
     return () => window.clearTimeout(timeoutId);
-  }, []);
-
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return rows.filter(
-      (row) =>
-        !query ||
-        row.title.toLowerCase().includes(query) ||
-        (row.code ?? "").toLowerCase().includes(query),
-    );
-  }, [rows, search]);
+  }, [search]);
 
   const columns: DataTableColumn<WarehouseStockUnitSummary>[] = [
     {
@@ -145,10 +135,10 @@ export function WarehouseStocksView({ role, basePath }: WarehouseStocksViewProps
         <LoadingState title="در حال دریافت انبارها" />
       ) : error ? (
         <PageErrorMessage title="دریافت انبارها انجام نشد" message={error} />
-      ) : filteredRows.length ? (
+      ) : rows.length ? (
         <DataTable
           columns={columns}
-          rows={filteredRows}
+          rows={rows}
           rowKey={(row) => row.objectId}
         />
       ) : (

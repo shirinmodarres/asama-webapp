@@ -139,7 +139,16 @@ export async function syncSepidarItems(): Promise<SepidarSyncOperationSummary> {
 }
 
 export async function syncSepidarCustomers(): Promise<SepidarSyncOperationSummary> {
-  return syncSepidar("/api/integrations/sepidar/sync/customers");
+  const data = await httpClient.post<unknown>(
+    "/api/integrations/sepidar/sync/customers",
+    {
+      limit: 100,
+      offset: 0,
+      maxPages: 1,
+      orderByDesc: "CustomerID",
+    },
+  );
+  return mapSepidarSyncOperationSummary(data);
 }
 
 export async function syncSepidarSaleTypes(): Promise<SepidarSyncOperationSummary> {

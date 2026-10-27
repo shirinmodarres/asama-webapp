@@ -15,6 +15,7 @@ export interface OrderItem {
   brand: string;
   brandName: string | null;
   quantity: number;
+  dispatchedQuantity?: number;
   unitPrice: number;
   priceListId?: string | null;
   priceListItemId?: string | null;
@@ -90,6 +91,7 @@ export interface Order {
   externalOrderNumber: string | null;
   najaOrderNumber: string | null;
   najaPurchaseDate: string | null;
+  sepidarQuotationDate: string | null;
   customerNationalId: string | null;
   customerMobile: string | null;
   customerPhone: string | null;
@@ -206,6 +208,7 @@ export interface CreateOrderPayload {
   recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
+  sepidarQuotationDate?: string | null;
   notes?: string;
   items: Array<{
     productObjectId?: string;

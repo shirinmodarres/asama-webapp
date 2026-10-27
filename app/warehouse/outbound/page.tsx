@@ -173,7 +173,7 @@ export default function WarehouseOutboundPage() {
           row.stockObjectId === stockObjectId;
         const canCreateExitSlip =
           row.orderStatus === "approved" &&
-          row.warehouseStatus === "reviewing" &&
+          ["reviewing", "partialDispatch"].includes(row.warehouseStatus) &&
           row.fulfillmentStatus !== "onHold" &&
           warehouseMatches;
 

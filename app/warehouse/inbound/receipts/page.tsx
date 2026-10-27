@@ -107,6 +107,11 @@ export default function WarehouseInboundReceiptsPage() {
       render: (row) => row.stockTitle || "-",
     },
     {
+      key: "supplierName",
+      header: "تامین کننده",
+      render: (row) => row.supplierName || "-",
+    },
+    {
       key: "quantity",
       header: "تعداد",
       render: (row) => formatNumber(row.quantity),
@@ -200,12 +205,14 @@ export default function WarehouseInboundReceiptsPage() {
           description="پس از ثبت ورود کالا، رسیدهای ورود در این بخش نمایش داده می‌شوند."
         />
       )}
-      <PaginationBar
-        currentPage={pagination.page}
-        totalPages={pagination.totalPages}
-        totalItems={pagination.total}
-        onPageChange={setPage}
-      />
+      {!isLoading && !error ? (
+        <PaginationBar
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.total}
+          onPageChange={setPage}
+        />
+      ) : null}
     </DashboardLayout>
   );
 }

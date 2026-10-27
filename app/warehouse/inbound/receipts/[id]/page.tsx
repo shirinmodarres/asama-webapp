@@ -80,6 +80,7 @@ export default function WarehouseInboundReceiptDetailPage() {
               <InfoItem label="تعداد کالاها" value={formatNumber(groupedItems.length)} />
               <InfoItem label="انبار" value={receipt.stockTitle || "-"} />
               <InfoItem label="تعداد" value={formatNumber(receipt.quantity)} />
+              <InfoItem label="تامین کننده" value={receipt.supplierName || "-"} />
               <InfoItem label="ثبت کننده" value={receipt.createdByName || "-"} />
               <InfoItem label="زمان ثبت" value={formatDateTime(receipt.createdAt)} />
               <InfoItem label="توضیحات" value={receipt.notes || "-"} className="lg:col-span-3" />

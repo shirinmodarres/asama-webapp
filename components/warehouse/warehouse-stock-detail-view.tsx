@@ -17,7 +17,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import type { PanelRoleKey } from "@/lib/domain/roles";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { WarehouseStockBrand, WarehouseStockKpis, WarehouseStockProductSummary, WarehouseStockProductUnitsPage, WarehouseStockUnitDetail } from "@/lib/models/warehouse.model";
-import { getWarehouseStockUnitDetail, listWarehouseStockBrandProducts, listWarehouseStockBrands, listWarehouseStockProductUnits } from "@/lib/services/warehouse.service";
+import { getWarehouseStockUnitDetail, listWarehouseStockBrandProducts, listWarehouseStockBrands, listWarehouseStockProductUnits, listWarehouseStockUnitsByTrackingCode } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface WarehouseStockDetailViewProps {
@@ -44,6 +44,9 @@ export function WarehouseStockDetailView({ role, listPath }: WarehouseStockDetai
   const [error, setError] = useState("");
   const [productsError, setProductsError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [trackingUnitsPage, setTrackingUnitsPage] = useState<WarehouseStockProductUnitsPage | null>(null);
+  const [isSearchingTrackingCode, setIsSearchingTrackingCode] = useState(false);
 
   useEffect(() => {
     if (!stockObjectId) return;
@@ -125,6 +128,23 @@ export function WarehouseStockDetailView({ role, listPath }: WarehouseStockDetai
     if (!unitPages[product.productObjectId]) await loadUnits(product.productObjectId, 1);
   }
 
+  async function searchByTrackingCode(page = 1) {
+    const value = trackingCode.trim();
+    if (!value) {
+      setTrackingUnitsPage(null);
+      return;
+    }
+    setIsSearchingTrackingCode(true);
+    setProductsError("");
+    try {
+      setTrackingUnitsPage(await listWarehouseStockUnitsByTrackingCode(stockObjectId, value, page, UNIT_PAGE_SIZE));
+    } catch (loadError) {
+      setProductsError(getErrorMessage(loadError));
+    } finally {
+      setIsSearchingTrackingCode(false);
+    }
+  }
+
   if (isLoading) return <DashboardLayout role={role} title="جزئیات انبار"><LoadingState title="در حال دریافت انبار" /></DashboardLayout>;
   if (error || !detail) return <DashboardLayout role={role} title="جزئیات انبار"><PageErrorMessage title="دریافت انبار انجام نشد" message={error || "انبار پیدا نشد."} /></DashboardLayout>;
 
@@ -133,6 +153,16 @@ export function WarehouseStockDetailView({ role, listPath }: WarehouseStockDetai
       <div className="space-y-5">
         <SectionHeader title={detail.stock.title || "انبار"} description={`کد انبار: ${detail.stock.code ? formatFaDigits(detail.stock.code) : "-"}`} actions={<Button asChild variant="outline"><Link href={listPath}>بازگشت به انبارها</Link></Button>} />
         <KpiGrid title="خلاصه موجودی انبار" kpis={detail.kpis} />
+        <Card className="p-4">
+          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void searchByTrackingCode(); }}>
+            <label className="grid flex-1 gap-2 text-sm font-medium text-[#334155]">
+              <span>جستجوی کد رهگیری در این انبار</span>
+              <Input value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="کد رهگیری را وارد کنید" />
+            </label>
+            <Button type="submit" disabled={isSearchingTrackingCode || !trackingCode.trim()}><Search className="size-4" />جستجو</Button>
+          </form>
+          {trackingUnitsPage || isSearchingTrackingCode ? <div className="mt-4 rounded-xl border border-[#EEF2F6]"><UnitTable unitsPage={trackingUnitsPage || undefined} isLoading={isSearchingTrackingCode} onPageChange={(page) => void searchByTrackingCode(page)} /></div> : null}
+        </Card>
         <Card className="p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-[#102034]">برندهای موجود</h2><p className="mt-1 text-sm text-[#64748B]">ابتدا برند را انتخاب کنید تا محصولات همان برند نمایش داده شود.</p></div><Badge variant="neutral">{formatNumber(brands.length)} برند</Badge></div>
           {brands.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{brands.map((brand) => { const key = brand.brandObjectId || UNBRANDED_KEY; const selected = selectedBrandId === key; return <button key={key} type="button" onClick={() => setSelectedBrandId(key)} className={`rounded-xl border p-4 text-right transition ${selected ? "border-[#21446E] bg-[#F2F7FC] shadow-sm" : "border-[#E5E7EB] bg-white hover:border-[#9DB5CE]"}`}><div className="flex items-center justify-between gap-3"><span className="font-semibold text-[#102034]">{brand.brandName}</span><Badge variant={selected ? "brand" : "neutral"}>{formatNumber(brand.productCount)} کالا</Badge></div><p className="mt-3 text-sm text-[#64748B]">موجودی واقعی: {formatNumber(brand.realQuantity)}</p></button>; })}</div> : <EmptyState title="برندی در این انبار یافت نشد" description="برای این انبار موجودی محصولی ثبت نشده است." />}
@@ -189,5 +219,6 @@ function UnitTable({ unitsPage, isLoading, onPageChange }: { unitsPage?: Warehou
   if (isLoading && !unitsPage) return <div className="border-t border-[#EEF2F6] p-5"><LoadingState title="در حال دریافت واحدها" /></div>;
   if (!unitsPage?.units.length) return <div className="border-t border-[#EEF2F6] p-5"><EmptyState title="واحدی ثبت نشده است" description="برای این محصول unit قابل نمایش وجود ندارد." /></div>;
   const { pagination } = unitsPage;
-  return <div className="border-t border-[#EEF2F6]"><div className="overflow-x-auto"><table className="min-w-full text-right"><thead className="bg-[#F8FBFD] text-xs font-semibold text-[#5B6B7F]"><tr>{["کد رهگیری", "سریال", "شناسه کالا", "وضعیت", "کد رسید ورود", "تاریخ ثبت"].map((header) => <th key={header} className="whitespace-nowrap px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-[#EEF2F6] text-sm text-[#334155]">{unitsPage.units.map((unit) => <tr key={unit.objectId} className="hover:bg-[#F8FBFD]"><td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.trackingCode || "-")}</td><td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.serialNumber || "-")}</td><td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.productIdentifier || "-")}</td><td className="whitespace-nowrap px-5 py-3">{unit.statusLabel || unit.status || "-"}</td><td className="whitespace-nowrap px-5 py-3">{unit.inboundReceiptCode ? formatFaDigits(unit.inboundReceiptCode) : "-"}</td><td className="whitespace-nowrap px-5 py-3">{unit.createdAt ? formatDateTime(unit.createdAt) : "-"}</td></tr>)}</tbody></table></div><div className="flex flex-wrap items-center justify-between gap-3 p-4"><span className="text-sm text-[#64748B]">صفحه {formatNumber(pagination.page)} از {formatNumber(pagination.totalPages)}، {formatNumber(pagination.total)} واحد</span><div className="flex gap-2"><Button type="button" size="icon" variant="outline" disabled={pagination.page <= 1 || isLoading} onClick={() => onPageChange(pagination.page - 1)} aria-label="صفحه قبلی"><ChevronRight className="size-4" /></Button><Button type="button" size="icon" variant="outline" disabled={pagination.page >= pagination.totalPages || isLoading} onClick={() => onPageChange(pagination.page + 1)} aria-label="صفحه بعدی"><ChevronLeft className="size-4" /></Button></div></div></div>;
+  const hasProductDetails = unitsPage.units.some((unit) => unit.productName || unit.productCode);
+  return <div className="border-t border-[#EEF2F6]"><div className="overflow-x-auto"><table className="min-w-full text-right"><thead className="bg-[#F8FBFD] text-xs font-semibold text-[#5B6B7F]"><tr>{[...(hasProductDetails ? ["کالا"] : []), "کد رهگیری", "سریال", "شناسه کالا", "وضعیت", "کد رسید ورود", "تاریخ ثبت"].map((header) => <th key={header} className="whitespace-nowrap px-5 py-3">{header}</th>)}</tr></thead><tbody className="divide-y divide-[#EEF2F6] text-sm text-[#334155]">{unitsPage.units.map((unit) => <tr key={unit.objectId} className="hover:bg-[#F8FBFD]">{hasProductDetails ? <td className="px-5 py-3"><p>{unit.productName || "-"}</p><p className="mt-1 text-xs text-[#64748B]">{formatFaDigits(unit.productCode || "-")}</p></td> : null}<td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.trackingCode || "-")}</td><td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.serialNumber || "-")}</td><td className="whitespace-nowrap px-5 py-3">{formatFaDigits(unit.productIdentifier || "-")}</td><td className="whitespace-nowrap px-5 py-3">{unit.statusLabel || unit.status || "-"}</td><td className="whitespace-nowrap px-5 py-3">{unit.inboundReceiptCode ? formatFaDigits(unit.inboundReceiptCode) : "-"}</td><td className="whitespace-nowrap px-5 py-3">{unit.createdAt ? formatDateTime(unit.createdAt) : "-"}</td></tr>)}</tbody></table></div><div className="flex flex-wrap items-center justify-between gap-3 p-4"><span className="text-sm text-[#64748B]">صفحه {formatNumber(pagination.page)} از {formatNumber(pagination.totalPages)}، {formatNumber(pagination.total)} واحد</span><div className="flex gap-2"><Button type="button" size="icon" variant="outline" disabled={pagination.page <= 1 || isLoading} onClick={() => onPageChange(pagination.page - 1)} aria-label="صفحه قبلی"><ChevronRight className="size-4" /></Button><Button type="button" size="icon" variant="outline" disabled={pagination.page >= pagination.totalPages || isLoading} onClick={() => onPageChange(pagination.page + 1)} aria-label="صفحه بعدی"><ChevronLeft className="size-4" /></Button></div></div></div>;
 }

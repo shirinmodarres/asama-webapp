@@ -181,6 +181,8 @@ export interface WarehouseStockProductUnitsPage {
 export interface WarehouseStockProductUnit {
   objectId: string;
   id: string;
+  productCode?: string;
+  productName?: string;
   trackingCode: string;
   serialNumber: string;
   productIdentifier: string;
@@ -337,6 +339,7 @@ export interface CreateInboundReceiptPayload {
     }>;
   }>;
   notes?: string;
+  supplierName?: string;
   createdByName?: string;
 }
 

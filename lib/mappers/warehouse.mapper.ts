@@ -15,6 +15,7 @@ import type {
   WarehouseInboundReceiptItemGroup,
   ProductWarehouseInventory,
   WarehouseInboundReceipt,
+  WarehouseInboundReceiptPage,
   WarehouseItemUnit,
   WarehouseUnitStatus,
 } from "@/lib/models/warehouse.model";
@@ -326,7 +327,9 @@ export function mapWarehouseInboundReceiptListDto(
   return toArray(dto).map(mapWarehouseInboundReceiptDto);
 }
 
-export function mapWarehouseInboundReceiptPageDto(dto: unknown) {
+export function mapWarehouseInboundReceiptPageDto(
+  dto: unknown,
+): WarehouseInboundReceiptPage {
   const record = toRecord(dto);
   const pagination = toRecord(record.pagination);
   return {

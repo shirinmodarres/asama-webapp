@@ -47,6 +47,7 @@ interface InboundReceiptDraftState {
   groups: ReceiptGroupDraft[];
   selectedStockId: string;
   notes: string;
+  supplierName: string;
   savedAt: string;
 }
 
@@ -69,6 +70,7 @@ export default function WarehouseInboundPage() {
   const [groupErrors, setGroupErrors] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<InboundFieldErrorState>({});
   const [notes, setNotes] = useState("");
+  const [supplierName, setSupplierName] = useState("");
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const draftReadyRef = useRef(false);
   const skipNextDraftSaveRef = useRef(false);
@@ -93,6 +95,7 @@ export default function WarehouseInboundPage() {
           setSelectedStockId(draft.selectedStockId);
           setGroups(draft.groups);
           setNotes(draft.notes);
+          setSupplierName(draft.supplierName);
           setDraftMessage(
             `پیش‌نویس ثبت موقت بازیابی شد (${formatDateTime(draft.savedAt)})`,
           );
@@ -128,8 +131,8 @@ export default function WarehouseInboundPage() {
       skipNextDraftSaveRef.current = false;
       return;
     }
-    writeInboundReceiptDraft({ groups, selectedStockId, notes });
-  }, [groups, notes, selectedStockId]);
+    writeInboundReceiptDraft({ groups, selectedStockId, notes, supplierName });
+  }, [groups, notes, selectedStockId, supplierName]);
 
   const productOptions = useMemo(
     () =>
@@ -375,6 +378,7 @@ export default function WarehouseInboundPage() {
           })),
         })),
         notes: notes.trim() || undefined,
+        supplierName: supplierName.trim() || undefined,
         createdByName: getStoredCurrentUser()?.fullName ?? undefined,
       });
       setMessage(
@@ -394,6 +398,7 @@ export default function WarehouseInboundPage() {
         ),
       );
       setNotes("");
+      setSupplierName("");
     } catch (submitError) {
       const validationErrors = extractInboundValidationFieldErrors(submitError);
       if (validationErrors.length) {
@@ -411,7 +416,7 @@ export default function WarehouseInboundPage() {
   };
 
   const saveDraft = () => {
-    const savedAt = writeInboundReceiptDraft({ groups, selectedStockId, notes });
+    const savedAt = writeInboundReceiptDraft({ groups, selectedStockId, notes, supplierName });
     setDraftMessage(`پیش‌نویس ثبت موقت ذخیره شد (${formatDateTime(savedAt)})`);
   };
 
@@ -708,7 +713,11 @@ export default function WarehouseInboundPage() {
 
           <Card className="p-5">
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
-              <span>توضیحات</span>
+              <span>نام تامین کننده</span>
+              <Input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
+            </label>
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span className="mt-4">توضیحات</span>
               <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
             </label>
             <p className="mt-3 text-xs text-[#6B7280]">
@@ -762,6 +771,7 @@ function readInboundReceiptDraft(
       groups,
       selectedStockId: draft.selectedStockId,
       notes: typeof draft.notes === "string" ? draft.notes : "",
+      supplierName: typeof draft.supplierName === "string" ? draft.supplierName : "",
       savedAt: draft.savedAt || new Date().toISOString(),
     };
   } catch {

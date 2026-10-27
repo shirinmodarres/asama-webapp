@@ -173,6 +173,7 @@ export interface OrderFormSubmitPayload {
   recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
+  sepidarQuotationDate?: string | null;
   notes?: string;
   items: Array<{
     productObjectId: string;
@@ -259,6 +260,9 @@ export function OrderForm({
   );
   const [najaPurchaseDate, setNajaPurchaseDate] = useState(
     initialOrder?.najaPurchaseDate?.slice(0, 10) ?? "",
+  );
+  const [sepidarQuotationDate, setSepidarQuotationDate] = useState(
+    initialOrder?.sepidarQuotationDate?.slice(0, 10) ?? "",
   );
   const [notes, setNotes] = useState(initialOrder?.notes ?? "");
   const [selectedCustomerId, setSelectedCustomerId] = useState(
@@ -1223,6 +1227,9 @@ export function OrderForm({
               najaPurchaseDate: najaPurchaseDate || null,
             }
           : {}),
+        ...(initialOrder?.orderType !== "naja"
+          ? { sepidarQuotationDate: sepidarQuotationDate || null }
+          : {}),
         salesTypeTitle:
           resolvedSelectedSalesType?.title ||
           (mode === "edit" ? orderSalesTypeFallback?.title : null) ||
@@ -1683,6 +1690,17 @@ export function OrderForm({
                   />
                 </div>
               </>
+            ) : null}
+
+            {!isNajaOrder ? (
+              <div className="md:col-span-2">
+                <JalaliDateInput
+                  label="تاریخ ثبت سفارش در سپیدار (اختیاری)"
+                  value={sepidarQuotationDate}
+                  onChange={setSepidarQuotationDate}
+                  placeholder="در صورت نیاز انتخاب کنید"
+                />
+              </div>
             ) : null}
           </div>
 
