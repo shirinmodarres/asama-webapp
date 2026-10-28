@@ -7,7 +7,8 @@ export type BackendRoleKey =
   | "warehouse"
   | "finance"
   | "support"
-  | "naja_expert";
+  | "naja_expert"
+  | "store_sales_expert";
 
 export type PanelRoleKey =
   | "expert"
@@ -16,7 +17,8 @@ export type PanelRoleKey =
   | "warehouse"
   | "finance"
   | "support"
-  | "naja";
+  | "naja"
+  | "store-expert";
 
 export const ROLE_LABELS: Record<BackendRoleKey, string> = {
   god: "مدیرکل",
@@ -28,6 +30,7 @@ export const ROLE_LABELS: Record<BackendRoleKey, string> = {
   systems_expert: "کارشناس سامانه‌ها",
   support: "پشتیبان",
   naja_expert: "کارشناس ناجا",
+  store_sales_expert: "کارشناس فروش فروشگاه",
 };
 
 export const PANEL_ROUTE_BY_ROLE: Record<BackendRoleKey, `/${PanelRoleKey}`> = {
@@ -40,6 +43,7 @@ export const PANEL_ROUTE_BY_ROLE: Record<BackendRoleKey, `/${PanelRoleKey}`> = {
   finance: "/finance",
   support: "/support",
   naja_expert: "/naja",
+  store_sales_expert: "/store-expert",
 };
 
 export const PANEL_ROLE_BY_BACKEND_ROLE: Record<BackendRoleKey, PanelRoleKey> = {
@@ -52,6 +56,7 @@ export const PANEL_ROLE_BY_BACKEND_ROLE: Record<BackendRoleKey, PanelRoleKey> = 
   finance: "finance",
   support: "support",
   naja_expert: "naja",
+  store_sales_expert: "store-expert",
 };
 
 export const BACKEND_ROLE_BY_PANEL_ROLE: Record<PanelRoleKey, BackendRoleKey> = {
@@ -62,6 +67,7 @@ export const BACKEND_ROLE_BY_PANEL_ROLE: Record<PanelRoleKey, BackendRoleKey> = 
   finance: "finance",
   support: "support",
   naja: "naja_expert",
+  "store-expert": "store_sales_expert",
 };
 
 export const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({

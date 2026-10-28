@@ -287,6 +287,25 @@ export async function createInboundReceipt(
   return mapWarehouseInboundReceiptDto(data);
 }
 
+export async function validateInboundReceipt(
+  payload: CreateInboundReceiptPayload,
+): Promise<{
+  valid: boolean;
+  totalProducts: number;
+  totalUnits: number;
+}> {
+  const data = await httpClient.post<unknown>(
+    "/api/warehouse/inbound/validate",
+    normalizeInboundPayload(payload),
+  );
+  const record = toRecord(data);
+  return {
+    valid: record.valid === true,
+    totalProducts: toNumberValue(record.totalProducts),
+    totalUnits: toNumberValue(record.totalUnits),
+  };
+}
+
 export async function listInboundReceipts(
   { page = 1, pageSize = 25 }: { page?: number; pageSize?: number } = {},
 ): Promise<WarehouseInboundReceiptPage> {

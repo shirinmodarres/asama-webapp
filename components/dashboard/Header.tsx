@@ -120,4 +120,5 @@ const PANEL_LOCATION_LABELS: Record<RoleKey, string> = {
   finance: "مالی",
   support: "پشتیبان",
   naja: "ناجا",
+  "store-expert": "فروشگاه",
 };

@@ -2,6 +2,14 @@ import type { PanelRoleKey } from "@/lib/domain/roles";
 import type { SidebarItem } from "@/lib/types";
 
 export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
+  "store-expert": [
+    {
+      label: "ثبت مشتری جدید",
+      href: "/store-expert/customers/new",
+      icon: "users",
+      description: "ثبت اطلاعات مشتری برای ارسال به سپیدار",
+    },
+  ],
   expert: [
     {
       label: "داشبورد",

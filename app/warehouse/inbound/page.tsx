@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, PackageSearch, Save, Trash2, Upload } from "lucide-react";
+import { FileSpreadsheet, Plus, PackageSearch, Save, Trash2, Upload } from "lucide-react";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
@@ -20,7 +20,7 @@ import type { SepidarStock } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
 import { listStocks } from "@/lib/services/stock.service";
-import { createInboundReceipt } from "@/lib/services/warehouse.service";
+import { createInboundReceipt, validateInboundReceipt } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 import {
   extractDuplicateDetails,
@@ -51,6 +51,12 @@ interface InboundReceiptDraftState {
   savedAt: string;
 }
 
+interface MultiImportPreview {
+  groups: ReceiptGroupDraft[];
+  totalRows: number;
+  invalidRows: Array<{ rowNumber: number; reason: string }>;
+}
+
 type InboundFieldErrorState = Record<
   string,
   Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "productObjectId", string>>
@@ -71,7 +77,10 @@ export default function WarehouseInboundPage() {
   const [fieldErrors, setFieldErrors] = useState<InboundFieldErrorState>({});
   const [notes, setNotes] = useState("");
   const [supplierName, setSupplierName] = useState("");
+  const [multiImportPreview, setMultiImportPreview] = useState<MultiImportPreview | null>(null);
+  const [isMultiImporting, setIsMultiImporting] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const multiImportInput = useRef<HTMLInputElement | null>(null);
   const draftReadyRef = useRef(false);
   const skipNextDraftSaveRef = useRef(false);
 
@@ -308,6 +317,98 @@ export default function WarehouseInboundPage() {
     }
   };
 
+  const previewMultiProductImport = async (file: File) => {
+    if (!selectedStockId) {
+      setError("ابتدا انبار مقصد را انتخاب کنید.");
+      return;
+    }
+    setIsMultiImporting(true);
+    setError("");
+    try {
+      const rows = (await parseInboundImportFile(file)).filter(
+        (row) => !isEmptyImportRow(row),
+      );
+      const productsByIdentifier = new Map(
+        products
+          .map((product) => [normalizeDigits(getProductIdentifier(product)), product] as const)
+          .filter(([identifier]) => Boolean(identifier)),
+      );
+      const invalidRows: Array<{ rowNumber: number; reason: string }> = [];
+      if (!rows.length) {
+        invalidRows.push({ rowNumber: 0, reason: "فایل هیچ ردیف کالایی ندارد." });
+      }
+      const serialRows = new Map<string, number[]>();
+      const trackingRows = new Map<string, number[]>();
+      const resolved = rows.map((row) => {
+        const productIdentifier = normalizeDigits(row.productIdentifier.trim());
+        const serialNumber = normalizeDigits(row.serialNumber.trim());
+        const trackingCode = normalizeDigits(row.trackingCode.trim());
+        const product = productsByIdentifier.get(productIdentifier);
+        if (!productIdentifier || !serialNumber || !trackingCode) {
+          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول، سریال و کد رهگیری الزامی هستند." });
+        } else if (!product) {
+          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول معتبر نیست یا کالا فعال نیست." });
+        }
+        if (serialNumber) serialRows.set(serialNumber, [...(serialRows.get(serialNumber) || []), row.excelRowNumber]);
+        if (trackingCode) trackingRows.set(trackingCode, [...(trackingRows.get(trackingCode) || []), row.excelRowNumber]);
+        return { row, product, productIdentifier, serialNumber, trackingCode };
+      });
+      [serialRows, trackingRows].forEach((duplicates, index) => {
+        duplicates.forEach((rowNumbers) => {
+          if (rowNumbers.length > 1) {
+            rowNumbers.forEach((rowNumber) => invalidRows.push({
+              rowNumber,
+              reason: index === 0 ? "سریال در فایل تکراری است." : "کد رهگیری در فایل تکراری است.",
+            }));
+          }
+        });
+      });
+      const groupsByProduct = new Map<string, ReceiptGroupDraft>();
+      resolved.forEach((entry, index) => {
+        if (!entry.product || invalidRows.some((invalid) => invalid.rowNumber === entry.row.excelRowNumber)) return;
+        const current = groupsByProduct.get(entry.product.objectId) || {
+          rowId: `excel-${entry.product.objectId}`,
+          productObjectId: entry.product.objectId,
+          units: [],
+        };
+        current.units.push({
+          rowId: `excel-${entry.row.excelRowNumber}-${index}`,
+          productIdentifier: entry.productIdentifier,
+          serialNumber: entry.serialNumber,
+          trackingCode: entry.trackingCode,
+        });
+        groupsByProduct.set(entry.product.objectId, current);
+      });
+      const importedGroups = [...groupsByProduct.values()];
+      if (!invalidRows.length && importedGroups.length) {
+        try {
+          await validateInboundReceipt({
+            stockObjectId: selectedStockId,
+            items: importedGroups.map((group) => ({
+              productObjectId: group.productObjectId,
+              units: group.units.map((unit) => ({ ...unit, productObjectId: group.productObjectId })),
+            })),
+          });
+        } catch (validationError) {
+          const fieldErrors = extractInboundValidationFieldErrors(validationError);
+          fieldErrors.forEach((fieldError) => {
+            const sourceRow = resolved[fieldError.rowIndex]?.row.excelRowNumber;
+            invalidRows.push({
+              rowNumber: sourceRow || fieldError.rowIndex + 1,
+              reason: fieldError.message,
+            });
+          });
+          if (!fieldErrors.length) throw validationError;
+        }
+      }
+      setMultiImportPreview({ groups: importedGroups, totalRows: rows.length, invalidRows });
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
+    } finally {
+      setIsMultiImporting(false);
+    }
+  };
+
   const validateGroup = (group: ReceiptGroupDraft) => {
     const errors: string[] = [];
     const product = products.find((item) => item.objectId === group.productObjectId);
@@ -317,7 +418,6 @@ export default function WarehouseInboundPage() {
 
     group.units.forEach((unit) => {
       const identifier = normalizeDigits(unit.productIdentifier.trim());
-      const serial = normalizeDigits(unit.serialNumber.trim());
       const track = normalizeDigits(unit.trackingCode.trim());
       if (identifierRequired && !identifier) {
         errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
@@ -329,15 +429,7 @@ export default function WarehouseInboundPage() {
 
   const canSubmit = groups.length > 0 && groups.every((group) => validateGroup(group).length === 0);
 
-  const getFlattenedUnits = () =>
-    groups.flatMap((group) =>
-      group.units.map((unit) => ({
-        groupRowId: group.rowId,
-        unit,
-      })),
-    );
-
-  const submitReceipt = async () => {
+  const submitReceipt = async (receiptGroups: ReceiptGroupDraft[] = groups) => {
     setError("");
     setMessage("");
     setGroupErrors({});
@@ -347,20 +439,20 @@ export default function WarehouseInboundPage() {
       setError("لطفاً انبار مقصد را انتخاب کنید.");
       return;
     }
-    if (!groups.length) {
+    if (!receiptGroups.length) {
       setError("حداقل یک کالا برای ثبت ورود اضافه کنید.");
       return;
     }
 
     const nextGroupErrors: Record<string, string> = {};
-    groups.forEach((group) => {
+    receiptGroups.forEach((group) => {
       const errors = validateGroup(group);
       if (errors.length) nextGroupErrors[group.rowId] = errors[0];
     });
     setGroupErrors(nextGroupErrors);
     if (Object.keys(nextGroupErrors).length > 0) {
       setError("ردیف‌های دارای خطا را اصلاح کنید.");
-      focusFirstInboundFieldError(groups, {});
+      focusFirstInboundFieldError(receiptGroups, {});
       return;
     }
 
@@ -368,7 +460,7 @@ export default function WarehouseInboundPage() {
     try {
       const receipt = await createInboundReceipt({
         stockObjectId: selectedStockId,
-        items: groups.map((group) => ({
+        items: receiptGroups.map((group) => ({
           productObjectId: group.productObjectId,
           units: group.units.map((unit) => ({
             productObjectId: group.productObjectId,
@@ -388,7 +480,7 @@ export default function WarehouseInboundPage() {
       setDraftMessage("");
       skipNextDraftSaveRef.current = true;
       setGroups(
-        groups.map((group) =>
+        receiptGroups.map((group) =>
           createEmptyGroup(
             group.productObjectId,
             getProductIdentifier(
@@ -402,11 +494,11 @@ export default function WarehouseInboundPage() {
     } catch (submitError) {
       const validationErrors = extractInboundValidationFieldErrors(submitError);
       if (validationErrors.length) {
-        const nextFieldErrors = buildInboundFieldErrors(validationErrors, groups);
+        const nextFieldErrors = buildInboundFieldErrors(validationErrors, receiptGroups);
         setFieldErrors(nextFieldErrors);
-        setGroupErrors(buildInboundGroupErrors(validationErrors, groups));
+        setGroupErrors(buildInboundGroupErrors(validationErrors, receiptGroups));
         setError("");
-        focusFirstInboundFieldError(groups, nextFieldErrors);
+        focusFirstInboundFieldError(receiptGroups, nextFieldErrors);
         return;
       }
       setError(formatInboundSubmitError(submitError));
@@ -463,6 +555,31 @@ export default function WarehouseInboundPage() {
                 <p className="text-[#6B7280]">تعداد واحدها</p>
                 <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(totalUnits)}</p>
               </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#E5E7EB] pt-4">
+              <input
+                ref={multiImportInput}
+                type="file"
+                accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
+                className="hidden"
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) await previewMultiProductImport(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => multiImportInput.current?.click()}
+                disabled={isMultiImporting || isSubmitting || !selectedStockId}
+              >
+                <FileSpreadsheet className="size-4" />
+                {isMultiImporting ? "در حال بررسی فایل..." : "ایمپورت چند کالا از اکسل"}
+              </Button>
+              <p className="text-xs text-[#6B7280]">
+                ستون‌ها: شناسه محصول، سریال محصول، کد رهگیری
+              </p>
             </div>
           </Card>
 
@@ -704,7 +821,7 @@ export default function WarehouseInboundPage() {
             </Button>
             <Button
               type="button"
-              onClick={submitReceipt}
+              onClick={() => void submitReceipt()}
               disabled={isSubmitting || !canSubmit}
             >
               {isSubmitting ? "در حال ثبت..." : "ثبت ورود کالا"}
@@ -726,6 +843,49 @@ export default function WarehouseInboundPage() {
           </Card>
         </div>
       )}
+      <AlertDialog
+        open={Boolean(multiImportPreview)}
+        onOpenChange={(open) => {
+          if (!open && !isSubmitting) setMultiImportPreview(null);
+        }}
+      >
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>پیش‌نمایش ورود چندکالا</AlertDialogTitle>
+            <AlertDialogDescription>
+              {multiImportPreview?.invalidRows.length
+                ? "فایل دارای خطاست و هیچ کالایی ثبت نخواهد شد."
+                : "پس از تایید، همه ردیف‌ها با یک رسید ورود ثبت می‌شوند."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-[55vh] space-y-3 overflow-y-auto text-sm">
+            <div className="grid grid-cols-3 gap-3">
+              <InfoItem label="تعداد ردیف" value={formatNumber(multiImportPreview?.totalRows || 0)} />
+              <InfoItem label="تعداد کالا" value={formatNumber(multiImportPreview?.groups.length || 0)} />
+              <InfoItem label="خطاها" value={formatNumber(multiImportPreview?.invalidRows.length || 0)} />
+            </div>
+            {multiImportPreview?.groups.map((group) => {
+              const product = products.find((item) => item.objectId === group.productObjectId);
+              return <div key={group.rowId} className="rounded-lg border border-[#E5E7EB] px-3 py-2">
+                <p className="font-medium text-[#102034]">{product?.name || "کالا"}</p>
+                <p className="mt-1 text-xs text-[#6B7280]">شناسه: {formatFaDigits(getProductIdentifier(product) || "-")} | تعداد: {formatNumber(group.units.length)}</p>
+              </div>;
+            })}
+            {multiImportPreview?.invalidRows.length ? <div className="rounded-lg border border-[#F5D0C5] bg-[#FFF7F5] p-3 text-[#9A3412]">
+              {multiImportPreview.invalidRows.map((row, index) => <p key={`${row.rowNumber}-${index}`}>ردیف {formatNumber(row.rowNumber)}: {row.reason}</p>)}
+            </div> : null}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>انصراف</AlertDialogCancel>
+            {multiImportPreview?.invalidRows.length ? <Button type="button" variant="outline" onClick={() => downloadMultiImportReport(multiImportPreview.invalidRows)}>دانلود گزارش خطا</Button> : <Button type="button" disabled={isSubmitting} onClick={() => {
+              if (!multiImportPreview) return;
+              setGroups(multiImportPreview.groups);
+              setMultiImportPreview(null);
+              void submitReceipt(multiImportPreview.groups);
+            }}>تایید و ثبت ورود</Button>}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
@@ -819,6 +979,16 @@ function countCompletedUnits(
         normalizeDigits(unit.trackingCode.trim()),
     ),
   ).length;
+}
+
+function downloadMultiImportReport(rows: Array<{ rowNumber: number; reason: string }>) {
+  const content = ["ردیف,خطا", ...rows.map((row) => `${row.rowNumber},\"${row.reason.replace(/\"/g, '\"\"')}\"`)].join("\n");
+  const url = URL.createObjectURL(new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "inbound-import-errors.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function InfoItem({ label, value }: { label: string; value: string }) {

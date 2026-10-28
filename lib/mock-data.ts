@@ -108,6 +108,7 @@ export const rolesByKey: Record<RoleKey, Role> = roles.reduce(
 );
 
 export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
+  "store-expert": [],
   expert: [
     {
       label: "داشبورد",
@@ -293,6 +294,7 @@ export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
 };
 
 export const statsByRole: Record<RoleKey, DashboardStat[]> = {
+  "store-expert": [],
   expert: [
     {
       id: "1",
@@ -426,6 +428,7 @@ export const statsByRole: Record<RoleKey, DashboardStat[]> = {
 };
 
 export const activityByRole: Record<RoleKey, ActivityItem[]> = {
+  "store-expert": [],
   expert: [
     {
       id: "1",
