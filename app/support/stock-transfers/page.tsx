@@ -57,10 +57,10 @@ export default function SupportStockTransfersPage() {
 
   const loadData = async () => {
     const [productData, stockData] = await Promise.all([
-      listProducts("support"),
+      listProducts("warehouse"),
       listSupportStocks(),
     ]);
-    setProducts(productData.filter((product) => product.isSyncedFromSepidar));
+    setProducts(productData);
     setStocks(stockData);
   };
 

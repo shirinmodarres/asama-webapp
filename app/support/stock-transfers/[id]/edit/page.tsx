@@ -27,13 +27,38 @@ export default function EditSupportStockTransferPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([getSupportStockTransfer(params.id), listProducts("support"), listSupportStocks()])
-      .then(([loaded, productRows, stockRows]) => {
-        setTransfer(loaded); setProducts(productRows); setStocks(stockRows);
-        setSource(loaded.sourceStockObjectId || ""); setDestination(loaded.destinationStockObjectId || "");
-        setItems(loaded.items.map((item) => ({ productObjectId: item.productObjectId, quantity: String(item.quantity) })));
-      })
-      .catch((reason) => setError(getErrorMessage(reason)));
+    let mounted = true;
+
+    async function load() {
+      setError("");
+      try {
+        const [loaded, productRows, stockRows] = await Promise.all([
+          getSupportStockTransfer(params.id),
+          listProducts("warehouse"),
+          listSupportStocks(),
+        ]);
+        if (!mounted) return;
+        setTransfer(loaded);
+        setProducts(productRows);
+        setStocks(stockRows);
+        setSource(loaded.sourceStockObjectId || "");
+        setDestination(loaded.destinationStockObjectId || "");
+        setItems(
+          loaded.items.map((item) => ({
+            productObjectId: item.productObjectId,
+            quantity: String(item.quantity),
+          })),
+        );
+      } catch (reason) {
+        if (mounted) setError(getErrorMessage(reason));
+      } finally {
+      }
+    }
+
+    void load();
+    return () => {
+      mounted = false;
+    };
   }, [params.id]);
 
   const save = async () => {
