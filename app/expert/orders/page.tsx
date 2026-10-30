@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,11 @@ export default function ExpertOrdersPage() {
       header: "تعداد آیتم",
       render: (row) =>
         formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
+    },
+    {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (row) => <OrderFinancialAmounts order={row} />,
     },
     {
       key: "order-status",

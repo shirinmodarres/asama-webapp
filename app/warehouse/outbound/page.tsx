@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,6 +145,11 @@ export default function WarehouseOutboundPage() {
       key: "warehouseStatus",
       header: "وضعیت انبار",
       render: (row) => row.warehouseStatusLabel || row.warehouseStatus,
+    },
+    {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (row) => <OrderFinancialAmounts order={row} />,
     },
     {
       key: "fulfillmentStatus",

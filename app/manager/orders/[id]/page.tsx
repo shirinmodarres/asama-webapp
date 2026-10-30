@@ -61,6 +61,10 @@ import {
   stopShipment,
 } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import {
+  getOrderDisplayDiscountAmount,
+  getSalesRequestDiscountNote,
+} from "@/lib/utils/order-financial-display";
 import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 type DecisionType = "approve" | "reject" | "cancel" | "needs_review" | null;
@@ -172,11 +176,15 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
+  const discountNote = getSalesRequestDiscountNote(order.notes);
+  const displayDiscountAmount = getOrderDisplayDiscountAmount({
+    totalAmount,
+    storedDiscountAmount: order.salesRequestDiscountTotal,
+    notes: order.notes,
+  });
   const orderFinancials = calculateSalesRequestFinancials(
     totalAmount,
-    totalAmount > 0
-      ? (Number(order.salesRequestDiscountTotal || 0) / totalAmount) * 100
-      : 0,
+    totalAmount > 0 ? (displayDiscountAmount / totalAmount) * 100 : 0,
   );
   const isNajaOrder = order.orderType === "naja";
   const workflowStage =
@@ -985,6 +993,12 @@ export default function ManagerOrderReviewPage() {
             <p className="text-sm text-[#6B7280]">مبلغ کل</p>
             <p className="mt-2 text-lg font-semibold text-[#102034]">
               {formatCurrency(totalAmount)}
+            </p>
+            <p className="mt-4 text-sm text-[#6B7280]">تخفیف سفارش</p>
+            <p className="mt-1 text-base font-semibold text-[#102034]">
+              {displayDiscountAmount > 0
+                ? formatCurrency(displayDiscountAmount)
+                : discountNote || "-"}
             </p>
             <p className="mt-4 text-sm text-[#6B7280]">مبلغ با مالیات</p>
             <p className="mt-1 text-base font-semibold text-[#102034]">

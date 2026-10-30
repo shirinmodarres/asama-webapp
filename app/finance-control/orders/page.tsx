@@ -13,6 +13,7 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
@@ -147,6 +148,11 @@ export default function FinancialControlOrdersPage() {
       header: "تعداد آیتم",
       render: (row) =>
         formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
+    },
+    {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (row) => <OrderFinancialAmounts order={row} />,
     },
     {
       key: "status",

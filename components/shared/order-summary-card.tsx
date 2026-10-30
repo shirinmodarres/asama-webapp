@@ -8,6 +8,10 @@ import {
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import { PaymentMethodRow } from "@/components/shared/payment-method-row";
 import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
+import {
+  getOrderDisplayDiscountAmount,
+  getSalesRequestDiscountNote,
+} from "@/lib/utils/order-financial-display";
 
 interface OrderSummaryCardProps {
   customerName: string | null;
@@ -38,9 +42,15 @@ export function OrderSummaryCard({
   priceListTitle,
   stockTitles = [],
 }: OrderSummaryCardProps) {
+  const discountNote = getSalesRequestDiscountNote(notes);
+  const displayDiscountAmount = getOrderDisplayDiscountAmount({
+    totalAmount,
+    storedDiscountAmount: discountAmount,
+    notes,
+  });
   const financials = calculateSalesRequestFinancials(
     totalAmount,
-    totalAmount > 0 ? (discountAmount / totalAmount) * 100 : 0,
+    totalAmount > 0 ? (displayDiscountAmount / totalAmount) * 100 : 0,
   );
   return (
     <Card className="p-5">
@@ -62,10 +72,15 @@ export function OrderSummaryCard({
         <SummaryRow label="مشتری" value={customerName || "-"} />
         <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
         <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
-        <SummaryRow label="مبلغ تقریبی" value={formatCurrency(totalAmount)} />
-        {discountAmount > 0 ? (
-          <SummaryRow label="تخفیف" value={formatCurrency(discountAmount)} />
-        ) : null}
+        <SummaryRow label="مبلغ کل" value={formatCurrency(totalAmount)} />
+        <SummaryRow
+          label="تخفیف سفارش"
+          value={
+            displayDiscountAmount > 0
+              ? formatCurrency(displayDiscountAmount)
+              : discountNote || "-"
+          }
+        />
         <SummaryRow label="مبلغ با مالیات" value={formatCurrency(financials.total)} />
         <PaymentMethodRow value={saleTypeTitle} />
         {priceListTitle ? (

@@ -12,6 +12,7 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Input } from "@/components/ui/input";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
@@ -91,6 +92,11 @@ export default function CustomerSystemTransfersPage() {
       render: (order) => formatNumber(order.items.reduce((sum, item) => sum + item.quantity, 0)),
     },
     { key: "date", header: "تاریخ ثبت", render: (order) => formatDate(order.createdAt) },
+    {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (order) => <OrderFinancialAmounts order={order} />,
+    },
     {
       key: "status",
       header: "وضعیت",
