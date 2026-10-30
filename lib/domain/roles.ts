@@ -70,7 +70,9 @@ export const BACKEND_ROLE_BY_PANEL_ROLE: Record<PanelRoleKey, BackendRoleKey> = 
   "store-expert": "store_sales_expert",
 };
 
-export const ROLE_OPTIONS = Object.entries(ROLE_LABELS).map(([value, label]) => ({
+export const ROLE_OPTIONS = Object.entries(ROLE_LABELS)
+  .filter(([value]) => value !== "financial_control")
+  .map(([value, label]) => ({
   value: value as BackendRoleKey,
   label,
 }));

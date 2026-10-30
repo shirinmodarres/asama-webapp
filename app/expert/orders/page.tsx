@@ -305,9 +305,6 @@ function getExpertWorkflowLabel(order: Order): string | null {
   if (order.financialApprovalStage === "systems_expert") {
     return "در انتظار بررسی اولیه کارشناس سامانه‌ها";
   }
-  if (order.financialApprovalStage === "treasurer") {
-    return "در انتظار بررسی خزانه‌دار";
-  }
   if (order.financialApprovalStage === "sales_accountant") {
     return "در انتظار بررسی حسابدار فروش";
   }

@@ -80,7 +80,7 @@ export const FINANCIAL_APPROVAL_STATUS_LABELS: Record<FinancialApprovalStatusCod
 
 export const FINANCIAL_APPROVAL_STAGE_LABELS: Record<FinancialApprovalStageCode, string> = {
   sales_accountant: "حسابدار فروش",
-  treasurer: "خزانه‌دار",
+  treasurer: "حسابدار فروش",
   systems_expert: "کارشناس سامانه‌ها (بررسی اولیه)",
   sales_manager: "مدیر فروش",
   systems_transfer: "کارشناس سامانه‌ها (انتقال بار)",

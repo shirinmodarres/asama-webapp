@@ -73,7 +73,7 @@ export const roles: Role[] = [
   },
   {
     key: "finance-control",
-    title: "خزانه‌دار",
+    title: "کنترل مالی قدیمی",
     description:
       "بررسی سفارش های در انتظار تایید مالی و بازگردانی موارد نیازمند اصلاح.",
     path: "/finance-control",
