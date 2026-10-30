@@ -141,6 +141,14 @@ export default function NajaOrdersPage() {
         row.najaOrderNumber ? formatFaDigits(row.najaOrderNumber) : "-",
     },
     {
+      key: "sepidarQuotationDate",
+      header: "تاریخ پیش‌فاکتور سپیدار",
+      render: (row) =>
+        row.sepidarQuotationDate
+          ? formatDate(row.sepidarQuotationDate)
+          : "ثبت نشده",
+    },
+    {
       key: "stock",
       header: "انبار خروج",
       render: (row) => row.stockTitle || "-",

@@ -27,7 +27,7 @@ export function getSalesRequestDiscountPercentage(
   const normalized = value
     .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1728))
     .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632));
-  const match = normalized.match(/^(\d+(?:\.\d+)?)\s*[%٪]$/);
+  const match = normalized.match(/^(\d+(?:\.\d+)?)\s*[%٪](?:\s*\|.*)?$/);
   if (!match) return null;
 
   const percentage = Number(match[1]);

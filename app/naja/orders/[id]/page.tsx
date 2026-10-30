@@ -266,6 +266,14 @@ export default function NajaOrderDetailsPage() {
                   value={formatFaDigits(order.sepidarQuotationNumber)}
                 />
               ) : null}
+              <InfoItem
+                label="تاریخ ثبت پیش‌فاکتور در سپیدار"
+                value={
+                  order.sepidarQuotationDate
+                    ? formatDate(order.sepidarQuotationDate)
+                    : "ثبت نشده"
+                }
+              />
               {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
             {!order.customerPhone || !order.deliveryFullAddress ? (

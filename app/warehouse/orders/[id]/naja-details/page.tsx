@@ -21,6 +21,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import type { Order } from "@/lib/models/order.model";
 import { completeNajaWarehouseInfo } from "@/lib/services/naja.service";
 import { getOrder } from "@/lib/services/order.service";
+import { formatDate } from "@/lib/expert/utils";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
 export default function WarehouseNajaDetailsPage() {
@@ -185,6 +186,11 @@ export default function WarehouseNajaDetailsPage() {
             <p className="font-semibold text-[#102034]">خلاصه سفارش</p>
             <p className="mt-2">مشتری: {order.customerName ?? "-"}</p>
             <p>ثبت کننده: {order.createdByName || "-"}</p>
+            <p>
+              تاریخ ثبت پیش‌فاکتور در سپیدار: {order.sepidarQuotationDate
+                ? formatDate(order.sepidarQuotationDate)
+                : "ثبت نشده"}
+            </p>
             <div className="flex items-center gap-2">
               <span>وضعیت فعلی:</span>
               <StatusBadge type="warehouse" status={order.warehouseStatus} />

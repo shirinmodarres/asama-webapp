@@ -741,12 +741,6 @@ export default function ManagerOrderReviewPage() {
                         : "-"
                     }
                   />
-                  {order.salesTypeTitle ? (
-                    <div className="sm:col-span-2 rounded-xl border border-[#D7E5F0] bg-[#F8FBFF] px-4 py-3 text-sm leading-7 text-[#1F3A5F]">
-                      این سفارش با روش پرداخت{" "}
-                      <strong>{order.salesTypeTitle}</strong> ثبت شده است.
-                    </div>
-                  ) : null}
                   {hasRecipientInfo(order) ? (
                     <>
                       <InfoItem
@@ -789,11 +783,11 @@ export default function ManagerOrderReviewPage() {
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem
-                label="تاریخ پیش‌فاکتور سپیدار"
+                label="تاریخ ثبت پیش‌فاکتور در سپیدار"
                 value={
                   order.sepidarQuotationDate
                     ? formatDate(order.sepidarQuotationDate)
-                    : "-"
+                    : "ثبت نشده"
                 }
               />
               <InfoItem
