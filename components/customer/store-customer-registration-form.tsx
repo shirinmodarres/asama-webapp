@@ -15,6 +15,8 @@ import {
   registerStoreCustomer,
   type StoreCustomerRegistrationResult,
 } from "@/lib/services/store-expert-customer.service";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { JalaliDateInput } from "../shared/jalali-date-input";
 
 type CustomerKind = "individual" | "legal";
 type AddressDraft = {
@@ -186,40 +188,54 @@ export function StoreCustomerRegistrationForm() {
         </div>
         <div className="mb-5 grid gap-4 md:grid-cols-2">
           <FormField label="گروه مشتری *">
-            <select
+            <SearchableSelect
               value={groupingRef}
-              onChange={(event) => setGroupingRef(event.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="" disabled>
-                انتخاب گروه
-              </option>
-              {STORE_GROUPS.map((group) => (
-                <option key={group.value} value={group.value}>
-                  {group.label}
-                </option>
-              ))}
-            </select>
+              onValueChange={setGroupingRef}
+              options={STORE_GROUPS.map((group) => ({
+                value: group.value,
+                label: group.label,
+              }))}
+              placeholder="انتخاب گروه مشتری"
+              searchPlaceholder="جستجوی گروه..."
+              emptyMessage="گروهی پیدا نشد"
+            />
           </FormField>
         </div>
-        <div className="mb-5 flex gap-2 rounded-xl bg-[#F6F8FB] p-1">
-          {(
-            [
-              ["individual", "حقیقی"],
-              ["legal", "حقوقی"],
-            ] as const
-          ).map(([value, label]) => (
-            <Button
-              key={value}
-              type="button"
-              size="sm"
-              variant={kind === value ? "default" : "ghost"}
-              className="flex-1"
-              onClick={() => setKind(value)}
-            >
-              {label}
-            </Button>
-          ))}
+        <div
+          dir="rtl"
+          className="relative mb-5 grid grid-cols-2 rounded-xl bg-[#F1F5F9] p-1"
+        >
+          {/* پس‌زمینه متحرک */}
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute bottom-1 top-1 right-1 w-[calc(50%-4px)] rounded-lg bg-[#102034] shadow-sm transition-transform duration-300 ease-in-out ${
+              kind === "individual" ? "translate-x-0" : "-translate-x-full"
+            }`}
+          />
+
+          <button
+            type="button"
+            onClick={() => setKind("individual")}
+            className={`relative z-10 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+              kind === "individual"
+                ? "text-white"
+                : "text-[#64748B] hover:text-[#102034]"
+            }`}
+          >
+            حقیقی
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setKind("legal")}
+            className={`relative z-10 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors duration-300 ${
+              kind === "legal"
+                ? "text-white"
+                : "text-[#64748B] hover:text-[#102034]"
+            }`}
+          >
+            حقوقی
+          </button>
         </div>
         {kind === "individual" ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -247,6 +263,7 @@ export function StoreCustomerRegistrationForm() {
               onChange={(value) =>
                 setIndividual({ ...individual, nationalId: value })
               }
+              type="number"
             />
             <Field
               label="کد اقتصادی"
@@ -254,14 +271,15 @@ export function StoreCustomerRegistrationForm() {
               onChange={(value) =>
                 setIndividual({ ...individual, economicCode: value })
               }
+              type="number"
             />
-            <Field
+            <JalaliDateInput
               label="تاریخ تولد"
-              type="date"
               value={individual.birthDate}
               onChange={(value) =>
                 setIndividual({ ...individual, birthDate: value })
               }
+              placeholder="انتخاب تاریخ تولد"
             />
             <Field
               label="شماره تلفن"
@@ -269,6 +287,7 @@ export function StoreCustomerRegistrationForm() {
               onChange={(value) =>
                 setIndividual({ ...individual, phone: value })
               }
+              type="tel"
             />
           </div>
         ) : (
@@ -286,16 +305,19 @@ export function StoreCustomerRegistrationForm() {
               onChange={(value) =>
                 setLegal({ ...legal, nationalIdentifier: value })
               }
+              type="number"
             />
             <Field
               label="کد اقتصادی"
               value={legal.economicCode}
               onChange={(value) => setLegal({ ...legal, economicCode: value })}
+              type="number"
             />
             <Field
               label="شماره تلفن"
               value={legal.phone}
               onChange={(value) => setLegal({ ...legal, phone: value })}
+              type="tel"
             />
           </div>
         )}
@@ -328,7 +350,7 @@ export function StoreCustomerRegistrationForm() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-semibold text-[#334155]">
-                  آدرس {index + 1}
+                  آدرس {(index + 1).toLocaleString("fa-IR")}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -369,6 +391,7 @@ export function StoreCustomerRegistrationForm() {
                   onChange={(value) =>
                     updateAddress(address.id, { postalCode: value })
                   }
+                  type="number"
                 />
               </div>
               <div className="mt-4">
@@ -451,6 +474,7 @@ function Field({
     <FormField label={required ? `${label} *` : label} error={error}>
       <Input
         type={type}
+        inputMode={type === "tel" ? "numeric" : undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
