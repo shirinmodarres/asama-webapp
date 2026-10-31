@@ -240,7 +240,9 @@ export interface ExitSlip {
   slipCode: string;
   orderId: string;
   orderCode: string;
+  stockTitle: string | null;
   issuedByName: string;
+  issuedAt: string | null;
   exitDate: string;
   deliveryToken: string | null;
   deliveryLink: string | null;

@@ -13,6 +13,7 @@ import type {
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 const STATUS_LABELS: Record<string, string> = {
+  store_quotation_issued: "صورتحساب ماد سنتر",
   ready_for_accounting: "آماده ثبت در حسابداری",
   ready_for_accountin: "آماده ثبت در حسابداری",
   entered_manually: "ثبت‌شده در حسابداری",

@@ -4,6 +4,7 @@ export type InternalInvoiceStatus =
   | "ready_for_accounting"
   | "entered_manually"
   | "cancelled"
+  | "store_quotation_issued"
   | string;
 
 export interface InternalInvoiceItem {

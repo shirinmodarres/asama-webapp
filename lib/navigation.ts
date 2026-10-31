@@ -4,6 +4,18 @@ import type { SidebarItem } from "@/lib/types";
 export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
   "store-expert": [
     {
+      label: "ثبت سفارش فروشگاه",
+      href: "/store-expert/orders/new",
+      icon: "shopping-cart",
+      description: "ثبت سفارش با مشتریان و قیمت‌های مادسنتر",
+    },
+    {
+      label: "مشتریان فروشگاه",
+      href: "/store-expert/customers",
+      icon: "users",
+      description: "مشتریان گروه‌های مادسنتر",
+    },
+    {
       label: "ثبت مشتری جدید",
       href: "/store-expert/customers/new",
       icon: "users",
@@ -225,6 +237,14 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       group: "سفارش‌ها",
       visibleToRoles: ["systems_expert"],
     },
+    {
+      label: "حواله‌های مادسنتر",
+      href: "/finance-control/store-exit-slips",
+      icon: "file-check",
+      description: "مشاهده حواله‌های خروج صادرشده مادسنتر",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
   ],
   support: [
     {
@@ -253,6 +273,13 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/pricing/generated-price-lists",
       icon: "file-check",
       description: "قیمت‌های داخلی قابل استفاده در سفارش",
+      group: "قیمت‌گذاری",
+    },
+    {
+      label: "قیمت‌گذاری فروشگاه",
+      href: "/finance-control/store-price-lists",
+      icon: "layers",
+      description: "انتخاب لیست قیمت مشترک هر برند مادسنتر",
       group: "قیمت‌گذاری",
     },
     {
