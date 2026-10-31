@@ -2,9 +2,9 @@ import type { NajaCenter } from "@/lib/models/naja-center.model";
 import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
 
-export type OrderType = "normal" | "naja";
+export type OrderType = "normal" | "naja" | "store";
 export type FulfillmentStatus = "normal" | "onHold";
-export type QuotationStatus = "success" | "failed" | "pending";
+export type QuotationStatus = "success" | "failed" | "pending" | "pending_verification";
 
 export interface OrderItem {
   objectId: string;
@@ -80,6 +80,7 @@ export interface Order {
   warehouseName: string | null;
   warehouseType: string | null;
   stockObjectId: string | null;
+  stockCode: number | null;
   selectedStockObjectIds?: string[];
   sepidarStockId: number | null;
   stockTitle: string | null;
@@ -167,9 +168,19 @@ export interface Order {
   sepidarQuotationId: number | null;
   sepidarQuotationNumber: number | string | null;
   quotationStatus: QuotationStatus;
+  quotationSyncStatus: string | null;
   sepidarIntegrationStatus: string | null;
   quotationSyncError: string | null;
   sepidarLastError: string | null;
+  exitSlipObjectId: string | null;
+  exitSlipNumber: string | null;
+  exitSlipIssuedAt: string | null;
+  internalInvoiceObjectId: string | null;
+  internalInvoiceNumber: string | null;
+  accountingStatus: string | null;
+  inventoryReservationStatus: string | null;
+  storePaymentMethod: "cash" | "credit" | null;
+  storePaymentTerms: string | null;
   canEdit: boolean;
   canCancel?: boolean;
   editBlockedReason: string | null;

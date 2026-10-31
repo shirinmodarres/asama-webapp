@@ -101,6 +101,8 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
       ),
     ),
     invoiceDate: toStringValue(record.invoiceDate ?? record.createdAt),
+    source: toNullableString(record.source),
+    orderType: toNullableString(record.orderType),
     orderObjectId: toStringValue(
       record.orderObjectId ?? record.orderId ?? order.objectId,
     ),
@@ -161,6 +163,9 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
     saleTypeTitle: toNullableString(record.saleTypeTitle),
     storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
     storePaymentTerms: toNullableString(record.storePaymentTerms),
+    sepidarInvoiceId: record.sepidarInvoiceId === undefined || record.sepidarInvoiceId === null ? null : toNumberValue(record.sepidarInvoiceId),
+    sepidarInvoiceNumber: toNullableString(record.sepidarInvoiceNumber),
+    sepidarInvoiceDate: toNullableString(record.sepidarInvoiceDate),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: toNullableString(record.recipientNationalId)

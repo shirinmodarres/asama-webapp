@@ -10,6 +10,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "ثبت سفارش با مشتریان و قیمت‌های مادسنتر",
     },
     {
+      label: "پیگیری سفارش‌ها",
+      href: "/store-expert/orders",
+      icon: "file-text",
+      description: "وضعیت پیش‌فاکتور، خروج و فاکتور سفارش‌های فروشگاه",
+    },
+    {
       label: "مشتریان فروشگاه",
       href: "/store-expert/customers",
       icon: "users",

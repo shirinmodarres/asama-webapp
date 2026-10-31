@@ -222,6 +222,12 @@ export function mapOrderDto(dto: unknown): Order {
     stockObjectId: toNullableString(
       record.stockObjectId ?? toRecord(record.stock).objectId,
     ),
+    stockCode:
+      record.stockCode === undefined || record.stockCode === null
+        ? (toRecord(record.stock).code === undefined || toRecord(record.stock).code === null
+          ? null
+          : toNumberValue(toRecord(record.stock).code))
+        : toNumberValue(record.stockCode),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null
         ? null
@@ -417,9 +423,19 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarIntegrationStatus,
       record.sepidarQuotationId,
     ),
+    quotationSyncStatus: toNullableString(record.quotationSyncStatus ?? record.quotationStatus),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
     quotationSyncError: toNullableString(record.quotationSyncError),
     sepidarLastError: toNullableString(record.sepidarLastError),
+    exitSlipObjectId: toNullableString(record.exitSlipObjectId),
+    exitSlipNumber: toNullableString(record.exitSlipNumber),
+    exitSlipIssuedAt: toNullableString(record.exitSlipIssuedAt),
+    internalInvoiceObjectId: toNullableString(record.internalInvoiceObjectId),
+    internalInvoiceNumber: toNullableString(record.internalInvoiceNumber),
+    accountingStatus: toNullableString(record.accountingStatus),
+    inventoryReservationStatus: toNullableString(record.inventoryReservationStatus),
+    storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
+    storePaymentTerms: toNullableString(record.storePaymentTerms),
     canEdit: toBooleanValue(record.canEdit),
     canCancel: toBooleanValue(record.canCancel),
     editBlockedReason: toNullableString(record.editBlockedReason),
@@ -489,7 +505,7 @@ function mapQuotationStatus(
 ): QuotationStatus {
   const explicit = toStringValue(value);
   if (explicit === "created") return "success";
-  if (explicit === "success" || explicit === "failed" || explicit === "pending") {
+  if (explicit === "success" || explicit === "failed" || explicit === "pending" || explicit === "pending_verification") {
     return explicit;
   }
 

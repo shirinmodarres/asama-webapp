@@ -28,6 +28,8 @@ export interface InternalInvoice {
   id: string;
   invoiceNumber: string;
   invoiceDate: string;
+  source: string | null;
+  orderType: string | null;
   orderObjectId: string;
   orderNumber: string;
   exitSlipObjectId: string;
@@ -43,6 +45,9 @@ export interface InternalInvoice {
   saleTypeTitle: string | null;
   storePaymentMethod?: "cash" | "credit" | null;
   storePaymentTerms?: string | null;
+  sepidarInvoiceId?: number | null;
+  sepidarInvoiceNumber?: string | null;
+  sepidarInvoiceDate?: string | null;
   recipientFirstName: string | null;
   recipientLastName: string | null;
   recipientNationalId: string | null;

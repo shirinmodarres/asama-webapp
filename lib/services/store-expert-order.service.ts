@@ -2,7 +2,10 @@ import { httpClient } from "@/lib/api/http-client";
 import type { Customer } from "@/lib/models/customer.model";
 import type { PriceList } from "@/lib/models/pricing.model";
 import type { ExitSlip } from "@/lib/models/warehouse.model";
+import type { Order } from "@/lib/models/order.model";
 import { mapExitSlipDto } from "@/lib/mappers/warehouse.mapper";
+import { mapOrderDto, mapOrderListDto } from "@/lib/mappers/order.mapper";
+import { toArray, toRecord } from "@/lib/mappers/mapper-utils";
 
 export type StoreStock = { objectId: string; id: string; sepidarStockId: number | null; code: number | null; title: string };
 export type StoreProductOption = {
@@ -59,6 +62,42 @@ export type StoreOrderSubmission = {
   errorMessage: string | null;
   canReconcile: boolean;
 };
+
+export type StoreOrderListResult = {
+  items: Order[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+};
+
+export async function listStoreOrders(filters: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+}, signal?: AbortSignal): Promise<StoreOrderListResult> {
+  const params = new URLSearchParams({
+    page: String(filters.page || 1),
+    pageSize: String(filters.pageSize || 20),
+  });
+  if (filters.search?.trim()) params.set("search", filters.search.trim());
+  if (filters.status && filters.status !== "all") params.set("status", filters.status);
+  const data = await httpClient.get<unknown>(`/api/store-expert/orders?${params.toString()}`, { signal });
+  const record = toRecord(data);
+  const pagination = toRecord(record.pagination);
+  const items = mapOrderListDto(toArray(record.items));
+  return {
+    items,
+    pagination: {
+      page: Number(pagination.page) || 1,
+      pageSize: Number(pagination.pageSize) || 20,
+      total: Number(pagination.total) || 0,
+      totalPages: Number(pagination.totalPages) || 1,
+    },
+  };
+}
+
+export async function getStoreOrder(orderObjectId: string): Promise<Order> {
+  return mapOrderDto(await httpClient.get<unknown>(`/api/store-expert/orders/${orderObjectId}`));
+}
 
 export async function createStoreOrder(payload: {
   operationKey: string;
