@@ -51,7 +51,7 @@ interface ExitSlipDraftState {
   savedAt: string;
 }
 
-export default function ExitSlipCreatePage() {
+export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardRole?: "warehouse" | "store-expert" }) {
   const params = useParams<{ id: string }>();
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const serialNumberRef = useRef<HTMLInputElement | null>(null);
@@ -518,7 +518,7 @@ export default function ExitSlipCreatePage() {
   };
 
   return (
-    <DashboardLayout role="warehouse" title="صدور حواله خروج">
+    <DashboardLayout role={dashboardRole} title="صدور حواله خروج">
       <style jsx global>{`
         @media print {
           body {
@@ -832,6 +832,8 @@ export default function ExitSlipCreatePage() {
     </DashboardLayout>
   );
 }
+
+export default ExitSlipCreatePage;
 
 function getExitSlipDraftStorageKey(orderObjectId: string): string {
   return `asama:warehouse:exit-slip:draft:${orderObjectId}`;

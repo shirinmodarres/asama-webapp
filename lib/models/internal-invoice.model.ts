@@ -41,6 +41,8 @@ export interface InternalInvoice {
   stockTitle: string | null;
   priceListTitle: string | null;
   saleTypeTitle: string | null;
+  storePaymentMethod?: "cash" | "credit" | null;
+  storePaymentTerms?: string | null;
   recipientFirstName: string | null;
   recipientLastName: string | null;
   recipientNationalId: string | null;

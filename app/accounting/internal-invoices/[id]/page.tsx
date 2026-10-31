@@ -226,6 +226,12 @@ export default function InternalInvoiceDetailPage() {
               {invoice.saleTypeTitle ? (
                 <Info label="روش پرداخت" value={invoice.saleTypeTitle || ""} />
               ) : null}
+              {invoice.storePaymentMethod ? (
+                <Info label="پرداخت فروشگاه" value={invoice.storePaymentMethod === "credit" ? "اعتباری" : "نقدی"} />
+              ) : null}
+              {invoice.storePaymentTerms ? (
+                <Info label="توضیحات شرایط پرداخت" value={invoice.storePaymentTerms} />
+              ) : null}
               {invoice.priceListTitle ? (
                 <Info label="لیست قیمت" value={invoice.priceListTitle || ""} />
               ) : null}

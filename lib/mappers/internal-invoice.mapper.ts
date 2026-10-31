@@ -159,6 +159,8 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
       record.priceListTitle ?? order.priceListTitle,
     ),
     saleTypeTitle: toNullableString(record.saleTypeTitle),
+    storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
+    storePaymentTerms: toNullableString(record.storePaymentTerms),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: toNullableString(record.recipientNationalId)
