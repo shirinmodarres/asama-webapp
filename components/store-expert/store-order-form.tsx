@@ -271,301 +271,398 @@ export function StoreOrderForm() {
   };
 
   return (
-    <div className="space-y-6">
-      {error ? <InlineErrorMessage message={error} /> : null}
-      {loading ? <LoadingState title="در حال دریافت مشتریان مادسنتر" /> : null}
-      <Card className="p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-[var(--foreground)]">۱. مشتری</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              فقط مشتریان گروه‌های مادسنتر قابل انتخاب هستند.
-            </p>
-          </div>
-          <Button asChild type="button" variant="outline" size="sm">
-            <Link href="/store-expert/customers/new">ثبت مشتری جدید</Link>
-          </Button>
-        </div>
-        <SearchableSelect
-          value={selectedCustomerId || undefined}
-          onValueChange={selectCustomer}
-          onOptionChange={(option) =>
-            setSelectedCustomerLabel(option?.label || "")
-          }
-          options={customerOptions(customers)}
-          loadOptions={customerLoadOptions}
-          placeholder="انتخاب مشتری"
-          searchPlaceholder="نام، کد یا تلفن مشتری"
-          emptyMessage="مشتری مادسنتری پیدا نشد"
-        />
-      </Card>
-      <Card className="p-5">
-        <div className="mb-4">
-          <h2 className="font-semibold text-[var(--foreground)]">
-            ۲. انبار و برند
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            هر سفارش فقط از یک انبار و برای یک برند ثبت می‌شود.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <SearchableSelect
-            value={selectedStockId || undefined}
-            onValueChange={selectStock}
-            options={(options?.stocks || []).map((stock) => ({
-              value: stock.objectId,
-              label: stock.title,
-              description: stock.code
-                ? `کد انبار: ${formatNumber(stock.code)}`
-                : undefined,
-            }))}
-            placeholder="انتخاب انبار"
-            emptyMessage="انبار مجاز پیدا نشد"
-            disabled={!selectedCustomerId}
-          />
-          <SearchableSelect
-            value={selectedBrand || undefined}
-            onValueChange={selectBrand}
-            options={(options?.brands || []).map((brand) => ({
-              value: brand.brandName,
-              label: brand.brandName,
-              description: brand.priceList.title,
-            }))}
-            placeholder="انتخاب برند"
-            emptyMessage="برندی با لیست قیمت فروشگاه تعیین نشده است"
-            disabled={!selectedStockId}
-          />
-        </div>
-      </Card>
-      <Card className="p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-[var(--foreground)]">
-              ۳. کالاها
-            </h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              قیمت فقط از لیست قیمت برند خوانده می‌شود و قابل ویرایش نیست.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              resetOperation();
-              setRows((current) => [...current, emptyRow()]);
-            }}
-            disabled={!products.length}
-          >
-            <PlusCircle className="size-4" />
-            افزودن کالا
-          </Button>
-        </div>
-        {loadingProducts ? (
-          <LoadingState title="در حال بررسی لیست قیمت و موجودی" />
-        ) : null}
-        <div className="space-y-3">
-          {rows.map((row) => {
-            const product = productsById.get(row.productObjectId);
-            return (
-              <div
-                key={row.id}
-                className="rounded-lg border border-[var(--border)] p-4"
-              >
-                <div className="grid gap-3 md:grid-cols-[minmax(250px,1fr)_120px_170px_170px_40px] md:items-end">
-                  <SearchableSelect
-                    value={row.productObjectId || undefined}
-                    onValueChange={(value) =>
-                      updateRow(row.id, { productObjectId: value, quantity: 1 })
-                    }
-                    options={productOptions}
-                    loadOptions={productLoadOptions}
-                    placeholder="انتخاب کالا"
-                    searchPlaceholder="جستجو با نام یا کد کالا"
-                    emptyMessage="کالای قابل فروش پیدا نشد"
-                    disabled={!products.length}
-                  />
-                  <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
-                    <span>تعداد</span>
-                    <Input
-                      inputMode="numeric"
-                      value={formatNumber(row.quantity)}
-                      onChange={(event) =>
-                        updateRow(row.id, {
-                          quantity: Math.max(0, toNumber(event.target.value)),
-                        })
-                      }
-                    />
-                  </label>
-                  <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
-                    <span>قیمت واحد</span>
-                    <Input
-                      disabled
-                      readOnly
-                      value={product ? formatCurrency(product.unitPrice) : "-"}
-                    />
-                  </label>
-                  <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
-                    <span>موجودی قابل فروش</span>
-                    <Input
-                      disabled
-                      readOnly
-                      value={
-                        product ? formatNumber(product.availableForSale) : "-"
-                      }
-                    />
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={rows.length === 1}
-                    onClick={() => {
-                      resetOperation();
-                      setRows((current) =>
-                        current.filter((item) => item.id !== row.id),
-                      );
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-                {product && row.quantity > product.availableForSale ? (
-                  <p className="mt-2 text-xs text-destructive">
-                    تعداد واردشده از موجودی قابل فروش بیشتر است.
-                  </p>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-      <Card className="p-5">
-        <div className="mb-4">
-          <h2 className="font-semibold text-[var(--foreground)]">۴. پرداخت</h2>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={paymentMethod === "cash" ? "default" : "outline"}
-            onClick={() => {
-              resetOperation();
-              setPaymentMethod("cash");
-            }}
-          >
-            نقدی
-          </Button>
-          <Button
-            type="button"
-            variant={paymentMethod === "credit" ? "default" : "outline"}
-            onClick={() => {
-              resetOperation();
-              setPaymentMethod("credit");
-            }}
-          >
-            اعتباری
-          </Button>
-        </div>
-        {paymentMethod === "credit" ? (
-          <label className="mt-4 grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
-            <span>توضیحات شرایط پرداخت *</span>
-            <Textarea
-              value={paymentTerms}
-              onChange={(event) => {
-                resetOperation();
-                setPaymentTerms(event.target.value);
-              }}
-              placeholder="شرایط پرداخت اعتباری را بنویسید"
-            />
-            {creditInvalid ? (
-              <span className="text-xs text-destructive">
-                توضیحات شرایط پرداخت الزامی است.
-              </span>
-            ) : null}
-          </label>
-        ) : null}
-      </Card>
-      <Card className="p-5">
-        <h2 className="font-semibold text-[var(--foreground)]">خلاصه سفارش</h2>
-        <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-          <Summary
-            label="مشتری"
-            value={
-              selectedCustomerLabel ||
-              customers.find(
-                (customer) => customer.objectId === selectedCustomerId,
-              )?.fullName ||
-              "-"
-            }
-          />
-          <Summary
-            label="انبار"
-            value={
-              options?.stocks.find(
-                (stock) => stock.objectId === selectedStockId,
-              )?.title || "-"
-            }
-          />
-          <Summary label="برند" value={selectedBrand || "-"} />
-          <Summary
-            label="روش پرداخت"
-            value={paymentMethod === "cash" ? "نقدی" : "اعتباری"}
-          />
-          <Summary
-            label="تعداد اقلام"
-            value={formatNumber(selectedItems.length)}
-          />
-          <Summary label="مبلغ کل" value={formatCurrency(totalAmount)} />
-        </dl>
-        {submitted ? (
-          <div className="mt-5 rounded-lg border border-[var(--border)] bg-muted/40 p-4 text-sm text-[var(--foreground)]">
-            {submitted.status === "completed" ? (
-              <div className="space-y-2">
-                <p className="font-semibold">
-                  سفارش و پیش‌فاکتور سپیدار با موفقیت ثبت شد.
+    <Card className="p-5 md:p-6">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          {error ? <InlineErrorMessage message={error} /> : null}
+          {loading ? (
+            <LoadingState title="در حال دریافت مشتریان مادسنتر" />
+          ) : null}
+          <section className="border-b border-[var(--border)] py-5 first:pt-0 last:border-b-0">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-[var(--foreground)]">
+                  مشتری
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  فقط مشتریان گروه‌های مادسنتر قابل انتخاب هستند.
                 </p>
-                {options?.stocks.find(
-                  (stock) => stock.objectId === selectedStockId,
-                )?.code === 999 && submitted.orderObjectId ? (
-                  <Link
-                    className="block text-primary underline"
-                    href={`/store-expert/orders/${submitted.orderObjectId}/exit-slip`}
-                  >
-                    ثبت خروج کالا با کد رهگیری
-                  </Link>
-                ) : (
-                  <p>
-                    سفارش در صف خروج انبار قرار گرفت و وضعیت آن توسط انباردار
-                    پیگیری می‌شود.
-                  </p>
-                )}
-                {submitted.internalInvoiceObjectId ? (
-                  <Link
-                    className="block text-primary underline"
-                    href={`/accounting/internal-invoices/${submitted.internalInvoiceObjectId}/print`}
-                    target="_blank"
-                  >
-                    دانلود صورتحساب داخلی ماد سنتر
-                  </Link>
-                ) : null}
               </div>
-            ) : (
-              <p>
-                درخواست ثبت شده و منتظر بررسی نتیجه پیش‌فاکتور سپیدار است. برای
-                جلوگیری از ثبت تکراری، دوباره ارسال نکنید.
+              <Button asChild type="button" variant="outline" size="sm">
+                <Link href="/store-expert/customers/new">ثبت مشتری جدید</Link>
+              </Button>
+            </div>
+            <SearchableSelect
+              value={selectedCustomerId || undefined}
+              onValueChange={selectCustomer}
+              onOptionChange={(option) =>
+                setSelectedCustomerLabel(option?.label || "")
+              }
+              options={customerOptions(customers)}
+              loadOptions={customerLoadOptions}
+              placeholder="انتخاب مشتری"
+              searchPlaceholder="نام، کد یا تلفن مشتری"
+              emptyMessage="مشتری مادسنتری پیدا نشد"
+            />
+          </section>
+          <section className="border-b border-[var(--border)] py-5 first:pt-0 last:border-b-0">
+            <div className="mb-4">
+              <h2 className="font-semibold text-[var(--foreground)]">
+                انبار و برند
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                هر سفارش فقط از یک انبار و برای یک برند ثبت می‌شود.
               </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <SearchableSelect
+                value={selectedStockId || undefined}
+                onValueChange={selectStock}
+                options={(options?.stocks || []).map((stock) => ({
+                  value: stock.objectId,
+                  label: stock.title,
+                  description: stock.code
+                    ? `کد انبار: ${formatNumber(stock.code)}`
+                    : undefined,
+                }))}
+                placeholder="انتخاب انبار"
+                emptyMessage="انبار مجاز پیدا نشد"
+                disabled={!selectedCustomerId}
+              />
+              <SearchableSelect
+                value={selectedBrand || undefined}
+                onValueChange={selectBrand}
+                options={(options?.brands || []).map((brand) => ({
+                  value: brand.brandName,
+                  label: brand.brandName,
+                  description: brand.priceList.title,
+                }))}
+                placeholder="انتخاب برند"
+                emptyMessage="برندی با لیست قیمت فروشگاه تعیین نشده است"
+                disabled={!selectedStockId}
+              />
+            </div>
+          </section>
+          <section className="border-b border-[var(--border)] py-5 first:pt-0 last:border-b-0">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-[var(--foreground)]">
+                  کالاها
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  قیمت فقط از لیست قیمت برند خوانده می‌شود و قابل ویرایش نیست.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetOperation();
+                  setRows((current) => [...current, emptyRow()]);
+                }}
+                disabled={!products.length}
+              >
+                <PlusCircle className="size-4" />
+                افزودن کالا
+              </Button>
+            </div>
+            {loadingProducts ? (
+              <LoadingState title="در حال بررسی لیست قیمت و موجودی" />
+            ) : null}
+            <div className="space-y-3">
+              {rows.map((row) => {
+                const product = productsById.get(row.productObjectId);
+                return (
+                  <div
+                    key={row.id}
+                    className="rounded-lg border border-[var(--border)] p-4"
+                  >
+                    <div className="space-y-4">
+                      {/* ردیف اول: انتخاب کالا و حذف */}
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <SearchableSelect
+                            value={row.productObjectId || undefined}
+                            onValueChange={(value) =>
+                              updateRow(row.id, {
+                                productObjectId: value,
+                                quantity: 1,
+                              })
+                            }
+                            options={productOptions}
+                            loadOptions={productLoadOptions}
+                            placeholder="انتخاب کالا"
+                            searchPlaceholder="جستجو با نام یا کد کالا"
+                            emptyMessage="کالای قابل فروش پیدا نشد"
+                            disabled={!products.length}
+                          />
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          disabled={rows.length === 1}
+                          onClick={() => {
+                            resetOperation();
+                            setRows((current) =>
+                              current.filter((item) => item.id !== row.id),
+                            );
+                          }}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+
+                      {/* ردیف دوم: اطلاعات کالا */}
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
+                          <span>تعداد</span>
+                          <Input
+                            inputMode="numeric"
+                            value={formatNumber(row.quantity)}
+                            onChange={(event) =>
+                              updateRow(row.id, {
+                                quantity: Math.max(
+                                  0,
+                                  toNumber(event.target.value),
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+
+                        <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
+                          <span>قیمت واحد</span>
+                          <Input
+                            disabled
+                            readOnly
+                            value={
+                              product ? formatCurrency(product.unitPrice) : "-"
+                            }
+                          />
+                        </label>
+
+                        <label className="grid gap-1.5 text-xs text-[var(--muted-foreground)]">
+                          <span>موجودی قابل فروش</span>
+                          <Input
+                            disabled
+                            readOnly
+                            value={
+                              product
+                                ? formatNumber(product.availableForSale)
+                                : "-"
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    {product && row.quantity > product.availableForSale ? (
+                      <p className="mt-2 text-xs text-destructive">
+                        تعداد واردشده از موجودی قابل فروش بیشتر است.
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          <section className="border-b border-[var(--border)] py-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-[var(--foreground)]">
+                روش پرداخت
+              </h2>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                نوع تسویه این سفارش را انتخاب کنید.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* پرداخت نقدی */}
+              <button
+                type="button"
+                aria-pressed={paymentMethod === "cash"}
+                onClick={() => {
+                  resetOperation();
+                  setPaymentMethod("cash");
+                }}
+                className={`flex items-center gap-3 rounded-xl border p-4 text-right transition-all ${
+                  paymentMethod === "cash"
+                    ? "border-primary bg-primary/5"
+                    : "border-[var(--border)] bg-[var(--card)] hover:bg-muted/40"
+                }`}
+              >
+                <span
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    paymentMethod === "cash"
+                      ? "border-primary"
+                      : "border-muted-foreground/50"
+                  }`}
+                >
+                  {paymentMethod === "cash" && (
+                    <span className="size-2.5 rounded-full bg-primary" />
+                  )}
+                </span>
+
+                <div className="flex flex-col items-start gap-1">
+                  <span className="text-sm font-semibold text-foreground">
+                    نقدی
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    تسویه نقدی سفارش
+                  </span>
+                </div>
+              </button>
+
+              {/* پرداخت اعتباری */}
+              <button
+                type="button"
+                aria-pressed={paymentMethod === "credit"}
+                onClick={() => {
+                  resetOperation();
+                  setPaymentMethod("credit");
+                }}
+                className={`flex items-center gap-3 rounded-xl border p-4 text-right transition-all ${
+                  paymentMethod === "credit"
+                    ? "border-primary bg-primary/5"
+                    : "border-[var(--border)] bg-[var(--card)] hover:bg-muted/40"
+                }`}
+              >
+                <span
+                  className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                    paymentMethod === "credit"
+                      ? "border-primary"
+                      : "border-muted-foreground/50"
+                  }`}
+                >
+                  {paymentMethod === "credit" && (
+                    <span className="size-2.5 rounded-full bg-primary" />
+                  )}
+                </span>
+
+                <div className="flex flex-col items-start gap-1">
+                  <span className="text-sm font-semibold text-foreground">
+                    اعتباری
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    با ثبت شرایط پرداخت
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {/* توضیحات پرداخت اعتباری */}
+            {paymentMethod === "credit" && (
+              <label className="mt-4 grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
+                <span>توضیحات شرایط پرداخت *</span>
+
+                <Textarea
+                  value={paymentTerms}
+                  onChange={(event) => {
+                    resetOperation();
+                    setPaymentTerms(event.target.value);
+                  }}
+                  placeholder="شرایط پرداخت اعتباری را بنویسید"
+                  className="min-h-[90px] resize-none"
+                />
+
+                {creditInvalid && (
+                  <span className="text-xs text-destructive">
+                    توضیحات شرایط پرداخت الزامی است.
+                  </span>
+                )}
+              </label>
             )}
-          </div>
-        ) : null}
-        <div className="mt-4 flex justify-end">
-          <Button
-            disabled={!canSubmit || submitting}
-            onClick={() => void submit()}
-          >
-            {submitting ? "در حال ثبت..." : "ثبت نهایی سفارش"}
-          </Button>
+          </section>
         </div>
-      </Card>
-    </div>
+
+        <aside className="lg:sticky lg:top-5 lg:border-r lg:border-[var(--border)] lg:pr-6">
+          {" "}
+          <h2 className="font-semibold text-[var(--foreground)]">
+            خلاصه سفارش
+          </h2>
+          <dl className="mt-4 grid gap-3 text-sm">
+            <Summary
+              label="مشتری"
+              value={
+                selectedCustomerLabel ||
+                customers.find(
+                  (customer) => customer.objectId === selectedCustomerId,
+                )?.fullName ||
+                "-"
+              }
+            />
+            <Summary
+              label="انبار"
+              value={
+                options?.stocks.find(
+                  (stock) => stock.objectId === selectedStockId,
+                )?.title || "-"
+              }
+            />
+            <Summary label="برند" value={selectedBrand || "-"} />
+            <Summary
+              label="روش پرداخت"
+              value={paymentMethod === "cash" ? "نقدی" : "اعتباری"}
+            />
+            <Summary
+              label="تعداد اقلام"
+              value={formatNumber(selectedItems.length)}
+            />
+            <Summary label="مبلغ کل" value={formatCurrency(totalAmount)} />
+          </dl>
+          {submitted ? (
+            <div className="mt-5 rounded-lg border border-[var(--border)] bg-muted/40 p-4 text-sm text-[var(--foreground)]">
+              {submitted.status === "completed" ? (
+                <div className="space-y-2">
+                  <p className="font-semibold">
+                    سفارش و پیش‌فاکتور سپیدار با موفقیت ثبت شد.
+                  </p>
+                  {options?.stocks.find(
+                    (stock) => stock.objectId === selectedStockId,
+                  )?.code === 999 && submitted.orderObjectId ? (
+                    <Link
+                      className="block text-primary underline"
+                      href={`/store-expert/orders/${submitted.orderObjectId}/exit-slip`}
+                    >
+                      ثبت خروج کالا با کد رهگیری
+                    </Link>
+                  ) : (
+                    <p>
+                      سفارش در صف خروج انبار قرار گرفت و وضعیت آن توسط انباردار
+                      پیگیری می‌شود.
+                    </p>
+                  )}
+                  {submitted.internalInvoiceObjectId ? (
+                    <Link
+                      className="block text-primary underline"
+                      href={`/accounting/internal-invoices/${submitted.internalInvoiceObjectId}/print`}
+                      target="_blank"
+                    >
+                      دانلود صورتحساب داخلی ماد سنتر
+                    </Link>
+                  ) : null}
+                </div>
+              ) : (
+                <p>
+                  درخواست ثبت شده و منتظر بررسی نتیجه پیش‌فاکتور سپیدار است.
+                  برای جلوگیری از ثبت تکراری، دوباره ارسال نکنید.
+                </p>
+              )}
+            </div>
+          ) : null}
+          <div className="mt-4 flex justify-end">
+            <Button
+              disabled={!canSubmit || submitting}
+              onClick={() => void submit()}
+            >
+              {submitting ? "در حال ثبت..." : "ثبت نهایی سفارش"}
+            </Button>
+          </div>
+        </aside>
+      </div>
+    </Card>
   );
 }
 
