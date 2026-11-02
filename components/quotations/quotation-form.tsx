@@ -29,7 +29,7 @@ import {
   SELECT_REQUIRED_MESSAGE,
   POSITIVE_NUMBER_MESSAGE,
 } from "@/lib/utils/form-validation";
-import { jalaliToIso, todayJalaliParts } from "@/lib/utils/jalali-date";
+import { tomorrowTehranIso } from "@/lib/utils/jalali-date";
 import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 import {
   buildQuotationSubmitPayload,
@@ -95,10 +95,7 @@ export function QuotationForm({
   );
   const [selectedValidUntil, setSelectedValidUntil] = useState(
     initialQuotation?.validUntil?.slice(0, 10) ||
-      (() => {
-        const [year, month, day] = todayJalaliParts();
-        return jalaliToIso(year, month, day);
-      })(),
+      tomorrowTehranIso(),
   );
   const [notes, setNotes] = useState(initialQuotation?.notes || "");
   const [selectedStockObjectId, setSelectedStockObjectId] = useState(
@@ -158,9 +155,11 @@ export function QuotationForm({
           }
         }
         setSalesTypes(normalizedSalesTypes);
-        if (!selectedSalesTypeId && initialQuotation) {
+        if (initialQuotation) {
           const nextSelected = getQuotationSalesTypeOptionKey(initialQuotation);
-          if (nextSelected) setSelectedSalesTypeId(nextSelected);
+          if (nextSelected) {
+            setSelectedSalesTypeId((current: string) => current || nextSelected);
+          }
         }
       } catch {
         if (mounted) setSalesTypes([]);
@@ -185,8 +184,8 @@ export function QuotationForm({
           normalizedCustomers.unshift(quotationCustomerFallback);
         }
         setCustomers(normalizedCustomers);
-        if (!selectedCustomerId && data.length === 1) {
-          setSelectedCustomerId(data[0].objectId);
+        if (data.length === 1) {
+          setSelectedCustomerId((current) => current || data[0].objectId);
         }
       } catch (loadError) {
         if (mounted) setCustomerError(getErrorMessage(loadError));
@@ -204,9 +203,13 @@ export function QuotationForm({
     initialQuotation?.salesTypeObjectId,
     quotationCustomerFallback,
     quotationSalesTypeFallback,
-    selectedCustomerId,
-    selectedSalesTypeId,
   ]);
+
+  const focusField = (id: string) => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.focus({ preventScroll: true });
+    });
+  };
 
   const selectedCustomer = useMemo(
     () =>
@@ -643,12 +646,14 @@ export function QuotationForm({
           <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>مشتری</span>
             <SearchableSelect
+              id="quotation-customer"
               value={selectedCustomerId || undefined}
               onValueChange={(value) => {
                 setSelectedCustomerId(value);
                 setRows([createEmptyRow(0)]);
                 setProducts([]);
                 setSelectedPriceListId("");
+                focusField("quotation-sales-type");
               }}
               options={
                 quotationCustomerFallback &&
@@ -699,8 +704,12 @@ export function QuotationForm({
           <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>روش پرداخت</span>
             <SearchableSelect
+              id="quotation-sales-type"
               value={selectedSalesTypeId || undefined}
-              onValueChange={setSelectedSalesTypeId}
+              onValueChange={(value) => {
+                setSelectedSalesTypeId(value);
+                focusField("quotation-price-list");
+              }}
               options={mergedSalesTypes.map((salesType) => ({
                 value: getSalesTypeOptionKey(salesType),
                 label: salesType.title,
@@ -717,8 +726,12 @@ export function QuotationForm({
           <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>لیست قیمت</span>
             <SearchableSelect
+              id="quotation-price-list"
               value={selectedPriceListId || undefined}
-              onValueChange={setSelectedPriceListId}
+              onValueChange={(value) => {
+                setSelectedPriceListId(value);
+                focusField("quotation-stock");
+              }}
               options={priceListOptions}
               placeholder="انتخاب لیست قیمت"
               searchPlaceholder="جستجو در لیست قیمت"
@@ -730,8 +743,12 @@ export function QuotationForm({
           <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>انبار درخواست</span>
             <SearchableSelect
+              id="quotation-stock"
               value={effectiveStockObjectId || undefined}
-              onValueChange={setSelectedStockObjectId}
+              onValueChange={(value) => {
+                setSelectedStockObjectId(value);
+                focusField("quotation-valid-until");
+              }}
               options={stockOptions}
               placeholder="انتخاب انبار"
               searchPlaceholder="جستجو در انبارها"
@@ -741,6 +758,7 @@ export function QuotationForm({
 
           <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <JalaliDateInput
+              id="quotation-valid-until"
               value={selectedValidUntil}
               onChange={setSelectedValidUntil}
               placeholder="انتخاب تاریخ اعتبار"

@@ -54,6 +54,29 @@ export function todayJalaliParts(): [number, number, number] {
   );
 }
 
+/** Returns tomorrow's calendar date in Tehran as an ISO calendar-date string. */
+export function tomorrowTehranIso(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  ) as Record<"year" | "month" | "day", string>;
+  const tomorrow = new Date(
+    Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day) + 1,
+    ),
+  );
+  return tomorrow.toISOString().slice(0, 10);
+}
+
 export function getJalaliMonthLength(jy: number, jm: number): number {
   if (jm >= 1 && jm <= 6) return 31;
   if (jm >= 7 && jm <= 11) return 30;

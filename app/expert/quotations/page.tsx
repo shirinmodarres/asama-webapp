@@ -102,12 +102,14 @@ export default function ExpertQuotationsPage() {
           >
             مشاهده
           </Link>
-          <Link
-            href={`/expert/quotations/${row.objectId}/edit`}
-            className="btn-primary inline-flex h-9 items-center justify-center rounded-xl px-3 text-xs font-medium text-white"
-          >
-            ویرایش
-          </Link>
+          {row.status === "draft" ? (
+            <Link
+              href={`/expert/quotations/${row.objectId}/edit`}
+              className="btn-primary inline-flex h-9 items-center justify-center rounded-xl px-3 text-xs font-medium text-white"
+            >
+              ویرایش
+            </Link>
+          ) : null}
         </div>
       ),
     },
