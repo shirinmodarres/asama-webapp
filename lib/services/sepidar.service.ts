@@ -22,6 +22,10 @@ export interface SepidarSettings {
   quotationPushEnvironment: "development" | "production";
   quotationPushUpdatedAt: string | null;
   quotationPushUpdatedByName: string | null;
+  sendCustomerToSepidar: boolean;
+  sendQuotationToSepidar: boolean;
+  storeSepidarUpdatedAt: string | null;
+  storeSepidarUpdatedByName: string | null;
 }
 
 export interface UpdateSepidarSettingsPayload {
@@ -119,6 +123,20 @@ export async function updateAutomaticQuotationPush(
   };
 }
 
+export async function updateStoreSepidarSettings(payload: {
+  sendCustomerToSepidar: boolean;
+  sendQuotationToSepidar: boolean;
+}): Promise<Pick<SepidarSettings, "sendCustomerToSepidar" | "sendQuotationToSepidar" | "storeSepidarUpdatedAt" | "storeSepidarUpdatedByName">> {
+  const data = await httpClient.patch<unknown>("/api/integrations/sepidar/settings/store", payload);
+  const record = toRecord(data);
+  return {
+    sendCustomerToSepidar: toBooleanValue(record.sendCustomerToSepidar),
+    sendQuotationToSepidar: toBooleanValue(record.sendQuotationToSepidar),
+    storeSepidarUpdatedAt: toStringValue(record.storeSepidarUpdatedAt) || null,
+    storeSepidarUpdatedByName: toStringValue(record.storeSepidarUpdatedByName) || null,
+  };
+}
+
 export async function testSepidarConnection(): Promise<SepidarConnectionTestResult> {
   const data = await httpClient.post<unknown>(
     "/api/integrations/sepidar/test-connection",
@@ -196,6 +214,10 @@ function mapSepidarSettings(dto: unknown): SepidarSettings {
         : "development",
     quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
     quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
+    sendCustomerToSepidar: toBooleanValue(record.sendCustomerToSepidar),
+    sendQuotationToSepidar: toBooleanValue(record.sendQuotationToSepidar),
+    storeSepidarUpdatedAt: toStringValue(record.storeSepidarUpdatedAt) || null,
+    storeSepidarUpdatedByName: toStringValue(record.storeSepidarUpdatedByName) || null,
   };
 }
 

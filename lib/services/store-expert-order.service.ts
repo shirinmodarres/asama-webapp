@@ -61,6 +61,8 @@ export type StoreOrderSubmission = {
   internalInvoiceObjectId: string | null;
   errorMessage: string | null;
   canReconcile: boolean;
+  dryRun?: boolean;
+  sepidarPayloadPreview?: Record<string, unknown> | null;
 };
 
 export type StoreOrderListResult = {

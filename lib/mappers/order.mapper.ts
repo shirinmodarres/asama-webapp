@@ -505,7 +505,7 @@ function mapQuotationStatus(
 ): QuotationStatus {
   const explicit = toStringValue(value);
   if (explicit === "created") return "success";
-  if (explicit === "success" || explicit === "failed" || explicit === "pending" || explicit === "pending_verification") {
+  if (explicit === "success" || explicit === "failed" || explicit === "pending" || explicit === "pending_verification" || explicit === "dry_run") {
     return explicit;
   }
 

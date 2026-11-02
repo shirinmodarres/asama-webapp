@@ -17,6 +17,7 @@ import {
 } from "@/lib/services/store-expert-customer.service";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { JalaliDateInput } from "../shared/jalali-date-input";
+import { normalizeDigits } from "@/lib/utils/number-format";
 
 type CustomerKind = "individual" | "legal";
 type AddressDraft = {
@@ -138,6 +139,10 @@ export function StoreCustomerRegistrationForm() {
       setResult(next);
       if (next.status === "completed") {
         toast.success("مشتری در سپیدار ثبت شد.");
+        setOperationKey(newOperationKey());
+      } else if (next.status === "dry_run") {
+        console.info("[MAD CENTER][DRY RUN] customer", next.sepidarPayloadPreview || {});
+        toast.error("ارسال مشتری به سپیدار غیرفعال است؛ پیش‌نمایش امن درخواست در Console ثبت شد.");
         setOperationKey(newOperationKey());
       } else {
         toast.error("نتیجه ثبت نیاز به بررسی دارد؛ درخواست دوباره ارسال نشد.");
@@ -277,7 +282,10 @@ export function StoreCustomerRegistrationForm() {
               label="تاریخ تولد"
               value={individual.birthDate}
               onChange={(value) =>
-                setIndividual({ ...individual, birthDate: value })
+                setIndividual((prev) => ({
+                  ...prev,
+                  birthDate: value,
+                }))
               }
               placeholder="انتخاب تاریخ تولد"
             />
@@ -421,8 +429,7 @@ export function StoreCustomerRegistrationForm() {
       </Card>
       <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-[#6B7280]">
-          ثبت مشتری به‌صورت مستقیم در سپیدار انجام می‌شود. استان و شهر فقط در
-          پنل نگهداری می‌شوند.
+          در حالت Dry Run هیچ مشتری در سپیدار ثبت نمی‌شود. استان و شهر فقط در پنل نگهداری می‌شوند.
         </div>
         <Button
           type="submit"
@@ -436,6 +443,8 @@ export function StoreCustomerRegistrationForm() {
           <p className="text-sm text-[#475569]">
             {result.status === "completed"
               ? `مشتری با شناسه سپیدار ${result.sepidarCustomerId ?? "-"} ثبت شد.`
+              : result.status === "dry_run"
+                ? "ارسال به سپیدار غیرفعال است؛ هیچ مشتری ساخته نشد. پیش‌نمایش امن درخواست در Console مرورگر موجود است."
               : result.errorMessage || "وضعیت ثبت نیازمند بررسی است."}
           </p>
           {result.canReconcile ? (
@@ -473,10 +482,19 @@ function Field({
   return (
     <FormField label={required ? `${label} *` : label} error={error}>
       <Input
-        type={type}
-        inputMode={type === "tel" ? "numeric" : undefined}
+        type={type === "number" ? "text" : type}
+        inputMode={type === "number" || type === "tel" ? "numeric" : undefined}
+        dir={type === "number" || type === "tel" ? "ltr" : undefined}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const isNumeric = type === "number" || type === "tel";
+
+          const nextValue = isNumeric
+            ? normalizeDigits(event.target.value).replace(/\D/g, "")
+            : event.target.value;
+
+          onChange(nextValue);
+        }}
         aria-invalid={Boolean(error)}
       />
     </FormField>

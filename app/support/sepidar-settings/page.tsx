@@ -27,6 +27,7 @@ import {
   testSepidarConnection,
   updateSepidarSettings,
   updateAutomaticQuotationPush,
+  updateStoreSepidarSettings,
   type SepidarConnectionTestResult,
   type SepidarDiagnosticStep,
   type SepidarSettings,
@@ -66,6 +67,7 @@ export default function SupportSepidarSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isSavingQuotationPush, setIsSavingQuotationPush] = useState(false);
+  const [isSavingStoreSepidar, setIsSavingStoreSepidar] = useState(false);
   const [syncingKey, setSyncingKey] = useState<SyncKey | "">("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -178,6 +180,28 @@ export default function SupportSepidarSettingsPage() {
       setError(getSepidarUiError(saveError));
     } finally {
       setIsSavingQuotationPush(false);
+    }
+  };
+
+  const changeStoreSepidarSetting = async (
+    key: "sendCustomerToSepidar" | "sendQuotationToSepidar",
+    enabled: boolean,
+  ) => {
+    if (!settings || isSavingStoreSepidar) return;
+    setIsSavingStoreSepidar(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updateStoreSepidarSettings({
+        sendCustomerToSepidar: key === "sendCustomerToSepidar" ? enabled : settings.sendCustomerToSepidar,
+        sendQuotationToSepidar: key === "sendQuotationToSepidar" ? enabled : settings.sendQuotationToSepidar,
+      });
+      setSettings((current) => current ? { ...current, ...updated } : current);
+      setMessage("تنظیمات اتصال مادسنتر به سپیدار ذخیره شد.");
+    } catch (saveError) {
+      setError(getSepidarUiError(saveError));
+    } finally {
+      setIsSavingStoreSepidar(false);
     }
   };
 
@@ -362,6 +386,29 @@ export default function SupportSepidarSettingsPage() {
                   onCheckedChange={changeAutomaticQuotationPush}
                 />
               </div>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-[#102034]">اتصال مادسنتر به سپیدار</h2>
+              <p className="mt-1 text-sm leading-6 text-[#6B7280]">تا زمانی که هر گزینه خاموش است، هیچ POSTی برای همان عملیات به سپیدار ارسال نمی‌شود و فقط پیش‌نمایش امن درخواست نمایش داده می‌شود.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <StoreSepidarToggle
+                title="ارسال مشتری جدید"
+                description="ثبت مشتری مادسنتر در سپیدار"
+                checked={Boolean(settings?.sendCustomerToSepidar)}
+                disabled={isSavingStoreSepidar}
+                onCheckedChange={(enabled) => changeStoreSepidarSetting("sendCustomerToSepidar", enabled)}
+              />
+              <StoreSepidarToggle
+                title="ارسال پیش‌فاکتور"
+                description="ثبت پیش‌فاکتور سفارش مادسنتر در سپیدار"
+                checked={Boolean(settings?.sendQuotationToSepidar)}
+                disabled={isSavingStoreSepidar}
+                onCheckedChange={(enabled) => changeStoreSepidarSetting("sendQuotationToSepidar", enabled)}
+              />
             </div>
           </Card>
 
@@ -754,6 +801,27 @@ function SyncStatusBadge({ status }: { status: string }) {
   if (status === "running") return <Badge variant="warning">در حال اجرا</Badge>;
   if (status === "never_run") return <Badge variant="neutral">اجرا نشده</Badge>;
   return <Badge variant="neutral">{status || "-"}</Badge>;
+}
+
+function StoreSepidarToggle({ title, description, checked, disabled, onCheckedChange }: {
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E7EDF3] p-4">
+      <div>
+        <p className="text-sm font-semibold text-[#102034]">{title}</p>
+        <p className="mt-1 text-xs text-[#6B7280]">{description}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={checked ? "success" : "neutral"} dot>{checked ? "فعال" : "Dry Run"}</Badge>
+        <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={title} />
+      </div>
+    </div>
+  );
 }
 
 function formatDateValue(value?: string | null): string {

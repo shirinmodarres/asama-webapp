@@ -78,7 +78,7 @@ export default function InternalInvoiceDetailPage() {
 
   const handleMarkEntered = async () => {
     setFieldError("");
-    if (invoice?.orderType !== "store" && !manualInvoiceNumber.trim()) {
+    if (!manualInvoiceNumber.trim()) {
       setFieldError("شماره فاکتور حسابداری الزامی است.");
       return;
     }
@@ -91,7 +91,7 @@ export default function InternalInvoiceDetailPage() {
         accountantNote,
       });
       setInvoice(updated);
-      setMessage(invoice?.orderType === "store" ? "فاکتور سپیدار صادر و فاکتور داخلی ثبت شد." : "فاکتور داخلی به عنوان ثبت‌شده در حسابداری علامت‌گذاری شد.");
+      setMessage("فاکتور داخلی به عنوان ثبت‌شده در حسابداری علامت‌گذاری شد.");
       setIsDialogOpen(false);
     } catch (submitError) {
       setError(getErrorMessage(submitError));
@@ -239,9 +239,6 @@ export default function InternalInvoiceDetailPage() {
                 label="تاریخ فاکتور"
                 value={formatDateTime(invoice.invoiceDate || invoice.createdAt)}
               />
-              {invoice.sepidarInvoiceNumber ? (
-                <Info label="شماره فاکتور سپیدار" value={formatFaDigits(invoice.sepidarInvoiceNumber)} />
-              ) : null}
               <div>
                 <p className="text-xs text-[#6B7280]">وضعیت</p>
                 <Badge
@@ -309,13 +306,13 @@ export default function InternalInvoiceDetailPage() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                  <DialogTitle>{invoice.orderType === "store" ? "صدور فاکتور سپیدار" : "ثبت فاکتور در حسابداری"}</DialogTitle>
+                  <DialogTitle>ثبت فاکتور در حسابداری</DialogTitle>
                 <DialogDescription>
-                  {invoice.orderType === "store" ? "فاکتور واقعی بر اساس پیش‌فاکتور سپیدار صادر می‌شود و سپس در حسابداری ثبت می‌گردد." : "شماره ثبت دستی و توضیح حسابدار را وارد کنید."}
+                  شماره ثبت دستی و توضیح حسابدار را وارد کنید.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4">
-                {invoice.orderType !== "store" ? <label className="grid gap-2 text-sm font-medium text-[#334155]">
+                <label className="grid gap-2 text-sm font-medium text-[#334155]">
                   <span>شماره فاکتور حسابداری</span>
                   <Input
                     value={manualInvoiceNumber}
@@ -327,7 +324,7 @@ export default function InternalInvoiceDetailPage() {
                     aria-invalid={Boolean(fieldError)}
                   />
                   <FieldError message={fieldError} />
-                </label> : null}
+                </label>
                 <label className="grid gap-2 text-sm font-medium text-[#334155]">
                   <span>یادداشت حسابدار</span>
                   <Textarea
@@ -349,7 +346,7 @@ export default function InternalInvoiceDetailPage() {
                   onClick={handleMarkEntered}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? "در حال ثبت..." : invoice.orderType === "store" ? "صدور فاکتور سپیدار" : "ثبت شد در حسابداری"}
+                  {isSubmitting ? "در حال ثبت..." : "ثبت شد در حسابداری"}
                 </Button>
               </DialogFooter>
             </DialogContent>

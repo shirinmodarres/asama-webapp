@@ -261,6 +261,11 @@ export function StoreOrderForm() {
         })),
       });
       setSubmitted(result);
+      if (result.status === "dry_run") {
+        console.info("[MAD CENTER][DRY RUN] quotation", result.sepidarPayloadPreview || {});
+        window.sessionStorage.removeItem("asama:store-expert:order-operation");
+        operationKeyRef.current = null;
+      }
       if (result.status === "completed")
         window.sessionStorage.removeItem("asama:store-expert:order-operation");
     } catch (reason) {
@@ -645,6 +650,12 @@ export function StoreOrderForm() {
                   </Link>
                 ) : null}
               </div>
+            ) : submitted.status === "dry_run" ? (
+              <p>
+                ارسال پیش‌فاکتور به سپیدار غیرفعال است؛ هیچ رزرو یا حواله‌ای
+                ایجاد نشد. پیش‌نمایش امن payload با برچسب {" "}
+                <code>[MAD CENTER][DRY RUN]</code> در Console مرورگر ثبت شده است.
+              </p>
             ) : (
               <p>
                 درخواست ثبت شده و منتظر بررسی نتیجه پیش‌فاکتور سپیدار است. برای

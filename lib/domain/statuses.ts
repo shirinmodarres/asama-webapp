@@ -12,6 +12,7 @@ export type OrderStatusCode =
   | "returned"
   | "returnedAfterInvoice"
   | "store_quotation_pending"
+  | "store_quotation_dry_run"
   | "store_quotation_pending_verification"
   | "store_quotation_failed";
 
@@ -26,7 +27,8 @@ export type WarehouseStatusCode =
   | "awaitingNajaDetails"
   | "najaDetailsCompleted"
   | "returnedFromWarehouse"
-  | "storeQuotationPending";
+  | "storeQuotationPending"
+  | "storeQuotationDryRun";
 
 export type ProductStatusCode = "active" | "inactive";
 export type InvoiceStatusCode = "issued" | "needs_follow_up";
@@ -52,6 +54,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   returned: "برگشتی",
   returnedAfterInvoice: "برگشتی پس از فاکتور",
   store_quotation_pending: "در انتظار ثبت پیش‌فاکتور سپیدار",
+  store_quotation_dry_run: "پیش‌نمایش پیش‌فاکتور فروشگاه",
   store_quotation_pending_verification: "در انتظار بررسی نتیجه پیش‌فاکتور سپیدار",
   store_quotation_failed: "ثبت پیش‌فاکتور سپیدار ناموفق",
 };
@@ -68,6 +71,7 @@ export const WAREHOUSE_STATUS_LABELS: Record<WarehouseStatusCode, string> = {
   najaDetailsCompleted: "اطلاعات انبار ناجا تکمیل شد",
   returnedFromWarehouse: "برگشتی از انبار",
   storeQuotationPending: "در انتظار ثبت پیش‌فاکتور سپیدار",
+  storeQuotationDryRun: "پیش‌نمایش پیش‌فاکتور فروشگاه",
 };
 
 export const PRODUCT_STATUS_LABELS: Record<ProductStatusCode, string> = {

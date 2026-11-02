@@ -24,6 +24,7 @@ import { formatFaDigits } from "@/lib/utils/number-format";
 const PAGE_SIZE = 20;
 const STORE_STATUSES = [
   "store_quotation_pending",
+  "store_quotation_dry_run",
   "store_quotation_pending_verification",
   "store_quotation_failed",
   "approved",
@@ -85,6 +86,7 @@ export default function StoreExpertOrdersPage() {
 
 export function QuotationState({ order, compact = false }: { order: Order; compact?: boolean }) {
   if (order.quotationSyncStatus === "success" || order.sepidarQuotationId) return <div className="space-y-1"><StatusBadge type="order" status="approved" /><p className="text-xs text-[var(--muted-foreground)]">{order.sepidarQuotationNumber ? `شماره: ${formatFaDigits(order.sepidarQuotationNumber)}` : "ثبت شد"}</p></div>;
+  if (order.quotationSyncStatus === "dry_run" || order.orderStatus === "store_quotation_dry_run") return <div className="space-y-1"><span className="text-sm font-medium text-[var(--muted-foreground)]">پیش‌نمایش؛ ارسال نشده</span>{!compact && <p className="text-sm text-[var(--muted-foreground)]">ارسال پیش‌فاکتور مادسنتر به سپیدار غیرفعال بوده است.</p>}</div>;
   if (order.quotationSyncStatus === "pending_verification" || order.orderStatus === "store_quotation_pending_verification") return <div className="space-y-1"><span className="text-sm font-medium text-amber-700 dark:text-amber-300">در انتظار بررسی سپیدار</span>{!compact && <p className="text-sm text-[var(--muted-foreground)]">پاسخ سپیدار قطعی نبوده است؛ برای جلوگیری از ثبت تکراری، سفارش دوباره ارسال نمی‌شود.</p>}</div>;
   if (order.quotationSyncStatus === "failed" || order.orderStatus === "store_quotation_failed") return <div className="space-y-1"><span className="text-sm font-medium text-destructive">ثبت پیش‌فاکتور ناموفق</span>{!compact && <p className="text-sm text-destructive">{order.quotationSyncError || order.sepidarLastError || "خطای نامشخص سپیدار"}</p>}</div>;
   return <div className="space-y-1"><span className="text-sm font-medium text-[var(--muted-foreground)]">در حال ثبت پیش‌فاکتور</span>{!compact && <p className="text-sm text-[var(--muted-foreground)]">نتیجه ثبت پیش‌فاکتور هنوز دریافت نشده است.</p>}</div>;

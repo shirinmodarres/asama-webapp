@@ -4,7 +4,7 @@ import type { Product } from "@/lib/models/product.model";
 
 export type OrderType = "normal" | "naja" | "store";
 export type FulfillmentStatus = "normal" | "onHold";
-export type QuotationStatus = "success" | "failed" | "pending" | "pending_verification";
+export type QuotationStatus = "success" | "failed" | "pending" | "pending_verification" | "dry_run";
 
 export interface OrderItem {
   objectId: string;

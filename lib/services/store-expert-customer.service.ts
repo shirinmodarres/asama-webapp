@@ -29,11 +29,13 @@ export type StoreCustomerRegistrationPayload = {
 
 export type StoreCustomerRegistrationResult = {
   operationKey: string;
-  status: "submitting" | "completed" | "pending_verification" | "failed";
+  status: "submitting" | "completed" | "pending_verification" | "failed" | "dry_run";
   customerId: string | null;
   sepidarCustomerId: number | null;
   errorMessage: string | null;
   canReconcile: boolean;
+  dryRun?: boolean;
+  sepidarPayloadPreview?: Record<string, unknown> | null;
 };
 
 export async function registerStoreCustomer(payload: StoreCustomerRegistrationPayload) {
