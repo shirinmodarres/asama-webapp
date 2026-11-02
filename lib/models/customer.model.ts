@@ -41,6 +41,24 @@ export interface Customer {
   id: string;
   sepidarCustomerId: string | null;
   sepidarCustomerCode: string | null;
+  sepidarGuid?: string | null;
+  sepidarDetails?: {
+    title: string | null;
+    code: string | null;
+    customerType: number | null;
+    name: string | null;
+    lastName: string | null;
+    birthDate: string | null;
+    nationalId: string | null;
+    economicCode: string | null;
+    registrationCode: string | null;
+    version: number | null;
+    groupingRef: number | null;
+    discountRate: number | null;
+    accountingRemainder: number | null;
+    creditRemainder: number | null;
+    remainderWithoutCheque: number | null;
+  };
   saleType: {
     objectId: string | null;
     sepidarSaleTypeId: number | null;

@@ -27,6 +27,7 @@ export function mapCustomerDto(dto: unknown): Customer {
   const record = toRecord(dto);
   const status = mapCustomerStatus(record.status);
   const rawSepidarCustomer = toRecord(record.rawSepidarCustomer);
+  const sepidarDetails = toRecord(record.sepidarDetails);
   const sepidarAddresses = toArray(
     record.sepidarAddresses ?? rawSepidarCustomer.Addresses,
   ).map((address) => mapCustomerAddressDto(address, record));
@@ -59,6 +60,23 @@ export function mapCustomerDto(dto: unknown): Customer {
     sepidarCustomerCode: toNullableString(
       record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
     ),
+    sepidarDetails: {
+      title: toNullableString(sepidarDetails.title),
+      code: toNullableString(sepidarDetails.code),
+      customerType: nullableNumber(sepidarDetails.customerType),
+      name: toNullableString(sepidarDetails.name),
+      lastName: toNullableString(sepidarDetails.lastName),
+      birthDate: toNullableString(sepidarDetails.birthDate),
+      nationalId: toNullableString(sepidarDetails.nationalId),
+      economicCode: toNullableString(sepidarDetails.economicCode),
+      registrationCode: toNullableString(sepidarDetails.registrationCode),
+      version: nullableNumber(sepidarDetails.version),
+      groupingRef: nullableNumber(sepidarDetails.groupingRef),
+      discountRate: nullableNumber(sepidarDetails.discountRate),
+      accountingRemainder: nullableNumber(sepidarDetails.accountingRemainder),
+      creditRemainder: nullableNumber(sepidarDetails.creditRemainder),
+      remainderWithoutCheque: nullableNumber(sepidarDetails.remainderWithoutCheque),
+    },
     saleType: mapCustomerSaleType(record.saleType),
     priceListId: legacyPriceListId,
     priceListIds: priceListIds.length
@@ -105,6 +123,12 @@ export function mapCustomerDto(dto: unknown): Customer {
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
   };
+}
+
+function nullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const number = toNumberValue(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function mapCustomerGroupingDto(value: unknown): CustomerGrouping | null {
