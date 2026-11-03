@@ -240,6 +240,7 @@ export interface ExitSlip {
   slipCode: string;
   orderId: string;
   orderCode: string;
+  orderType: string | null;
   issuedByName: string;
   exitDate: string;
   deliveryToken: string | null;
@@ -281,6 +282,8 @@ export interface ExitSlipPdfData {
   slipCode: string;
   receiptCode: string | null;
   orderCode: string;
+  orderType: string | null;
+  najaOrderNumber: string | null;
   issueDate: string | null;
   customer: {
     name: string | null;

@@ -6,6 +6,7 @@ import { formatFaDigits } from "@/lib/utils/number-format";
 interface SlipDetailsCardProps {
   slipNumber: string;
   orderCode: string;
+  najaOrderNumber?: string | null;
   exitDate: string;
   createdBy: string;
   createdAt: string;
@@ -17,6 +18,7 @@ interface SlipDetailsCardProps {
 export function SlipDetailsCard({
   slipNumber,
   orderCode,
+  najaOrderNumber,
   exitDate,
   createdBy,
   createdAt,
@@ -42,6 +44,9 @@ export function SlipDetailsCard({
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
         <Item label="شماره حواله" value={formatFaDigits(slipNumber)} />
         <Item label="سفارش مرتبط" value={formatFaDigits(orderCode)} />
+        {najaOrderNumber ? (
+          <Item label="کد سفارش ناجا" value={formatFaDigits(najaOrderNumber)} />
+        ) : null}
         <Item label="تاریخ خروج" value={formatDate(exitDate)} />
         <Item label="مسئول ثبت" value={createdBy} />
         <Item label="زمان ثبت" value={formatDateTime(createdAt)} />

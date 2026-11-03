@@ -88,6 +88,7 @@ export default function ExitSlipPdfPage() {
 function buildExitSlipDocumentData(data: ExitSlipPdfData) {
   const customer = resolveExitSlipPdfCustomer(data);
   const recipient = resolveExitSlipPdfRecipient(data);
+  const isNajaOrder = data.orderType === "naja";
   const hasRecipientName = Boolean(
     recipient.fullName?.trim() ||
       data.receiver.fullName?.trim() ||
@@ -106,7 +107,7 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
     },
   ];
 
-  if (hasRecipientName) {
+  if (isNajaOrder || hasRecipientName) {
     informationSections.push({
       title: "اطلاعات تحویل‌گیرنده ناجا",
       fields: [
@@ -160,6 +161,9 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
     headerFields: [
       { label: "کد حواله", value: formatFaDigits(data.slipCode) || "-" },
       { label: "کد سفارش", value: formatFaDigits(data.orderCode) || "-" },
+      ...(isNajaOrder && recipient.najaOrderNumber
+        ? [{ label: "کد سفارش ناجا", value: formatFaDigits(recipient.najaOrderNumber) }]
+        : []),
       { label: "تاریخ صدور", value: data.issueDate ? formatDateTime(data.issueDate) : "-" },
     ],
     informationSections,

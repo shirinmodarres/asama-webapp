@@ -373,6 +373,7 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     ),
     orderId: toStringValue(source.orderId),
     orderCode: normalizeDigits(toStringValue(source.orderCode)),
+    orderType: toNullableString(source.orderType ?? orderRecord.orderType),
     issuedByName: toStringValue(source.issuedByName),
     exitDate: toStringValue(source.exitDate),
     deliveryToken: toNullableString(source.deliveryToken),
@@ -493,6 +494,13 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
     slipCode: normalizeDigits(toStringValue(record.slipCode)),
     receiptCode: toNullableString(record.receiptCode),
     orderCode: normalizeDigits(toStringValue(record.orderCode)),
+    orderType: toNullableString(record.orderType ?? orderRecord.orderType),
+    najaOrderNumber: normalizeNullableDigits(
+      record.najaOrderNumber ??
+        record.externalOrderNumber ??
+        orderRecord.najaOrderNumber ??
+        orderRecord.externalOrderNumber,
+    ),
     issueDate: toNullableString(record.issueDate),
     customer: {
       name: toNullableString(

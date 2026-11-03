@@ -117,6 +117,9 @@ export default function ExitSlipDetailsPage() {
           <SlipDetailsCard
             slipNumber={slip.slipCode || slip.id}
             orderCode={slip.orderCode}
+            najaOrderNumber={
+              isNajaOrder ? resolvedRecipient?.najaOrderNumber : null
+            }
             exitDate={slip.exitDate}
             createdBy={slip.issuedByName}
             createdAt={slip.createdAt}

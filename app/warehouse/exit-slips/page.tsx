@@ -102,7 +102,16 @@ export default function WarehouseExitSlipsPage() {
     {
       key: "order",
       header: "سفارش مرتبط",
-      render: (row) => formatFa(row.slip.orderCode) || "-",
+      render: (row) => (
+        <div className="grid gap-1">
+          <span>{formatFa(row.slip.orderCode) || "-"}</span>
+          {row.slip.orderType === "naja" && row.slip.najaOrderNumber ? (
+            <span className="text-xs text-[#6B7280]">
+              کد ناجا: {formatFa(row.slip.najaOrderNumber)}
+            </span>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "customer",
