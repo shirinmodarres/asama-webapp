@@ -616,6 +616,16 @@ export default function ExitSlipCreatePage() {
                 label="نوع سفارش"
                 value={order.orderType === "naja" ? "ناجا" : "بازار"}
               />
+              {order.orderType === "naja" ? (
+                <InfoItem
+                  label="کد سفارش ناجا"
+                  value={
+                    order.najaOrderNumber
+                      ? formatFaDigits(order.najaOrderNumber)
+                      : "-"
+                  }
+                />
+              ) : null}
               <InfoItem
                 label="انبار خروج"
                 value={order.stockTitle || order.warehouseName || "-"}
