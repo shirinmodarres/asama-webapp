@@ -52,17 +52,25 @@ export function getReceiverName(
 export function formatDeliveryAddress(address: AddressLike): string {
   if (!address) return "آدرس ثبت نشده است.";
 
-  const parts = [
-    getAddressValue(address, "addressText"),
-    getAddressValue(address, "province"),
-    getAddressValue(address, "county"),
-    getAddressValue(address, "city"),
-    getAddressValue(address, "fullAddress"),
-    getAddressPostalCode(address),
-    formatPlaqueUnit(address),
-  ].filter(Boolean);
+  const fullAddress = getAddressValue(address, "fullAddress");
+  const parts = fullAddress
+    ? [
+        fullAddress,
+        getAddressPostalCode(address),
+        formatPlaqueUnit(address),
+      ].filter(Boolean)
+    : [
+        getAddressValue(address, "addressText"),
+        getAddressValue(address, "province"),
+        getAddressValue(address, "county"),
+        getAddressValue(address, "city"),
+        getAddressPostalCode(address),
+        formatPlaqueUnit(address),
+      ].filter(Boolean);
 
-  return parts.length ? parts.join("، ") : "آدرس ثبت نشده است.";
+  return parts.length
+    ? [...new Set(parts)].join("، ")
+    : "آدرس ثبت نشده است.";
 }
 
 export function formatPlaqueUnit(address: AddressLike): string {
