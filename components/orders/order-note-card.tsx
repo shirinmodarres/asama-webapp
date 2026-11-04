@@ -1,9 +1,13 @@
 import { Card } from "@/components/ui/card";
-import { getSalesRequestDiscountNote } from "@/lib/utils/order-financial-display";
+import {
+  getManualOrderNotes,
+  getSalesRequestDiscountNote,
+} from "@/lib/utils/order-financial-display";
 
 export function OrderNoteCard({ notes }: { notes: string | null }) {
   if (!notes) return null;
   const discountNote = getSalesRequestDiscountNote(notes);
+  const manualNotes = getManualOrderNotes(notes);
 
   return (
     <Card className="p-5">
@@ -13,9 +17,11 @@ export function OrderNoteCard({ notes }: { notes: string | null }) {
           تخفیف سفارش: {discountNote}
         </p>
       ) : null}
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#334155]">
-        {notes}
-      </p>
+      {manualNotes ? (
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#334155]">
+          {manualNotes}
+        </p>
+      ) : null}
     </Card>
   );
 }

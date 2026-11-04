@@ -1499,7 +1499,7 @@ export function OrderForm({
                 </p>
                 <p>
                   آدرس کامل:{" "}
-                  {selectedAddress.Address || formatDeliveryAddress(selectedAddress)}
+                  {formatDeliveryAddress(selectedAddress)}
                 </p>
               </div>
             ) :

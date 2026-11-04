@@ -79,13 +79,7 @@ export function CustomerInfoCard({
           {!hideDeliveryInfo ? (
             <InfoItem
               label="آدرس تحویل"
-              value={
-                order.selectedCustomerAddressText ||
-                order.customerAddressText ||
-                order.deliveryFullAddress ||
-                order.customerAddress ||
-                "-"
-              }
+              value={formatDeliveryAddress(order)}
               className="sm:col-span-2"
             />
           ) : // <>

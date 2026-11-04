@@ -442,6 +442,9 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     deliveryCounty: toNullableString(
       source.deliveryCounty ?? deliveryAddress.county,
     ),
+    deliveryPostalCode: toNullableString(
+      source.deliveryPostalCode ?? deliveryAddress.postalCode,
+    ),
     deliveryAddress: fullAddress,
     notes: toNullableString(source.notes),
     internalInvoiceObjectId: toNullableString(
@@ -559,6 +562,7 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
       city: toNullableString(deliveryAddress.city),
       county: toNullableString(deliveryAddress.county),
       fullAddress: toNullableString(deliveryAddress.fullAddress),
+      postalCode: toNullableString(deliveryAddress.postalCode),
       formatted: toNullableString(deliveryAddress.formatted),
     },
     items: items.length ? items : groupUnitsByProduct(units),

@@ -267,6 +267,7 @@ export interface ExitSlip {
   deliveryProvince: string | null;
   deliveryCity: string | null;
   deliveryCounty: string | null;
+  deliveryPostalCode: string | null;
   deliveryAddress: string | null;
   notes: string | null;
   internalInvoiceObjectId: string | null;
@@ -313,6 +314,7 @@ export interface ExitSlipPdfData {
     city: string | null;
     county: string | null;
     fullAddress: string | null;
+    postalCode?: string | null;
     formatted: string | null;
   };
   items: ExitSlipItemGroup[];

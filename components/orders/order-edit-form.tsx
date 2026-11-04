@@ -636,7 +636,7 @@ export function OrderEditForm({
               ) : null}
               {selectedAddress ? (
                 <span className="sm:col-span-2">
-                  آدرس تحویل: {getCustomerAddressText(selectedAddress) || "-"}
+                  آدرس تحویل: {formatDeliveryAddress(selectedAddress)}
                 </span>
               ) : null}
             </div>
@@ -676,8 +676,7 @@ export function OrderEditForm({
                 </p>
                 <p>
                   آدرس کامل:{" "}
-                  {getCustomerAddressText(selectedAddress) ||
-                    formatDeliveryAddress(selectedAddress)}
+                  {formatDeliveryAddress(selectedAddress)}
                 </p>
               </div>
             ) : null}

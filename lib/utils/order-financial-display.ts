@@ -18,6 +18,16 @@ export function getSalesRequestDiscountNote(notes?: string | null): string | nul
   return value || null;
 }
 
+export function getManualOrderNotes(notes?: string | null): string | null {
+  if (!notes) return null;
+  const manualNotes = notes
+    .split(/\r?\n/)
+    .filter((item) => !item.trim().startsWith(SALES_REQUEST_DISCOUNT_NOTE_PREFIX))
+    .join("\n")
+    .trim();
+  return manualNotes || null;
+}
+
 export function getSalesRequestDiscountPercentage(
   notes?: string | null,
 ): number | null {

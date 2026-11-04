@@ -243,11 +243,15 @@ export default function DeliveryConfirmationPage() {
                   />
                   <InfoItem
                     label="آدرس تحویل"
-                    value={
-                      delivery.deliveryAddress ||
-                      delivery.deliveryFullAddress ||
-                      "-"
-                    }
+                    value={[
+                      delivery.deliveryProvince,
+                      delivery.deliveryCity,
+                      delivery.deliveryCounty,
+                      delivery.deliveryFullAddress || delivery.deliveryAddress,
+                      delivery.deliveryPostalCode
+                        ? `کدپستی ${formatFaDigits(delivery.deliveryPostalCode)}`
+                        : null,
+                    ].filter(Boolean).join("، ") || "-"}
                     className="sm:col-span-2"
                   />
                 </dl>
