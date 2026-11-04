@@ -20,6 +20,7 @@ import {
   getSepidarSettings,
   getSepidarSyncSummary,
   syncSepidarCustomers,
+  syncSepidarGeographicAreas,
   syncSepidarItems,
   syncSepidarPrices,
   syncSepidarSaleTypes,
@@ -44,7 +45,7 @@ import {
 } from "@/lib/services/pricing.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
-type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks";
+type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks" | "geographic-areas";
 type PriceNoteItemsSyncResult = NonNullable<PriceNoteItemsSyncJob["result"]> & {
   syncedAt: string;
 };
@@ -55,6 +56,7 @@ const SYNC_LABELS: Record<SyncKey, string> = {
   "sale-types": "نوع‌های فروش",
   prices: "قیمت‌ها",
   stocks: "انبارها",
+  "geographic-areas": "استان‌ها و شهرها",
 };
 
 export default function SupportSepidarSettingsPage() {
@@ -444,7 +446,7 @@ export default function SupportSepidarSettingsPage() {
                   داده‌های آساما را با آخرین اطلاعات سپیدار به‌روزرسانی کنید.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7">
                 <SyncButton
                   label="کالاها"
                   loading={syncingKey === "items"}
@@ -474,6 +476,12 @@ export default function SupportSepidarSettingsPage() {
                   loading={syncingKey === "stocks"}
                   disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("stocks", syncSepidarStocks)}
+                />
+                <SyncButton
+                  label="استان‌ها و شهرها"
+                  loading={syncingKey === "geographic-areas"}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
+                  onClick={() => runSync("geographic-areas", syncSepidarGeographicAreas)}
                 />
                 <SyncButton
                   label="آیتم‌های لیست قیمت"
