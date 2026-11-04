@@ -207,6 +207,7 @@ export function mapCustomerAddressDto(
     address: toNullableString(record.address ?? record.Address),
     province: toStringValue(record.province),
     city: toStringValue(record.city),
+    cityTitle: toNullableString(record.cityTitle) || toNullableString(record.city),
     county: toNullableString(record.county),
     fullAddress: toStringValue(record.fullAddress),
     postalCode: record.postalCode

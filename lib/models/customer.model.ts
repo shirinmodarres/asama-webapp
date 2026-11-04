@@ -26,6 +26,7 @@ export interface CustomerAddress {
   postalCode: string | null;
   zipCode?: string | null;
   cityRef?: number | null;
+  cityTitle?: string | null;
   pathRef?: number | null;
   plaque: string | null;
   unit: string | null;
