@@ -184,6 +184,7 @@ export async function syncSepidarStocks(): Promise<SepidarSyncOperationSummary> 
 export async function syncSepidarGeographicAreas(): Promise<SepidarSyncOperationSummary> {
   const data = await httpClient.post<unknown>(
     "/api/store-expert/geographic-areas/sync",
+    { force: true },
   );
   return mapSepidarSyncOperationSummary(data);
 }
