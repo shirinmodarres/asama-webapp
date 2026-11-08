@@ -17,7 +17,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
-import { listOrders } from "@/lib/services/order.service";
+import { approveOrder, listOrders } from "@/lib/services/order.service";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -31,6 +31,7 @@ export default function ManagerPendingOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("workflow_pending");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
   const workflowPendingStatuses = [
     "pending_financial_approval",
     "pending_manager_approval",
@@ -112,6 +113,22 @@ export default function ManagerPendingOrdersPage() {
     [orders],
   );
 
+  const approveFromList = async (order: Order) => {
+    setApprovingOrderId(order.objectId);
+    setError("");
+    try {
+      // Use the same canonical manager-approval endpoint as the detail page.
+      const result = await approveOrder(order.objectId);
+      setOrders((current) => current.map((entry) => (
+        entry.objectId === order.objectId && result.order ? result.order : entry
+      )));
+    } catch (approvalError) {
+      setError(getErrorMessage(approvalError));
+    } finally {
+      setApprovingOrderId(null);
+    }
+  };
+
   const columns: DataTableColumn<Order>[] = [
     {
       key: "code",
@@ -161,12 +178,23 @@ export default function ManagerPendingOrdersPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => (
-        <Link
-          href={`/manager/orders/${row.objectId}`}
-          className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs text-white!"
-        >
-          بررسی سفارش
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {row.orderType !== "naja" && row.orderStatus === "pending_manager_approval" ? (
+            <Button
+              size="sm"
+              disabled={approvingOrderId === row.objectId}
+              onClick={() => void approveFromList(row)}
+            >
+              {approvingOrderId === row.objectId ? "در حال تأیید..." : "تأیید"}
+            </Button>
+          ) : null}
+          <Link
+            href={`/manager/orders/${row.objectId}`}
+            className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs text-white!"
+          >
+            بررسی سفارش
+          </Link>
+        </div>
       ),
     },
   ];

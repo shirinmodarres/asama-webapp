@@ -58,6 +58,15 @@ export async function getAssignedCustomerDetailsForExpert(
   return mapCustomerListDto([normalizeAssignedCustomerDto(data)])[0]!;
 }
 
+export async function refreshAssignedCustomerDetailsForExpert(
+  customerObjectId: string,
+): Promise<Customer> {
+  const data = await httpClient.post<unknown>(
+    `/api/expert/assigned-customers/${customerObjectId}/refresh`,
+  );
+  return mapCustomerListDto([normalizeAssignedCustomerDto(data)])[0]!;
+}
+
 export async function getAssignedCustomerForExpert(
   customerObjectId: string,
   expertUserId?: string,

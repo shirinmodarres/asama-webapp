@@ -1116,18 +1116,6 @@ export default function ManagerOrderReviewPage() {
                   </Button>
                 ) : null}
 
-                {canApprove && !isFinancialReviewer ? (
-                  <Button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => setDecision("approve")}
-                    className="w-full justify-center gap-2"
-                  >
-                    <CheckCircle2 className="size-4" />
-                    تایید و ارسال برای انتقال بار
-                  </Button>
-                ) : null}
-
                 {canApprove ? (
                   <Button
                     type="button"

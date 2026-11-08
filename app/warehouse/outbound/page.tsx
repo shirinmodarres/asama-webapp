@@ -11,18 +11,19 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
-import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatNumber } from "@/lib/expert/utils";
+import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
 import { listStocks } from "@/lib/services/stock.service";
 import { listWarehouseOrders } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import { getOrderDisplayDiscountAmount } from "@/lib/utils/order-financial-display";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 const PAGE_SIZE = 15;
 
@@ -147,9 +148,24 @@ export default function WarehouseOutboundPage() {
       render: (row) => row.warehouseStatusLabel || row.warehouseStatus,
     },
     {
-      key: "amounts",
-      header: "مبالغ سفارش",
-      render: (row) => <OrderFinancialAmounts order={row} />,
+      key: "finalAmount",
+      header: "مبلغ نهایی",
+      render: (row) => {
+        const subtotal = row.items.reduce(
+          (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+          0,
+        );
+        const discount = getOrderDisplayDiscountAmount({
+          totalAmount: subtotal,
+          storedDiscountAmount: row.salesRequestDiscountTotal,
+          notes: row.notes,
+        });
+        const finalAmount = calculateSalesRequestFinancials(
+          subtotal,
+          subtotal > 0 ? (discount / subtotal) * 100 : 0,
+        ).total;
+        return formatCurrency(finalAmount);
+      },
     },
     {
       key: "fulfillmentStatus",

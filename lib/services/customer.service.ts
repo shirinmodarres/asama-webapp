@@ -59,6 +59,11 @@ export async function getSupportCustomer(objectId: string): Promise<Customer> {
   return mapCustomerDto(data);
 }
 
+export async function refreshSupportCustomer(objectId: string): Promise<Customer> {
+  const data = await httpClient.post<unknown>(`/api/support/customers/${objectId}/refresh`);
+  return mapCustomerDto(data);
+}
+
 export async function createCustomer(
   payload: CustomerPayload,
 ): Promise<Customer> {

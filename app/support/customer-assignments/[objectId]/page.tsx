@@ -13,7 +13,7 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Customer } from "@/lib/models/customer.model";
-import { getSupportCustomer } from "@/lib/services/customer.service";
+import { getSupportCustomer, refreshSupportCustomer } from "@/lib/services/customer.service";
 import { listExpertCustomerAssignmentsPage } from "@/lib/services/customer-assignment.service";
 
 export default function SupportCustomerDetailsPage() {
@@ -22,6 +22,7 @@ export default function SupportCustomerDetailsPage() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -63,8 +64,30 @@ export default function SupportCustomerDetailsPage() {
     return () => { mounted = false; };
   }, [objectId]);
 
+  const refreshCustomer = async () => {
+    setIsRefreshing(true);
+    setError("");
+    try {
+      const refreshed = await refreshSupportCustomer(objectId);
+      setCustomer((current) => current ? {
+        ...refreshed,
+        assignedExpertName: current.assignedExpertName,
+        priceLists: current.priceLists,
+        priceListIds: current.priceListIds,
+        priceListId: current.priceListId,
+        priceListTitle: current.priceListTitle,
+        priceListType: current.priceListType,
+        priceListBrand: current.priceListBrand,
+      } : refreshed);
+    } catch (refreshError) {
+      setError(getErrorMessage(refreshError));
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return <DashboardLayout role="support" title="جزئیات مشتری">
     <SectionHeader title="جزئیات مشتری" description="اطلاعات سپیدار، دسته‌بندی فروش و تخصیص کارشناس." actions={<Button asChild variant="outline"><Link href="/support/customer-assignments"><ArrowRight className="size-4" />بازگشت</Link></Button>} />
-    {isLoading ? <LoadingState title="در حال دریافت اطلاعات مشتری" /> : error ? <PageErrorMessage title="دریافت اطلاعات مشتری انجام نشد" message={error} /> : customer ? <CustomerDetails customer={customer} /> : <EmptyState title="مشتری پیدا نشد" description="شناسه مشتری معتبر نیست." />}
+    {isLoading ? <LoadingState title="در حال دریافت اطلاعات مشتری" /> : error && !customer ? <PageErrorMessage title="دریافت اطلاعات مشتری انجام نشد" message={error} /> : customer ? <><CustomerDetails customer={customer} onRefresh={() => void refreshCustomer()} isRefreshing={isRefreshing} />{error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}</> : <EmptyState title="مشتری پیدا نشد" description="شناسه مشتری معتبر نیست." />}
   </DashboardLayout>;
 }
