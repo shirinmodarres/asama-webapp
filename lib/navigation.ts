@@ -36,6 +36,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت سفارش‌های روز",
     },
     {
+      label: "درخواست‌های فروش",
+      href: "/expert/quotations",
+      icon: "file-text",
+      description: "فهرست و مدیریت درخواست فروش",
+    },
+    {
       label: "سفارش ها",
       href: "/expert/orders",
       icon: "shopping-cart",
@@ -52,12 +58,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/expert/products",
       icon: "boxes",
       description: "کالاهای قابل فروش و قیمت‌ها",
-    },
-    {
-      label: "درخواست‌های فروش",
-      href: "/expert/quotations",
-      icon: "file-text",
-      description: "فهرست و مدیریت درخواست فروش",
     },
   ],
   naja: [
