@@ -26,7 +26,6 @@ import {
 import { getErrorMessage } from "@/lib/api/api-error";
 import {
   getFinancialApprovalStageLabel,
-  getFinancialApprovalStatusLabel,
 } from "@/lib/domain/statuses";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -210,9 +209,9 @@ export default function ExpertOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code)}`}
             description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
             actions={
-              order.canEdit || order.canCancel ? (
+              (!needsFinancialCorrection && order.canEdit) || order.canCancel ? (
                 <div className="flex flex-wrap gap-2">
-                  {order.canEdit ? (
+                  {!needsFinancialCorrection && order.canEdit ? (
                     <Link
                       href={`/expert/orders/${order.objectId}/edit`}
                       className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
@@ -283,29 +282,32 @@ export default function ExpertOrderDetailsPage() {
           ) : null}
 
           {needsFinancialCorrection ? (
-            <div className="rounded-xl border border-[#E8C5A5] bg-[#FFF8F2] p-5 shadow-sm">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FBE7D6] text-[#96521F]">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                   <AlertTriangle className="size-5" />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-[#7C421B]">
-                    این سفارش برای اصلاح از کنترل مالی برگشت خورده است.
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge type="financial" status="needs_correction" />
+                    <h3 className="text-sm font-semibold text-foreground">
+                      این سفارش برای اصلاح برگشت خورده است.
+                    </h3>
+                  </div>
 
-                  <p className="mt-2 text-sm leading-7 text-[#6B4B35]">
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
                     {order.financialCorrectionReason ||
                       "دلیل مشخصی ثبت نشده است."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#F0DDCC] pt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
                 {order.canEdit ? (
                   <Link
                     href={`/expert/orders/${order.objectId}/edit`}
-                    className="inline-flex items-center justify-center rounded-xl border border-[#D9B493] bg-white px-4 py-2 text-sm font-medium text-[#96521F] transition-colors hover:bg-[#FFF0E3]"
+                    className="inline-flex items-center justify-center rounded-xl border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     <Pencil className="size-4" />
                     اصلاح سفارش
@@ -314,7 +316,7 @@ export default function ExpertOrderDetailsPage() {
 
                 <Button
                   type="button"
-                  className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white hover:bg-[#294B75] hover:text-white disabled:opacity-50"
+                  className="rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
                   disabled={isSubmitting || !order.canEdit}
                   onClick={handleResubmitFinancialReview}
                 >

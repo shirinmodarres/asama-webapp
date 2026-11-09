@@ -145,21 +145,9 @@ export function OrderEditForm({
     order.najaPurchaseDate?.slice(0, 10) || "",
   );
   const [notes, setNotes] = useState(order.notes || "");
-  const [discountPercentage, setDiscountPercentage] = useState(() => {
-    const subtotal = order.items.reduce(
-      (sum, item) =>
-        sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
-      0,
-    );
-    const stored = Number(order.discountPercentage);
-    if (Number.isFinite(stored) && stored >= 0) return stored;
-    return subtotal > 0
-      ? Math.max(
-          0,
-          (Number(order.salesRequestDiscountTotal || 0) / subtotal) * 100,
-        )
-      : 0;
-  });
+  const [discountPercentage, setDiscountPercentage] = useState(() =>
+    resolveInitialDiscountPercentage(order),
+  );
   const [items, setItems] = useState<EditDraftItem[]>(() =>
     mapOrderItems(order.items, products),
   );
@@ -806,51 +794,53 @@ export function OrderEditForm({
                   className="rounded-2xl border border-[#E7EDF3] bg-white p-4"
                 >
                   {/* کالا + حذف ردیف */}
-                  <label className="grid min-w-0 flex-1 gap-2 text-sm font-medium text-[#334155]">
+                  <div className="grid gap-2 text-sm font-medium text-[#334155]">
                     <span>کالا</span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <SearchableSelect
+                        value={item.productObjectId || undefined}
+                        onValueChange={(value) =>
+                          updateRow(item.rowId, {
+                            productObjectId: value,
+                          })
+                        }
+                        options={selectableProducts.map((productOption) => ({
+                          value: productOption.objectId,
+                          label: productIdentityLabel(productOption),
+                          searchText: [
+                            productOption.sepidarCode,
+                            productOption.name,
+                            productOption.brandName || productOption.brand,
+                          ]
+                            .filter(Boolean)
+                            .join(" "),
+                        }))}
+                        placeholder="انتخاب کالا"
+                        searchPlaceholder="جستجو در کالاها"
+                        emptyMessage="کالایی یافت نشد"
+                        disabled={!canEditItemSelection}
+                        invalid={Boolean(rowErrors[item.rowId]?.productObjectId)}
+                        triggerClassName="min-w-0 flex-1"
+                      />
 
-                    <SearchableSelect
-                      value={item.productObjectId || undefined}
-                      onValueChange={(value) =>
-                        updateRow(item.rowId, {
-                          productObjectId: value,
-                        })
-                      }
-                      options={selectableProducts.map((productOption) => ({
-                        value: productOption.objectId,
-                        label: productIdentityLabel(productOption),
-                        searchText: [
-                          productOption.sepidarCode,
-                          productOption.name,
-                          productOption.brandName || productOption.brand,
-                        ]
-                          .filter(Boolean)
-                          .join(" "),
-                      }))}
-                      placeholder="انتخاب کالا"
-                      searchPlaceholder="جستجو در کالاها"
-                      emptyMessage="کالایی یافت نشد"
-                      disabled={!canEditItemSelection}
-                      invalid={Boolean(rowErrors[item.rowId]?.productObjectId)}
-                    />
+                      {canEditItemSelection ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
+                          onClick={() => removeRow(item.rowId)}
+                          aria-label="حذف کالا"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      ) : null}
+                    </div>
 
                     <FieldError
                       message={rowErrors[item.rowId]?.productObjectId}
                     />
-                  </label>
-
-                  {canEditItemSelection ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="mt-[30px] shrink-0 text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
-                      onClick={() => removeRow(item.rowId)}
-                      aria-label="حذف کالا"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  ) : null}
+                  </div>
 
                   {/* اطلاعات کالا */}
                   {product ? (
@@ -1365,6 +1355,44 @@ function mapOrderItems(
       quantity: item.quantity,
     };
   });
+}
+
+function resolveInitialDiscountPercentage(order: Order): number {
+  const subtotal = order.items.reduce(
+    (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+    0,
+  );
+  const storedPercentage = Number(order.discountPercentage);
+  if (Number.isFinite(storedPercentage) && storedPercentage > 0) {
+    return Math.min(100, storedPercentage);
+  }
+
+  const storedAmount = Number(order.salesRequestDiscountTotal || 0);
+  if (subtotal > 0 && Number.isFinite(storedAmount) && storedAmount > 0) {
+    return Math.min(100, Math.max(0, (storedAmount / subtotal) * 100));
+  }
+
+  const notePercentage = discountPercentageFromNotes(order.notes);
+  if (notePercentage !== null) return notePercentage;
+  return Number.isFinite(storedPercentage) && storedPercentage >= 0
+    ? Math.min(100, storedPercentage)
+    : 0;
+}
+
+function discountPercentageFromNotes(notes: string | null): number | null {
+  const line = String(notes || "")
+    .split(/\r?\n/)
+    .find((entry) => entry.trim().startsWith("تخفیف درخواست فروش:"));
+  if (!line) return null;
+
+  const normalized = normalizeDigits(line).replace(/[٬,]/g, "");
+  const match = normalized.match(
+    /تخفیف\s+درخواست\s+فروش\s*:\s*(\d+(?:\.\d+)?)\s*[٪%]/,
+  );
+  if (!match) return null;
+
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value >= 0 && value <= 100 ? value : null;
 }
 
 function getOrderCustomerAddressKey(order: Order): string {

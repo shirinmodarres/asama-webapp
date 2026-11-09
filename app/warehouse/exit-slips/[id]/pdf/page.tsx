@@ -102,6 +102,12 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
         { label: "کد دریافت", value: customer.sepidarCustomerCode ? formatFaDigits(customer.sepidarCustomerCode) : "-" },
         { label: "موبایل/تلفن", value: customer.phone ? formatFaDigits(customer.phone) : "-" },
         { label: "آدرس", value: customer.address || "-", className: "col-span-2" },
+        {
+          label: "کد پستی",
+          value: data.deliveryAddress.postalCode
+            ? formatFaDigits(data.deliveryAddress.postalCode)
+            : "-",
+        },
       ],
     },
   ];
@@ -126,6 +132,12 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
           label: "آدرس تحویل",
           value: data.deliveryAddress.formatted || data.deliveryAddress.fullAddress || "-",
           className: "col-span-2",
+        },
+        {
+          label: "کد پستی",
+          value: data.deliveryAddress.postalCode
+            ? formatFaDigits(data.deliveryAddress.postalCode)
+            : "-",
         },
       ],
     });

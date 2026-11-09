@@ -137,9 +137,7 @@ export default function ExpertOrdersPage() {
         return (
           <div className="space-y-1.5">
             {row.financialApprovalStatus === "needs_correction" ? (
-              <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                نیازمند اصلاح
-              </span>
+              <StatusBadge type="financial" status="needs_correction" />
             ) : (
               <StatusBadge type="order" status={row.orderStatus} />
             )}

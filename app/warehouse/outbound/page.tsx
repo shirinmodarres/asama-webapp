@@ -122,11 +122,6 @@ export default function WarehouseOutboundPage() {
       header: "مشتری",
       render: (row) => row.customerName || "-",
     },
-    {
-      key: "receiverFullName",
-      header: "گیرنده بار",
-      render: (row) => row.receiverFullName || row.customerName || "-",
-    },
 
     {
       key: "quantity",

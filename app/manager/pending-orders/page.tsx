@@ -56,6 +56,21 @@ export default function ManagerPendingOrdersPage() {
   const [bulkReasonCode, setBulkReasonCode] = useState("");
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
   const [bulkSummary, setBulkSummary] = useState<string>("");
+  const [bulkError, setBulkError] = useState("");
+
+  const refreshOrders = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const data = await listOrders();
+      setOrders(data);
+    } catch (loadError) {
+      setError(getErrorMessage(loadError));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -63,7 +78,6 @@ export default function ManagerPendingOrdersPage() {
     async function loadOrders() {
       setIsLoading(true);
       setError("");
-
       try {
         const data = await listOrders();
         if (isMounted) setOrders(data);
@@ -74,8 +88,7 @@ export default function ManagerPendingOrdersPage() {
       }
     }
 
-    loadOrders();
-
+    void loadOrders();
     return () => {
       isMounted = false;
     };
@@ -157,6 +170,7 @@ export default function ManagerPendingOrdersPage() {
     setIsBulkSubmitting(true);
     setError("");
     setBulkSummary("");
+    setBulkError("");
     const selected = orders.filter((order) =>
       selectedSelectableOrderIds.includes(order.objectId),
     );
@@ -183,17 +197,10 @@ export default function ManagerPendingOrdersPage() {
     }
 
     if (successes.length) {
-      const updatedById = new Map(
-        successes
-          .filter((entry): entry is { id: string; order: Order } => Boolean(entry.order))
-          .map((entry) => [entry.id, entry.order]),
-      );
-      setOrders((current) =>
-        current.map((order) => updatedById.get(order.objectId) || order),
-      );
       setSelectedOrderIds((current) =>
         current.filter((id) => !successes.some((entry) => entry.id === id)),
       );
+      await refreshOrders();
     }
     setBulkSummary(
       `${formatFaDigits(successes.length)} سفارش انجام شد${
@@ -201,7 +208,7 @@ export default function ManagerPendingOrdersPage() {
       }`,
     );
     if (failures.length) {
-      setError(failures.map((failure) => `${failure.code}: ${failure.message}`).join(" | "));
+      setBulkError(failures.map((failure) => `${failure.code}: ${failure.message}`).join(" | "));
     }
     setBulkAction(null);
     setBulkReasonCode("");
@@ -436,6 +443,12 @@ export default function ManagerPendingOrdersPage() {
         <PageErrorMessage title="دریافت سفارش ها انجام نشد" message={error} />
       ) : filteredOrders.length > 0 ? (
         <div className="space-y-3">
+          {bulkError ? (
+            <PageErrorMessage
+              title="برخی سفارش‌ها انجام نشدند"
+              message={bulkError}
+            />
+          ) : null}
           {selectableOrders.length > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-sm">
               <p className="text-sm text-[#475569]">

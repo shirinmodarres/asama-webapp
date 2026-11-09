@@ -110,11 +110,6 @@ export default function WarehouseExitSlipsPage() {
       render: (row) => row.slip.customerName || "-",
     },
     {
-      key: "receiver",
-      header: "گیرنده بار",
-      render: (row) => row.slip.receiverFullName || "-",
-    },
-    {
       key: "status",
       header: "تأیید تحویل",
       render: (row) => (
