@@ -110,28 +110,43 @@ export async function listOrderProductsForAssignment(context: {
   stockObjectId?: string;
   includeUnavailable?: boolean;
 }): Promise<Product[]> {
-  const params = new URLSearchParams({
-    customerObjectId: context.customerObjectId,
-  });
-  if (context.expertUserId) {
-    params.set("expertUserId", context.expertUserId);
+  const products: Product[] = [];
+  const limit = 200;
+  let skip = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      customerObjectId: context.customerObjectId,
+      limit: String(limit),
+      skip: String(skip),
+    });
+    if (context.expertUserId) {
+      params.set("expertUserId", context.expertUserId);
+    }
+    if (context.priceListId) {
+      params.set("priceListId", context.priceListId);
+    }
+    if (context.stockObjectId) {
+      params.set("stockObjectId", context.stockObjectId);
+    }
+    if (context.includeUnavailable) {
+      params.set("includeUnavailable", "true");
+    }
+    const data = await httpClient.get<unknown>(
+      `/api/expert/available-products?${params.toString()}`,
+    );
+    const record = toRecord(data);
+    products.push(
+      ...mapProductOrderOptionListDto(
+        Array.isArray(data) ? data : record.items ?? record.products ?? [],
+      ),
+    );
+    const pagination = toRecord(record.pagination);
+    if (!pagination.hasNext) break;
+    skip += limit;
   }
-  if (context.priceListId) {
-    params.set("priceListId", context.priceListId);
-  }
-  if (context.stockObjectId) {
-    params.set("stockObjectId", context.stockObjectId);
-  }
-  if (context.includeUnavailable) {
-    params.set("includeUnavailable", "true");
-  }
-  const data = await httpClient.get<unknown>(
-    `/api/expert/available-products?${params.toString()}`,
-  );
-  const record = toRecord(data);
-  return mapProductOrderOptionListDto(
-    Array.isArray(data) ? data : record.items ?? record.products ?? [],
-  );
+
+  return products;
 }
 
 export async function listQuotationProductsForAssignment(context: {
