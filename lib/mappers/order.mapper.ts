@@ -382,6 +382,7 @@ export function mapOrderDto(dto: unknown): Order {
     financialReturnedAt: toNullableString(record.financialReturnedAt),
     financialReturnedBy: toNullableString(record.financialReturnedBy),
     sourceLabel: toNullableString(record.sourceLabel),
+    discountPercentage: toNumberValue(record.discountPercentage),
     salesRequestSubtotal: toNumberValue(record.salesRequestSubtotal),
     salesRequestDiscountTotal: toNumberValue(
       record.salesRequestDiscountTotal ?? record.salesRequestDeductionTotal,

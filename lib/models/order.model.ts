@@ -147,6 +147,7 @@ export interface Order {
   financialReturnedAt: string | null;
   financialReturnedBy: string | null;
   sourceLabel: string | null;
+  discountPercentage: number;
   salesRequestSubtotal: number;
   salesRequestDiscountTotal: number;
   salesRequestTaxAmount: number;
@@ -220,6 +221,7 @@ export interface CreateOrderPayload {
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
   sepidarQuotationDate?: string | null;
+  discountPercentage?: number | null;
   notes?: string;
   items: Array<{
     productObjectId?: string;

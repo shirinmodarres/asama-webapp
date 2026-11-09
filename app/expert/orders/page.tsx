@@ -136,7 +136,13 @@ export default function ExpertOrdersPage() {
         const workflowLabel = getExpertWorkflowLabel(row);
         return (
           <div className="space-y-1.5">
-            <StatusBadge type="order" status={row.orderStatus} />
+            {row.financialApprovalStatus === "needs_correction" ? (
+              <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                نیازمند اصلاح
+              </span>
+            ) : (
+              <StatusBadge type="order" status={row.orderStatus} />
+            )}
             {workflowLabel ? (
               <p className="text-xs leading-5 text-[#64748B]">
                 {workflowLabel}

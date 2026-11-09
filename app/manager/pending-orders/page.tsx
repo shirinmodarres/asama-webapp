@@ -10,18 +10,37 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
+import { ConfirmationModal } from "@/components/manager/confirmation-modal";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
+import { REVIEW_REASONS } from "@/lib/domain/order-action-reasons";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
-import { approveOrder, listOrders } from "@/lib/services/order.service";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
+import {
+  approveOrder,
+  listOrders,
+  markOrderNeedsReview,
+} from "@/lib/services/order.service";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatFaDigits } from "@/lib/utils/number-format";
+
+const WORKFLOW_PENDING_STATUSES = [
+  "pending_financial_approval",
+  "pending_manager_approval",
+];
 
 export default function ManagerPendingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -32,10 +51,11 @@ export default function ManagerPendingOrdersPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
-  const workflowPendingStatuses = [
-    "pending_financial_approval",
-    "pending_manager_approval",
-  ];
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"approve" | "needs_review" | null>(null);
+  const [bulkReasonCode, setBulkReasonCode] = useState("");
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+  const [bulkSummary, setBulkSummary] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
@@ -77,7 +97,7 @@ export default function ManagerPendingOrdersPage() {
           statusFilter === "all"
             ? true
             : statusFilter === "workflow_pending"
-              ? workflowPendingStatuses.includes(order.orderStatus)
+              ? WORKFLOW_PENDING_STATUSES.includes(order.orderStatus)
               : order.orderStatus === statusFilter;
         return (
           matchesSearch &&
@@ -92,6 +112,101 @@ export default function ManagerPendingOrdersPage() {
     statusFilter !== "workflow_pending" ||
     dateFrom.length > 0 ||
     dateTo.length > 0;
+
+  const selectableOrders = useMemo(
+    () =>
+      filteredOrders.filter(
+        (order) =>
+          order.orderType !== "naja" &&
+          order.orderStatus === "pending_manager_approval",
+      ),
+    [filteredOrders],
+  );
+  const selectableOrderIds = useMemo(
+    () => new Set(selectableOrders.map((order) => order.objectId)),
+    [selectableOrders],
+  );
+  const selectedSelectableOrderIds = selectedOrderIds.filter((id) =>
+    selectableOrderIds.has(id),
+  );
+
+  const toggleOrderSelection = (orderId: string, checked: boolean) => {
+    setSelectedOrderIds((current) =>
+      checked
+        ? Array.from(new Set([...current, orderId]))
+        : current.filter((id) => id !== orderId),
+    );
+  };
+
+  const toggleAllSelection = (checked: boolean) => {
+    setSelectedOrderIds((current) => {
+      const visible = selectableOrders.map((order) => order.objectId);
+      return checked
+        ? Array.from(new Set([...current, ...visible]))
+        : current.filter((id) => !visible.includes(id));
+    });
+  };
+
+  const executeBulkAction = async () => {
+    if (!bulkAction || selectedSelectableOrderIds.length === 0) return;
+    if (bulkAction === "needs_review" && !bulkReasonCode) {
+      setError("لطفاً دلیل ارجاع برای اصلاح را انتخاب کنید.");
+      return;
+    }
+
+    setIsBulkSubmitting(true);
+    setError("");
+    setBulkSummary("");
+    const selected = orders.filter((order) =>
+      selectedSelectableOrderIds.includes(order.objectId),
+    );
+    const successes: Array<{ id: string; order: Order | null }> = [];
+    const failures: Array<{ code: string; message: string }> = [];
+    const requestedByName =
+      getStoredCurrentUser()?.fullName || getStoredCurrentUser()?.username || "مدیر فروش";
+
+    for (const order of selected) {
+      try {
+        if (bulkAction === "approve") {
+          const result = await approveOrder(order.objectId);
+          successes.push({ id: order.objectId, order: result.order });
+        } else {
+          const updated = await markOrderNeedsReview(order.objectId, {
+            reasonCode: bulkReasonCode,
+            requestedByName,
+          });
+          successes.push({ id: order.objectId, order: updated });
+        }
+      } catch (actionError) {
+        failures.push({ code: order.code, message: getErrorMessage(actionError) });
+      }
+    }
+
+    if (successes.length) {
+      const updatedById = new Map(
+        successes
+          .filter((entry): entry is { id: string; order: Order } => Boolean(entry.order))
+          .map((entry) => [entry.id, entry.order]),
+      );
+      setOrders((current) =>
+        current.map((order) => updatedById.get(order.objectId) || order),
+      );
+      setSelectedOrderIds((current) =>
+        current.filter((id) => !successes.some((entry) => entry.id === id)),
+      );
+    }
+    setBulkSummary(
+      `${formatFaDigits(successes.length)} سفارش انجام شد${
+        failures.length ? `؛ ${formatFaDigits(failures.length)} سفارش ناموفق بود: ${failures.map((failure) => failure.code).join("، ")}` : ""
+      }`,
+    );
+    if (failures.length) {
+      setError(failures.map((failure) => `${failure.code}: ${failure.message}`).join(" | "));
+    }
+    setBulkAction(null);
+    setBulkReasonCode("");
+    setIsBulkSubmitting(false);
+  };
 
   const statusOptions = useMemo(
     () => {
@@ -130,6 +245,38 @@ export default function ManagerPendingOrdersPage() {
   };
 
   const columns: DataTableColumn<Order>[] = [
+    {
+      key: "select",
+      header: (
+        <input
+          type="checkbox"
+          aria-label="انتخاب همه سفارش‌های قابل اقدام"
+          checked={
+            selectableOrders.length > 0 &&
+            selectedSelectableOrderIds.length === selectableOrders.length
+          }
+          onChange={(event) => toggleAllSelection(event.target.checked)}
+          disabled={selectableOrders.length === 0 || isBulkSubmitting}
+        />
+      ),
+      render: (row) => {
+        const selectable =
+          row.orderType !== "naja" &&
+          row.orderStatus === "pending_manager_approval";
+        return selectable ? (
+          <input
+            type="checkbox"
+            aria-label={`انتخاب ${row.code}`}
+            checked={selectedOrderIds.includes(row.objectId)}
+            onChange={(event) => toggleOrderSelection(row.objectId, event.target.checked)}
+            disabled={isBulkSubmitting}
+          />
+        ) : null;
+      },
+      className: "w-12 px-3",
+      headerClassName: "w-12 px-3",
+      cellClassName: "w-12 px-3",
+    },
     {
       key: "code",
       header: "کد سفارش",
@@ -288,17 +435,82 @@ export default function ManagerPendingOrdersPage() {
       ) : error ? (
         <PageErrorMessage title="دریافت سفارش ها انجام نشد" message={error} />
       ) : filteredOrders.length > 0 ? (
-        <DataTable
-          columns={columns}
-          rows={filteredOrders}
-          rowKey={(row) => row.objectId || row.id}
-        />
+        <div className="space-y-3">
+          {selectableOrders.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-sm">
+              <p className="text-sm text-[#475569]">
+                {selectedSelectableOrderIds.length
+                  ? `${formatFaDigits(selectedSelectableOrderIds.length)} سفارش انتخاب شده است.`
+                  : "برای اقدام گروهی، سفارش‌ها را انتخاب کنید."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!selectedSelectableOrderIds.length || isBulkSubmitting}
+                  onClick={() => setBulkAction("approve")}
+                >
+                  تأیید گروهی
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!selectedSelectableOrderIds.length || isBulkSubmitting}
+                  onClick={() => setBulkAction("needs_review")}
+                >
+                  ارجاع گروهی برای اصلاح
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {bulkSummary ? (
+            <p className="text-sm text-[#475569]">{bulkSummary}</p>
+          ) : null}
+          <DataTable
+            columns={columns}
+            rows={filteredOrders}
+            rowKey={(row) => row.objectId || row.id}
+          />
+        </div>
       ) : (
         <EmptyState
           title="سفارش در انتظار تایید یافت نشد"
           description="فیلترها را تغییر دهید یا وارد روند سفارش ها شوید."
         />
       )}
+      <ConfirmationModal
+        open={bulkAction !== null}
+        title={bulkAction === "approve" ? "تأیید گروهی سفارش‌ها" : "ارجاع گروهی برای اصلاح"}
+        message={
+          bulkAction === "approve"
+            ? "هر سفارش انتخاب‌شده با همان فرایند تأیید تکی بررسی و پردازش می‌شود. خطای یک سفارش مانع ادامه بقیه نخواهد شد."
+            : "همه سفارش‌های انتخاب‌شده با دلیل یکسان برای اصلاح به کارشناس فروش بازگردانده می‌شوند."
+        }
+        confirmText={bulkAction === "approve" ? "تأیید سفارش‌ها" : "ثبت ارجاع برای اصلاح"}
+        tone={bulkAction === "needs_review" ? "danger" : "success"}
+        busy={isBulkSubmitting}
+        onConfirm={() => void executeBulkAction()}
+        onCancel={() => {
+          if (isBulkSubmitting) return;
+          setBulkAction(null);
+          setBulkReasonCode("");
+        }}
+      >
+        <p className="text-sm text-[#475569]">
+          تعداد سفارش‌های انتخاب‌شده: {formatFaDigits(selectedSelectableOrderIds.length)}
+        </p>
+        {bulkAction === "needs_review" ? (
+          <Select value={bulkReasonCode} onValueChange={setBulkReasonCode} disabled={isBulkSubmitting}>
+            <SelectTrigger><SelectValue placeholder="دلیل ارجاع برای اصلاح" /></SelectTrigger>
+            <SelectContent>
+              {REVIEW_REASONS.map((reason) => (
+                <SelectItem key={reason.code} value={reason.code}>{reason.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </ConfirmationModal>
     </DashboardLayout>
   );
 }

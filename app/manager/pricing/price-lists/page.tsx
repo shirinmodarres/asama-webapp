@@ -26,6 +26,16 @@ import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 export default function ManagerActivePriceListsPage() {
+  return <ActivePriceListsView role="manager" basePath="/manager/pricing/price-lists" />;
+}
+
+export function ActivePriceListsView({
+  role,
+  basePath,
+}: {
+  role: "manager" | "finance";
+  basePath: string;
+}) {
   const [rows, setRows] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -128,7 +138,7 @@ export default function ManagerActivePriceListsPage() {
       render: (row) => (
         row.objectId || row.id ? (
           <Button asChild size="sm" variant="outline">
-            <Link href={`/manager/pricing/price-lists/${row.objectId || row.id}`}>
+            <Link href={`${basePath}/${row.objectId || row.id}`}>
               جزئیات
             </Link>
           </Button>
@@ -138,7 +148,7 @@ export default function ManagerActivePriceListsPage() {
   ];
 
   return (
-    <DashboardLayout role="manager" title="لیست قیمت‌ها">
+    <DashboardLayout role={role} title="لیست قیمت‌ها">
       <SectionHeader
         title="لیست قیمت‌های فعال"
         description="تمام لیست‌های قیمت فعال برندها برای بررسی و استفاده در دسترس هستند."

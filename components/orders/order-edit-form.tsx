@@ -45,6 +45,7 @@ export interface OrderEditFormSubmitPayload {
   recipientMobile?: string;
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
+  discountPercentage?: number | null;
   notes?: string;
   items: Array<{
     productObjectId: string;
@@ -144,6 +145,17 @@ export function OrderEditForm({
     order.najaPurchaseDate?.slice(0, 10) || "",
   );
   const [notes, setNotes] = useState(order.notes || "");
+  const [discountPercentage, setDiscountPercentage] = useState(() => {
+    const subtotal = order.items.reduce(
+      (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+      0,
+    );
+    const stored = Number(order.discountPercentage);
+    if (Number.isFinite(stored) && stored >= 0) return stored;
+    return subtotal > 0
+      ? Math.max(0, (Number(order.salesRequestDiscountTotal || 0) / subtotal) * 100)
+      : 0;
+  });
   const [items, setItems] = useState<EditDraftItem[]>(() =>
     mapOrderItems(order.items, products),
   );
@@ -351,6 +363,7 @@ export function OrderEditForm({
     const product = productMap[item.productObjectId];
     return sum + item.quantity * (product?.unitPrice ?? 0);
   }, 0);
+  const discountAmount = totalAmount * (discountPercentage / 100);
   const currentStockTitles = selectedCustomer
     ? getAllowedStockTitles(selectedCustomer)
     : order.stockTitle
@@ -480,6 +493,7 @@ export function OrderEditForm({
           : undefined,
       najaPurchaseDate:
         order.orderType === "naja" ? najaPurchaseDate || null : undefined,
+      discountPercentage,
       notes: trimOrUndefined(notes),
       salesTypeObjectId: selectedSalesTypeForSubmit?.objectId || undefined,
       salesTypeTitle: selectedSalesTypeForSubmit?.title || undefined,
@@ -929,6 +943,21 @@ export function OrderEditForm({
         </div>
 
         <div className="mt-6 grid gap-4">
+          <label className="grid max-w-xs gap-2 text-sm font-medium text-[#334155]">
+            <span>تخفیف سفارش (درصد)</span>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={discountPercentage}
+              onChange={(event) => {
+                const value = Number(event.target.value);
+                setDiscountPercentage(Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0);
+              }}
+              disabled={isSubmitting}
+            />
+          </label>
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>توضیحات داخلی سفارش</span>
             <Textarea
@@ -969,6 +998,8 @@ export function OrderEditForm({
           itemCount={totalItems}
           totalQuantity={totalQuantity}
           totalAmount={totalAmount}
+          discountAmount={discountAmount}
+          notes={notes}
           status={order.orderStatus}
           warehouseStatus={order.warehouseStatus}
           saleTypeTitle={
@@ -981,15 +1012,6 @@ export function OrderEditForm({
         />
       </div>
     </section>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8EEF4] bg-[#FBFCFD] px-3.5 py-3">
-      <dt className="text-[#6B7280]">{label}</dt>
-      <dd className="font-semibold text-[#102034]">{value}</dd>
-    </div>
   );
 }
 

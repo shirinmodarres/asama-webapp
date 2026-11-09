@@ -20,8 +20,27 @@ import {
 } from "@/lib/utils/number-format";
 
 export async function listProducts(viewerRole?: string): Promise<Product[]> {
-  const data = await httpClient.get<unknown>(buildProductsPath(viewerRole));
-  return mapProductListDto(data);
+  const products: Product[] = [];
+  const limit = 200;
+  let skip = 0;
+
+  while (true) {
+    const path = new URLSearchParams();
+    if (viewerRole) path.set("viewerRole", viewerRole);
+    path.set("limit", String(limit));
+    path.set("skip", String(skip));
+    const data = await httpClient.get<unknown>(`/api/products?${path.toString()}`);
+    const record = toRecord(data);
+    const page = mapProductListDto(
+      Array.isArray(data) ? data : record.items ?? record.products ?? [],
+    );
+    products.push(...page);
+    const pagination = toRecord(record.pagination);
+    if (!pagination.hasNext) break;
+    skip += page.length;
+  }
+
+  return products;
 }
 
 export async function listSepidarOrderProducts(): Promise<Product[]> {
@@ -110,28 +129,35 @@ export async function listOrderProductsForAssignment(context: {
   stockObjectId?: string;
   includeUnavailable?: boolean;
 }): Promise<Product[]> {
-  const params = new URLSearchParams({
-    customerObjectId: context.customerObjectId,
-  });
-  if (context.expertUserId) {
-    params.set("expertUserId", context.expertUserId);
+  const products: Product[] = [];
+  const limit = 200;
+  let skip = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      customerObjectId: context.customerObjectId,
+      limit: String(limit),
+      skip: String(skip),
+    });
+    if (context.expertUserId) params.set("expertUserId", context.expertUserId);
+    if (context.priceListId) params.set("priceListId", context.priceListId);
+    if (context.stockObjectId) params.set("stockObjectId", context.stockObjectId);
+    if (context.includeUnavailable) params.set("includeUnavailable", "true");
+
+    const data = await httpClient.get<unknown>(
+      `/api/expert/available-products?${params.toString()}`,
+    );
+    const record = toRecord(data);
+    const page = mapProductOrderOptionListDto(
+      Array.isArray(data) ? data : record.items ?? record.products ?? [],
+    );
+    products.push(...page);
+    const pagination = toRecord(record.pagination);
+    if (!pagination.hasNext) break;
+    skip += limit;
   }
-  if (context.priceListId) {
-    params.set("priceListId", context.priceListId);
-  }
-  if (context.stockObjectId) {
-    params.set("stockObjectId", context.stockObjectId);
-  }
-  if (context.includeUnavailable) {
-    params.set("includeUnavailable", "true");
-  }
-  const data = await httpClient.get<unknown>(
-    `/api/expert/available-products?${params.toString()}`,
-  );
-  const record = toRecord(data);
-  return mapProductOrderOptionListDto(
-    Array.isArray(data) ? data : record.items ?? record.products ?? [],
-  );
+
+  return products;
 }
 
 export async function listQuotationProductsForAssignment(context: {
@@ -268,12 +294,6 @@ function normalizeStockPayload(
     totalStock,
     salesStock,
   };
-}
-
-function buildProductsPath(viewerRole?: string): string {
-  if (!viewerRole) return "/api/products";
-  const params = new URLSearchParams({ viewerRole });
-  return `/api/products?${params.toString()}`;
 }
 
 export async function deactivateProduct(objectId: string): Promise<Product> {

@@ -46,9 +46,7 @@ export default function ExpertPage() {
     const pendingOrders = orders.filter(
       (order) => order.orderStatus === "pending_financial_approval",
     );
-    const needsReviewOrders = orders.filter(
-      (order) => order.orderStatus === "needs_review",
-    );
+    const needsReviewOrders = orders.filter(isRevisionRequired);
     const approvedOrders = orders.filter(
       (order) => order.orderStatus === "approved",
     );
@@ -148,7 +146,9 @@ export default function ExpertPage() {
                           </p>
                         </div>
                         <span className="text-xs text-[#6B7280]">
-                          {order.orderStatusLabel}
+                          {isRevisionRequired(order)
+                            ? "نیازمند اصلاح"
+                            : order.orderStatusLabel}
                         </span>
                       </div>
                     </div>
@@ -176,5 +176,12 @@ export default function ExpertPage() {
         </>
       )}
     </DashboardLayout>
+  );
+}
+
+function isRevisionRequired(order: Order): boolean {
+  return (
+    order.orderStatus === "needs_review" ||
+    order.financialApprovalStatus === "needs_correction"
   );
 }

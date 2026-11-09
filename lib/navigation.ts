@@ -206,6 +206,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "اسناد مالی صادرشده",
     },
     {
+      label: "لیست قیمت‌ها",
+      href: "/finance/pricing/price-lists",
+      icon: "layers",
+      description: "مشاهده کالاها و قیمت‌های فعال",
+    },
+    {
       label: "فاکتورهای داخلی",
       href: "/accounting/internal-invoices",
       icon: "file-check",
