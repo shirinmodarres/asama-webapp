@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, PackageSearch, Trash2 } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { JalaliDateInput } from "@/components/shared/jalali-date-input";
@@ -830,6 +830,71 @@ export function OrderForm({
     null;
   const requiresPriceListSelection =
     sepidarProductsOnly && Boolean(selectedCustomerId) && hasGeneratedPriceList;
+  const loadProductOptions = useCallback(
+    async (search: string) => {
+      if (
+        !sepidarProductsOnly ||
+        !selectedCustomerId ||
+        (requiresPriceListSelection && !selectedPriceListId)
+      ) {
+        return [];
+      }
+
+      const data = await listOrderProductsForAssignment({
+        customerObjectId: selectedCustomerId,
+        expertUserId:
+          initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
+        priceListId: selectedPriceListId,
+        stockObjectId: selectedStockObjectId,
+        search,
+      });
+      const stockProducts = selectedStockObjectId
+        ? data.map((product) => {
+            const availableStocks = (product.availableStocks ?? []).filter(
+              (stock) => stock.stockObjectId === selectedStockObjectId,
+            );
+            const availableForSale = availableStocks.reduce(
+              (sum, stock) => sum + Number(stock.availableForSale ?? 0),
+              0,
+            );
+            return {
+              ...product,
+              availableStocks,
+              availableForSale,
+              availableSalesQuantity: availableForSale,
+            };
+          })
+        : data;
+      const selectableProducts = stockProducts.filter((product) =>
+        getEditableAvailableQuantity({
+          product,
+          mode,
+          oldQuantityByProductId,
+        }) > 0,
+      );
+
+      setProducts((current) => {
+        const byId = new Map(current.map((product) => [product.objectId, product]));
+        selectableProducts.forEach((product) => byId.set(product.objectId, product));
+        return Array.from(byId.values());
+      });
+
+      return selectableProducts.map((product) => ({
+        value: product.objectId,
+        label: productIdentityLabel(product),
+      }));
+    },
+    [
+      initialOrder?.expertUserId,
+      mode,
+      oldQuantityByProductId,
+      requiresPriceListSelection,
+      selectedCustomerId,
+      selectedPriceListId,
+      selectedStockObjectId,
+      sepidarProductsOnly,
+    ],
+  );
   const isNajaOrder = initialOrder?.orderType === "naja";
   const selectedSalesType =
     mergedSalesTypes.find((item) => getSalesTypeOptionKey(item) === selectedSalesTypeId) ||

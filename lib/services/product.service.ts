@@ -109,6 +109,7 @@ export async function listOrderProductsForAssignment(context: {
   priceListId?: string;
   stockObjectId?: string;
   includeUnavailable?: boolean;
+  search?: string;
 }): Promise<Product[]> {
   const products: Product[] = [];
   const limit = 200;
@@ -131,6 +132,9 @@ export async function listOrderProductsForAssignment(context: {
     }
     if (context.includeUnavailable) {
       params.set("includeUnavailable", "true");
+    }
+    if (context.search?.trim()) {
+      params.set("search", context.search.trim());
     }
     const data = await httpClient.get<unknown>(
       `/api/expert/available-products?${params.toString()}`,
