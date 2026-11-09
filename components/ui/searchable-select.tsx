@@ -241,7 +241,9 @@ export function SearchableSelect({
                   onChange={(event) => setQuery(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key !== "Enter") return;
-                    const firstOption = filteredOptions[0];
+                    const firstOption = loadOptions
+                      ? remoteOptions[0]
+                      : filteredOptions[0];
                     if (!firstOption) return;
                     event.preventDefault();
                     onValueChange(firstOption.value);

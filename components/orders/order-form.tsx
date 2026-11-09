@@ -1987,6 +1987,9 @@ export function OrderForm({
                           : "انتخاب کالا"
                       }
                       searchPlaceholder="جستجو در کالاها"
+                      loadOptions={
+                        sepidarProductsOnly ? loadProductOptions : undefined
+                      }
         emptyMessage={
                   sepidarProductsOnly &&
                   (!requiresPriceListSelection ||
