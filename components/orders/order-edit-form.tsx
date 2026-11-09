@@ -147,13 +147,17 @@ export function OrderEditForm({
   const [notes, setNotes] = useState(order.notes || "");
   const [discountPercentage, setDiscountPercentage] = useState(() => {
     const subtotal = order.items.reduce(
-      (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+      (sum, item) =>
+        sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
       0,
     );
     const stored = Number(order.discountPercentage);
     if (Number.isFinite(stored) && stored >= 0) return stored;
     return subtotal > 0
-      ? Math.max(0, (Number(order.salesRequestDiscountTotal || 0) / subtotal) * 100)
+      ? Math.max(
+          0,
+          (Number(order.salesRequestDiscountTotal || 0) / subtotal) * 100,
+        )
       : 0;
   });
   const [items, setItems] = useState<EditDraftItem[]>(() =>
@@ -688,10 +692,7 @@ export function OrderEditForm({
                   گیرنده بار:{" "}
                   {getReceiverName(selectedAddress, selectedCustomer) || "-"}
                 </p>
-                <p>
-                  آدرس کامل:{" "}
-                  {formatDeliveryAddress(selectedAddress)}
-                </p>
+                <p>آدرس کامل: {formatDeliveryAddress(selectedAddress)}</p>
               </div>
             ) : null}
           </div>
@@ -805,55 +806,51 @@ export function OrderEditForm({
                   className="rounded-2xl border border-[#E7EDF3] bg-white p-4"
                 >
                   {/* کالا + حذف ردیف */}
-                  <div className="flex items-end gap-2">
-                    <label className="grid min-w-0 flex-1 gap-2 text-sm font-medium text-[#334155]">
-                      <span>کالا</span>
+                  <label className="grid min-w-0 flex-1 gap-2 text-sm font-medium text-[#334155]">
+                    <span>کالا</span>
 
-                      <SearchableSelect
-                        value={item.productObjectId || undefined}
-                        onValueChange={(value) =>
-                          updateRow(item.rowId, {
-                            productObjectId: value,
-                          })
-                        }
-                        options={selectableProducts.map((productOption) => ({
-                          value: productOption.objectId,
-                          label: productIdentityLabel(productOption),
-                          searchText: [
-                            productOption.sepidarCode,
-                            productOption.name,
-                            productOption.brandName || productOption.brand,
-                          ]
-                            .filter(Boolean)
-                            .join(" "),
-                        }))}
-                        placeholder="انتخاب کالا"
-                        searchPlaceholder="جستجو در کالاها"
-                        emptyMessage="کالایی یافت نشد"
-                        disabled={!canEditItemSelection}
-                        invalid={Boolean(
-                          rowErrors[item.rowId]?.productObjectId,
-                        )}
-                      />
+                    <SearchableSelect
+                      value={item.productObjectId || undefined}
+                      onValueChange={(value) =>
+                        updateRow(item.rowId, {
+                          productObjectId: value,
+                        })
+                      }
+                      options={selectableProducts.map((productOption) => ({
+                        value: productOption.objectId,
+                        label: productIdentityLabel(productOption),
+                        searchText: [
+                          productOption.sepidarCode,
+                          productOption.name,
+                          productOption.brandName || productOption.brand,
+                        ]
+                          .filter(Boolean)
+                          .join(" "),
+                      }))}
+                      placeholder="انتخاب کالا"
+                      searchPlaceholder="جستجو در کالاها"
+                      emptyMessage="کالایی یافت نشد"
+                      disabled={!canEditItemSelection}
+                      invalid={Boolean(rowErrors[item.rowId]?.productObjectId)}
+                    />
 
-                      <FieldError
-                        message={rowErrors[item.rowId]?.productObjectId}
-                      />
-                    </label>
+                    <FieldError
+                      message={rowErrors[item.rowId]?.productObjectId}
+                    />
+                  </label>
 
-                    {canEditItemSelection ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="shrink-0 text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
-                        onClick={() => removeRow(item.rowId)}
-                        aria-label="حذف کالا"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    ) : null}
-                  </div>
+                  {canEditItemSelection ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-[30px] shrink-0 text-[#9B1C1C] hover:bg-[#FCEFEF] hover:text-[#7F1D1D]"
+                      onClick={() => removeRow(item.rowId)}
+                      aria-label="حذف کالا"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  ) : null}
 
                   {/* اطلاعات کالا */}
                   {product ? (
@@ -918,7 +915,7 @@ export function OrderEditForm({
 
                     <span>
                       {isExpertEdit
-                        ? "فقط تعداد هر ردیف قابل ویرایش است."
+                        ? ""
                         : "این ردیف با داده‌های فعلی سفارش همگام شده است."}
                     </span>
                   </div>
@@ -953,7 +950,11 @@ export function OrderEditForm({
               value={discountPercentage}
               onChange={(event) => {
                 const value = Number(event.target.value);
-                setDiscountPercentage(Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0);
+                setDiscountPercentage(
+                  Number.isFinite(value)
+                    ? Math.min(100, Math.max(0, value))
+                    : 0,
+                );
               }}
               disabled={isSubmitting}
             />

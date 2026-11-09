@@ -269,15 +269,30 @@ export default function ExpertQuotationDetailPage() {
                   />
                   <InfoRow
                     label={`تخفیف (${formatNumber(quotation.discountPercentage)}٪)`}
-                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).discountAmount)}
+                    value={formatCurrency(
+                      calculateSalesRequestFinancials(
+                        quotation.subtotal,
+                        quotation.discountPercentage,
+                      ).discountAmount,
+                    )}
                   />
                   <InfoRow
                     label="مالیات (۱۰٪)"
-                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).taxAmount)}
+                    value={formatCurrency(
+                      calculateSalesRequestFinancials(
+                        quotation.subtotal,
+                        quotation.discountPercentage,
+                      ).taxAmount,
+                    )}
                   />
                   <InfoRow
                     label="مبلغ با مالیات"
-                    value={formatCurrency(calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).total)}
+                    value={formatCurrency(
+                      calculateSalesRequestFinancials(
+                        quotation.subtotal,
+                        quotation.discountPercentage,
+                      ).total,
+                    )}
                   />
                 </dl>
               </Card>
@@ -323,17 +338,19 @@ function getQuotationStatusMeta(status: string) {
   if (status === "finalized") {
     return {
       label: "نهایی‌شده",
-      className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      className: "border border-[#CFE3D3] bg-[#F3FAF4] text-[#3E6A46]",
     };
   }
+
   if (status === "cancelled") {
     return {
       label: "لغو شده",
-      className: "bg-rose-50 text-rose-700 border border-rose-200",
+      className: "border border-[#EBCACA] bg-[#FFF4F4] text-[#9C3B3B]",
     };
   }
+
   return {
     label: "پیش‌نویس",
-    className: "bg-slate-50 text-slate-700 border border-slate-200",
+    className: "border border-[#C9D7E8] bg-[#EEF4FA] text-[#1F3A5F]",
   };
 }

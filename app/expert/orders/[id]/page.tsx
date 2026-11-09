@@ -283,56 +283,44 @@ export default function ExpertOrderDetailsPage() {
           ) : null}
 
           {needsFinancialCorrection ? (
-            <div className="rounded-xl border border-[#F8D9A0] bg-[#FFF8E7] p-5 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2 text-[#9A6C18]">
-                <AlertTriangle className="size-5" />
-                <h3 className="text-base font-semibold">
-                  این سفارش برای اصلاح برگشت خورده است.
-                </h3>
-                <StatusBadge
-                  type="financial"
-                  status={order.financialApprovalStatus ?? "needs_correction"}
-                />
+            <div className="rounded-xl border border-[#E8C5A5] bg-[#FFF8F2] p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#FBE7D6] text-[#96521F]">
+                  <AlertTriangle className="size-5" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-[#7C421B]">
+                    این سفارش برای اصلاح از کنترل مالی برگشت خورده است.
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-7 text-[#6B4B35]">
+                    {order.financialCorrectionReason ||
+                      "دلیل مشخصی ثبت نشده است."}
+                  </p>
+                </div>
               </div>
-              <p className="mt-3 text-sm leading-7 text-[#5F4320]">
-                {order.financialCorrectionReasonLabel ||
-                  order.financialCorrectionReason ||
-                  "دلیل مشخصی ثبت نشده است."}
-                {order.financialCorrectionReason ? (
-                  <span className="mt-1 block text-xs text-[#8A6A3A]">
-                    توضیحات: {order.financialCorrectionReason}
-                  </span>
-                ) : null}
-                <span className="mt-2 block text-xs text-[#8A6A3A]">
-                  وضعیت فعلی:{" "}
-                  {getFinancialApprovalStatusLabel(
-                    order.financialApprovalStatus,
-                  )}
-                </span>
-                {order.financialApprovalStageLabel ? (
-                  <span className="mt-1 block text-xs text-[#8A6A3A]">
-                    مرحله درخواست‌کننده اصلاح:{" "}
-                    {order.financialApprovalStageLabel}
-                  </span>
-                ) : null}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#F0DDCC] pt-4">
                 {order.canEdit ? (
                   <Link
                     href={`/expert/orders/${order.objectId}/edit`}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D9A441] bg-white px-4 text-sm font-medium text-[#9A6C18] shadow-sm transition-colors visited:text-[#9A6C18] hover:border-[#C7922E] hover:bg-[#FFF8E7] hover:text-[#7A520F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9A441]/30"
+                    className="inline-flex items-center justify-center rounded-xl border border-[#D9B493] bg-white px-4 py-2 text-sm font-medium text-[#96521F] transition-colors hover:bg-[#FFF0E3]"
                   >
                     <Pencil className="size-4" />
                     اصلاح سفارش
                   </Link>
                 ) : null}
+
                 <Button
                   type="button"
-                  className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white hover:text-white"
-                  disabled={isSubmitting}
+                  className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white hover:bg-[#294B75] hover:text-white disabled:opacity-50"
+                  disabled={isSubmitting || !order.canEdit}
                   onClick={handleResubmitFinancialReview}
                 >
-                  ارسال مجدد برای بررسی
+                  {isSubmitting
+                    ? "در حال ارسال..."
+                    : "ارسال مجدد برای بررسی مالی"}
                 </Button>
               </div>
             </div>
