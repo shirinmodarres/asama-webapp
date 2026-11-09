@@ -23,7 +23,7 @@ import {
 } from "@/lib/services/store-expert-order.service";
 import { toNumber } from "@/lib/utils/number-format";
 
-type DraftRow = { id: string; productObjectId: string; quantity: number };
+type DraftRow = { id: string; productObjectId: string; stockObjectId: string; quantity: number };
 
 const createUuid = (): string => {
   const bytes = new Uint8Array(16);
@@ -46,6 +46,7 @@ const createUuid = (): string => {
 const emptyRow = (): DraftRow => ({
   id: createUuid(),
   productObjectId: "",
+  stockObjectId: "",
   quantity: 1,
 });
 export function StoreOrderForm() {
@@ -55,8 +56,6 @@ export function StoreOrderForm() {
   const [options, setOptions] = useState<StoreOrderOptions | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [selectedCustomerLabel, setSelectedCustomerLabel] = useState("");
-  const [selectedStockId, setSelectedStockId] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
   const [products, setProducts] = useState<StoreProductOption[]>([]);
   const [rows, setRows] = useState<DraftRow[]>([emptyRow()]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit">("cash");
@@ -82,8 +81,6 @@ export function StoreOrderForm() {
       .then((result) => {
         if (!active) return;
         setOptions(result);
-        setSelectedStockId("");
-        setSelectedBrand("");
         setProducts([]);
         setRows([emptyRow()]);
       })
@@ -94,35 +91,13 @@ export function StoreOrderForm() {
     };
   }, [selectedCustomerId]);
 
-  useEffect(() => {
-    if (!selectedCustomerId || !selectedStockId || !selectedBrand) return;
-    let active = true;
-    void getStoreOrderOptions({
-      customerObjectId: selectedCustomerId,
-      stockObjectId: selectedStockId,
-      brandName: selectedBrand,
-    })
-      .then((result) => {
-        if (!active) return;
-        setOptions(result);
-        setProducts(result.products);
-        setRows([emptyRow()]);
-      })
-      .catch((reason) => active && setError(getErrorMessage(reason)))
-      .finally(() => active && setLoadingProducts(false));
-    return () => {
-      active = false;
-    };
-  }, [selectedCustomerId, selectedStockId, selectedBrand]);
-
   const productsById = useMemo(
     () =>
-      new Map(products.map((product) => [product.productObjectId, product])),
+      new Map(products.map((product) => [`${product.productObjectId}:${product.stockObjectId}`, product])),
     [products],
   );
-  const productOptions = useMemo(
-    () =>
-      products.map((product) => ({
+  const productOptionsForStock = useCallback(
+    (stockObjectId: string) => products.filter((product) => product.stockObjectId === stockObjectId).map((product) => ({
         value: product.productObjectId,
         label: `${product.productCode || "-"} - ${product.productName}`,
         description: `قابل فروش: ${formatNumber(product.availableForSale)}`,
@@ -131,20 +106,19 @@ export function StoreOrderForm() {
     [products],
   );
   const productLoadOptions = useCallback(
-    async (query: string) => {
-      if (!selectedCustomerId || !selectedStockId || !selectedBrand) return [];
+    async (stockObjectId: string, query: string) => {
+      if (!selectedCustomerId || !stockObjectId) return [];
       const result = await getStoreOrderOptions({
         customerObjectId: selectedCustomerId,
-        stockObjectId: selectedStockId,
-        brandName: selectedBrand,
+        stockObjectId,
         search: query,
       });
       setProducts((current) => {
         const byId = new Map(
-          current.map((product) => [product.productObjectId, product]),
+          current.map((product) => [`${product.productObjectId}:${product.stockObjectId}`, product]),
         );
         result.products.forEach((product) =>
-          byId.set(product.productObjectId, product),
+          byId.set(`${product.productObjectId}:${product.stockObjectId}`, product),
         );
         return [...byId.values()];
       });
@@ -155,10 +129,10 @@ export function StoreOrderForm() {
         searchText: `${product.productCode || ""} ${product.productName}`,
       }));
     },
-    [selectedBrand, selectedCustomerId, selectedStockId],
+    [selectedCustomerId],
   );
   const selectedItems = rows
-    .map((row) => ({ row, product: productsById.get(row.productObjectId) }))
+    .map((row) => ({ row, product: productsById.get(`${row.productObjectId}:${row.stockObjectId}`) }))
     .filter((item) => item.product);
   const totalAmount = selectedItems.reduce(
     (sum, { row, product }) => sum + row.quantity * (product?.unitPrice || 0),
@@ -170,12 +144,10 @@ export function StoreOrderForm() {
       row.quantity <= 0 || row.quantity > (product?.availableForSale || 0),
   );
   const hasIncompleteItem = rows.some(
-    (row) => !row.productObjectId || !productsById.has(row.productObjectId),
+    (row) => !row.productObjectId || !row.stockObjectId || !productsById.has(`${row.productObjectId}:${row.stockObjectId}`),
   );
   const canSubmit = Boolean(
     selectedCustomerId &&
-    selectedStockId &&
-    selectedBrand &&
     selectedItems.length &&
     !hasIncompleteItem &&
     !hasInvalidQuantity &&
@@ -213,25 +185,26 @@ export function StoreOrderForm() {
     setError("");
     setSelectedCustomerId(value);
     setOptions(null);
-    setSelectedStockId("");
-    setSelectedBrand("");
     setProducts([]);
     setRows([emptyRow()]);
   };
-  const selectStock = (value: string) => {
-    resetOperation();
-    setSelectedStockId(value);
-    setSelectedBrand("");
-    setProducts([]);
-    setRows([emptyRow()]);
-  };
-  const selectBrand = (value: string) => {
+  const selectRowStock = async (rowId: string, stockObjectId: string) => {
     resetOperation();
     setLoadingProducts(true);
     setError("");
-    setSelectedBrand(value);
-    setProducts([]);
-    setRows([emptyRow()]);
+    updateRow(rowId, { stockObjectId, productObjectId: "", quantity: 1 });
+    try {
+      const result = await getStoreOrderOptions({ customerObjectId: selectedCustomerId, stockObjectId });
+      setProducts((current) => {
+        const values = new Map(current.map((product) => [`${product.productObjectId}:${product.stockObjectId}`, product]));
+        result.products.forEach((product) => values.set(`${product.productObjectId}:${product.stockObjectId}`, product));
+        return [...values.values()];
+      });
+    } catch (reason) {
+      setError(getErrorMessage(reason));
+    } finally {
+      setLoadingProducts(false);
+    }
   };
   const operationKey = () => {
     if (operationKeyRef.current) return operationKeyRef.current;
@@ -250,13 +223,12 @@ export function StoreOrderForm() {
       const result = await createStoreOrder({
         operationKey: operationKey(),
         customerObjectId: selectedCustomerId,
-        stockObjectId: selectedStockId,
-        brandName: selectedBrand,
         paymentMethod,
         paymentTerms:
           paymentMethod === "credit" ? paymentTerms.trim() : undefined,
         items: selectedItems.map(({ row }) => ({
           productObjectId: row.productObjectId,
+          stockObjectId: row.stockObjectId,
           quantity: row.quantity,
         })),
       });
@@ -317,44 +289,6 @@ export function StoreOrderForm() {
           />
         </section>
         <section className="border-b border-[var(--border)] py-5 first:pt-0 last:border-b-0">
-          <div className="mb-4">
-            <h2 className="font-semibold text-[var(--foreground)]">
-              انبار و برند
-            </h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-              هر سفارش فقط از یک انبار و برای یک برند ثبت می‌شود.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <SearchableSelect
-              value={selectedStockId || undefined}
-              onValueChange={selectStock}
-              options={(options?.stocks || []).map((stock) => ({
-                value: stock.objectId,
-                label: stock.title,
-                description: stock.code
-                  ? `کد انبار: ${formatNumber(stock.code)}`
-                  : undefined,
-              }))}
-              placeholder="انتخاب انبار"
-              emptyMessage="انبار مجاز پیدا نشد"
-              disabled={!selectedCustomerId}
-            />
-            <SearchableSelect
-              value={selectedBrand || undefined}
-              onValueChange={selectBrand}
-              options={(options?.brands || []).map((brand) => ({
-                value: brand.brandName,
-                label: brand.brandName,
-                description: brand.priceList.title,
-              }))}
-              placeholder="انتخاب برند"
-              emptyMessage="برندی با لیست قیمت فروشگاه تعیین نشده است"
-              disabled={!selectedStockId}
-            />
-          </div>
-        </section>
-        <section className="border-b border-[var(--border)] py-5 first:pt-0 last:border-b-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-semibold text-[var(--foreground)]">کالاها</h2>
@@ -369,7 +303,7 @@ export function StoreOrderForm() {
                 resetOperation();
                 setRows((current) => [...current, emptyRow()]);
               }}
-              disabled={!products.length}
+              disabled={!selectedCustomerId}
             >
               <PlusCircle className="size-4" />
               افزودن کالا
@@ -380,15 +314,25 @@ export function StoreOrderForm() {
           ) : null}
           <div className="space-y-3">
             {rows.map((row) => {
-              const product = productsById.get(row.productObjectId);
+              const product = productsById.get(`${row.productObjectId}:${row.stockObjectId}`);
               return (
                 <div
                   key={row.id}
                   className="rounded-lg border border-[var(--border)] p-4"
                 >
                   <div className="space-y-4">
-                    {/* ردیف اول: انتخاب کالا و حذف */}
+                    {/* ردیف اول: انتخاب انبار، کالا و حذف */}
                     <div className="flex items-center gap-3">
+                      <div className="w-52 shrink-0">
+                        <SearchableSelect
+                          value={row.stockObjectId || undefined}
+                          onValueChange={(value) => void selectRowStock(row.id, value)}
+                          options={(options?.stocks || []).map((stock) => ({ value: stock.objectId, label: stock.title }))}
+                          placeholder="انتخاب انبار"
+                          emptyMessage="انبار مجاز پیدا نشد"
+                          disabled={!selectedCustomerId}
+                        />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <SearchableSelect
                           value={row.productObjectId || undefined}
@@ -398,12 +342,12 @@ export function StoreOrderForm() {
                               quantity: 1,
                             })
                           }
-                          options={productOptions}
-                          loadOptions={productLoadOptions}
+                          options={productOptionsForStock(row.stockObjectId)}
+                          loadOptions={(query) => productLoadOptions(row.stockObjectId, query)}
                           placeholder="انتخاب کالا"
                           searchPlaceholder="جستجو با نام یا کد کالا"
                           emptyMessage="کالای قابل فروش پیدا نشد"
-                          disabled={!products.length}
+                          disabled={!row.stockObjectId}
                         />
                       </div>
 
@@ -600,14 +544,10 @@ export function StoreOrderForm() {
             }
           />
           <Summary
-            label="انبار"
-            value={
-              options?.stocks.find(
-                (stock) => stock.objectId === selectedStockId,
-              )?.title || "-"
-            }
+            label="انبارها"
+            value={[...new Set(selectedItems.map(({ row }) => options?.stocks.find((stock) => stock.objectId === row.stockObjectId)?.title).filter(Boolean))].join("، ") || "-"}
           />
-          <Summary label="برند" value={selectedBrand || "-"} />
+          <Summary label="برندها" value={[...new Set(selectedItems.map(({ product }) => product?.brandName).filter(Boolean))].join("، ") || "-"} />
           <Summary
             label="روش پرداخت"
             value={paymentMethod === "cash" ? "نقدی" : "اعتباری"}
@@ -625,9 +565,7 @@ export function StoreOrderForm() {
                 <p className="font-semibold">
                   سفارش و پیش‌فاکتور سپیدار با موفقیت ثبت شد.
                 </p>
-                {options?.stocks.find(
-                  (stock) => stock.objectId === selectedStockId,
-                )?.code === 999 && submitted.orderObjectId ? (
+                {selectedItems.some(({ row }) => options?.stocks.find((stock) => stock.objectId === row.stockObjectId)?.code === 999) && submitted.orderObjectId ? (
                   <Link
                     className="block text-primary underline"
                     href={`/store-expert/orders/${submitted.orderObjectId}/exit-slip`}

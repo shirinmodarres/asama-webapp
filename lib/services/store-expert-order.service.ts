@@ -45,11 +45,9 @@ export async function getStoreOrderOptions(filters: {
 
 export async function previewStoreOrder(payload: {
   customerObjectId: string;
-  stockObjectId: string;
-  brandName: string;
   paymentMethod: "cash" | "credit";
   paymentTerms?: string;
-  items: Array<{ productObjectId: string; quantity: number; unitPrice?: number }>;
+  items: Array<{ productObjectId: string; stockObjectId: string; quantity: number; unitPrice?: number }>;
 }) {
   return httpClient.post("/api/store-expert/order-preview", payload);
 }
@@ -104,11 +102,9 @@ export async function getStoreOrder(orderObjectId: string): Promise<Order> {
 export async function createStoreOrder(payload: {
   operationKey: string;
   customerObjectId: string;
-  stockObjectId: string;
-  brandName: string;
   paymentMethod: "cash" | "credit";
   paymentTerms?: string;
-  items: Array<{ productObjectId: string; quantity: number }>;
+  items: Array<{ productObjectId: string; stockObjectId: string; quantity: number }>;
 }): Promise<StoreOrderSubmission> {
   return httpClient.post("/api/store-expert/orders", payload);
 }
