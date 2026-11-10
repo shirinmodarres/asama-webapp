@@ -820,7 +820,8 @@ export function OrderEditForm({
                         emptyMessage="کالایی یافت نشد"
                         disabled={!canEditItemSelection}
                         invalid={Boolean(rowErrors[item.rowId]?.productObjectId)}
-                        triggerClassName="min-w-0 flex-1"
+                        className="min-w-0 flex-1"
+                        triggerClassName="w-full"
                       />
 
                       {canEditItemSelection ? (

@@ -58,6 +58,7 @@ export function SearchableSelect({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const loadOptionsRef = useRef(loadOptions);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const selectedOptionFromList =
     options.find((option) => option.value === value) ||
@@ -98,13 +99,18 @@ export function SearchableSelect({
   }, [normalizeSearch, options, query]);
 
   useEffect(() => {
-    if (!open || !loadOptions) return;
+    loadOptionsRef.current = loadOptions;
+  }, [loadOptions]);
+
+  useEffect(() => {
+    const loader = loadOptionsRef.current;
+    if (!open || !loader) return;
 
     let active = true;
     void (async () => {
       setIsLoadingOptions(true);
       try {
-        const items = await loadOptions(query);
+        const items = await loader(query);
         if (!active) return;
         setRemoteOptions(items);
       } catch {
@@ -119,7 +125,7 @@ export function SearchableSelect({
     return () => {
       active = false;
     };
-  }, [loadOptions, open, query]);
+  }, [open, query]);
 
   useEffect(() => {
     if (!open) return;
