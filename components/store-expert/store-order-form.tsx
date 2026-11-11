@@ -468,7 +468,7 @@ export function StoreOrderForm() {
               </div>
             </button>
 
-            {/* پرداخت اعتباری */}
+            {/* پرداخت اقساطی */}
             <button
               type="button"
               aria-pressed={paymentMethod === "credit"}
@@ -496,19 +496,19 @@ export function StoreOrderForm() {
 
               <div className="flex flex-col items-start gap-1">
                 <span className="text-sm font-semibold text-foreground">
-                  اعتباری
+                  اقساطی
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  با ثبت شرایط پرداخت
+                  با ثبت توضیحات اقساط
                 </span>
               </div>
             </button>
           </div>
 
-          {/* توضیحات پرداخت اعتباری */}
+          {/* توضیحات پرداخت اقساطی */}
           {paymentMethod === "credit" && (
             <label className="mt-4 grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
-              <span>توضیحات شرایط پرداخت *</span>
+              <span>توضیحات اقساط *</span>
 
               <Textarea
                 value={paymentTerms}
@@ -516,13 +516,13 @@ export function StoreOrderForm() {
                   resetOperation();
                   setPaymentTerms(event.target.value);
                 }}
-                placeholder="شرایط پرداخت اعتباری را بنویسید"
+                placeholder="توضیحات اقساط را بنویسید"
                 className="min-h-[90px] resize-none"
               />
 
               {creditInvalid && (
                 <span className="text-xs text-destructive">
-                  توضیحات شرایط پرداخت الزامی است.
+                  توضیحات اقساط الزامی است.
                 </span>
               )}
             </label>
@@ -550,7 +550,7 @@ export function StoreOrderForm() {
           <Summary label="برندها" value={[...new Set(selectedItems.map(({ product }) => product?.brandName).filter(Boolean))].join("، ") || "-"} />
           <Summary
             label="روش پرداخت"
-            value={paymentMethod === "cash" ? "نقدی" : "اعتباری"}
+            value={paymentMethod === "cash" ? "نقدی" : "اقساطی"}
           />
           <Summary
             label="تعداد اقلام"
