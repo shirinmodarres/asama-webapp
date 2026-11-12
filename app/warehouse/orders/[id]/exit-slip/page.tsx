@@ -100,10 +100,11 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     if (!order) return;
     draftReadyRef.current = false;
     try {
-      const raw = window.localStorage.getItem(getExitSlipDraftStorageKey(order.objectId));
+      const raw = window.localStorage.getItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
       if (!raw) return;
       const draft = JSON.parse(raw) as Partial<ExitSlipDraftState>;
       if (Array.isArray(draft.scannedUnits)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once for this order/role.
         setScannedUnits(
           draft.scannedUnits.filter(
             (unit): unit is WarehouseItemUnit =>
@@ -129,7 +130,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     } finally {
       draftReadyRef.current = true;
     }
-  }, [order]);
+  }, [dashboardRole, order]);
 
   useEffect(() => {
     if (!order || !draftReadyRef.current) return;
@@ -140,10 +141,10 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
       savedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(
-      getExitSlipDraftStorageKey(order.objectId),
+      getExitSlipDraftStorageKey(order.objectId, dashboardRole),
       JSON.stringify(payload),
     );
-  }, [notes, order, scanValues, scannedUnits]);
+  }, [dashboardRole, notes, order, scanValues, scannedUnits]);
 
   useEffect(() => {
     if (!isLoading) serialNumberRef.current?.focus();
@@ -152,9 +153,12 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
   const expectedRows = useMemo<ExpectedRow[]>(() => {
     if (!order) return [];
     const itemsByProduct = new Map<string, OrderItem>();
+    const visibleItems = dashboardRole === "store-expert"
+      ? order.items.filter(itemIsAssignedToRetailWarehouse)
+      : order.items;
 
-    for (const item of order.items) {
-      const key = getOrderItemProductKey(item);
+    for (const item of visibleItems) {
+      const key = getOrderItemProductKey(item, dashboardRole === "store-expert");
       const existing = itemsByProduct.get(key);
       if (existing) {
         existing.quantity += item.quantity;
@@ -182,7 +186,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         ),
       };
     });
-  }, [order, scannedUnits]);
+  }, [dashboardRole, order, scannedUnits]);
   const totalItemCount = useMemo(
     () =>
       expectedRows.reduce(
@@ -226,7 +230,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     scannedUnits.length > 0 &&
     expectedRows.length > 0 &&
     scannedUnits.every((unit) =>
-      expectedRows.some((row) => unitMatchesOrderItem(unit, row.item)),
+      expectedRows.some((row) => unitMatchesOrderItem(unit, row.item, dashboardRole === "store-expert")),
     );
 
   const expectedColumns: DataTableColumn<ExpectedRow>[] = [
@@ -480,7 +484,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         notes: notes.trim() || undefined,
         unitObjectIds,
       });
-      window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId));
+      window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
       setCreatedSlip(slip);
       setMessage(
         isFullyScanned
@@ -503,7 +507,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
       savedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(
-      getExitSlipDraftStorageKey(order.objectId),
+      getExitSlipDraftStorageKey(order.objectId, dashboardRole),
       JSON.stringify(payload),
     );
     setDraftMessage(
@@ -513,7 +517,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
 
   const handleClearDraft = () => {
     if (!order) return;
-    window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId));
+    window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
     setDraftMessage("پیش‌نویس ثبت مرحله‌ای پاک شد.");
   };
 
@@ -835,8 +839,8 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
 
 export default ExitSlipCreatePage;
 
-function getExitSlipDraftStorageKey(orderObjectId: string): string {
-  return `asama:warehouse:exit-slip:draft:${orderObjectId}`;
+function getExitSlipDraftStorageKey(orderObjectId: string, dashboardRole: "warehouse" | "store-expert" = "warehouse"): string {
+  return `asama:warehouse:exit-slip:draft:${dashboardRole}:${orderObjectId}`;
 }
 
 const ScanField = forwardRef<
@@ -886,7 +890,9 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 function unitMatchesOrderItem(
   unit: WarehouseItemUnit,
   item: OrderItem,
+  restrictToRetailStock = false,
 ): boolean {
+  if (restrictToRetailStock && unit.sepidarStockId !== 56) return false;
   if (unit.productObjectId && item.productId) {
     return unit.productObjectId === item.productId;
   }
@@ -900,8 +906,13 @@ function unitMatchesOrderItem(
   );
 }
 
-function getOrderItemProductKey(item: OrderItem): string {
-  if (item.productId) return item.productId;
-  if (item.productSku) return `sku:${item.productSku}`;
-  return `name:${item.productName}`;
+function itemIsAssignedToRetailWarehouse(item: OrderItem): boolean {
+  return item.sepidarStockId === 56 || Boolean(item.stockAllocations?.some((allocation) => allocation.sepidarStockId === 56));
+}
+
+function getOrderItemProductKey(item: OrderItem, includeStock = false): string {
+  const stockKey = includeStock ? `:${item.stockAllocations?.find((allocation) => allocation.sepidarStockId === 56)?.stockObjectId || item.stockObjectId || "retail"}` : "";
+  if (item.productId) return `${item.productId}${stockKey}`;
+  if (item.productSku) return `sku:${item.productSku}${stockKey}`;
+  return `name:${item.productName}${stockKey}`;
 }

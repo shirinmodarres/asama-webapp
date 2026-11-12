@@ -484,10 +484,28 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     pricingSource: toNullableString(record.pricingSource),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),
     trackingCode: normalizeNullableDigits(record.trackingCode),
+    stockObjectId: toNullableString(record.stockObjectId),
+    sepidarStockId:
+      record.sepidarStockId === undefined || record.sepidarStockId === null
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    stockAllocations: toArray(record.stockAllocations).map((allocation) => {
+      const value = toRecord(allocation);
+      return {
+        stockObjectId: toNullableString(value.stockObjectId),
+        sepidarStockId:
+          value.sepidarStockId === undefined || value.sepidarStockId === null
+            ? null
+            : toNumberValue(value.sepidarStockId),
+        stockTitle: toNullableString(value.stockTitle),
+        quantity: toNumberValue(value.quantity),
+      };
+    }),
   };
 }
 
 function mapOrderType(value: unknown): OrderType {
+  if (value === "store") return "store";
   return value === "naja" ? "naja" : "normal";
 }
 

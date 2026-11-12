@@ -19,7 +19,7 @@ import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { listStoreOrders } from "@/lib/services/store-expert-order.service";
-import { formatFaDigits } from "@/lib/utils/number-format";
+import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 
 const PAGE_SIZE = 20;
 const STORE_STATUSES = [
@@ -68,11 +68,12 @@ export default function StoreExpertOrdersPage() {
   const columns: DataTableColumn<Order>[] = [
     { key: "code", header: "کد سفارش", render: (row) => <span className="font-semibold text-[var(--foreground)]">{formatFaDigits(row.code)}</span> },
     { key: "customer", header: "مشتری", render: (row) => <div><p>{row.customerName || "-"}</p><p className="mt-1 text-xs text-[var(--muted-foreground)]">{formatFaDigits(row.sepidarCustomerCode || "-")}</p></div> },
-    { key: "brand", header: "برند", render: (row) => row.priceListBrand || "-" },
-    { key: "stock", header: "انبار", render: (row) => row.stockTitle || "-" },
+    { key: "brand", header: "برند", render: (row) => [...new Set(row.items.map((item) => item.brandName || item.brand).filter(Boolean))].join("، ") || "-" },
+    { key: "stock", header: "انبار", render: (row) => row.selectedStockTitles.join("، ") || row.stockTitle || "-" },
     { key: "quantity", header: "تعداد", render: (row) => formatNumber(row.items.reduce((total, item) => total + item.quantity, 0)) },
     { key: "quotation", header: "پیش‌فاکتور", render: (row) => <QuotationState order={row} compact /> },
     { key: "warehouse", header: "خروج کالا", render: (row) => <StatusBadge type="warehouse" status={row.warehouseStatus} /> },
+    { key: "total", header: "مبلغ نهایی", render: (row) => formatFaCurrency(row.salesRequestTotalWithTax || row.items.reduce((total, item) => total + item.quantity * item.unitPrice, 0)) },
     { key: "date", header: "تاریخ ثبت", render: (row) => formatDate(row.createdAt) },
     { key: "actions", header: "عملیات", sticky: "left", render: (row) => <Link href={`/store-expert/orders/${row.objectId}`} className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-muted">مشاهده جزئیات</Link> },
   ];

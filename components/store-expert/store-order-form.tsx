@@ -60,6 +60,7 @@ export function StoreOrderForm() {
   const [rows, setRows] = useState<DraftRow[]>([emptyRow()]);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit">("cash");
   const [paymentTerms, setPaymentTerms] = useState("");
+  const [discountPercentage, setDiscountPercentage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -138,6 +139,11 @@ export function StoreOrderForm() {
     (sum, { row, product }) => sum + row.quantity * (product?.unitPrice || 0),
     0,
   );
+  const normalizedDiscountPercentage = Math.min(100, Math.max(0, Number(discountPercentage) || 0));
+  const discountAmount = Math.round(totalAmount * normalizedDiscountPercentage / 100);
+  const taxableAmount = Math.max(totalAmount - discountAmount, 0);
+  const taxAmount = Math.round(taxableAmount * 0.1);
+  const finalAmount = taxableAmount + taxAmount;
   const creditInvalid = paymentMethod === "credit" && !paymentTerms.trim();
   const hasInvalidQuantity = selectedItems.some(
     ({ row, product }) =>
@@ -226,6 +232,7 @@ export function StoreOrderForm() {
         paymentMethod,
         paymentTerms:
           paymentMethod === "credit" ? paymentTerms.trim() : undefined,
+        discountPercentage: normalizedDiscountPercentage,
         items: selectedItems.map(({ row }) => ({
           productObjectId: row.productObjectId,
           stockObjectId: row.stockObjectId,
@@ -422,6 +429,25 @@ export function StoreOrderForm() {
           </div>
         </section>
         <section className="border-b border-[var(--border)] py-5">
+          <label className="grid max-w-xs gap-1.5 text-sm font-medium text-[var(--foreground)]">
+            <span>تخفیف سفارش (درصد)</span>
+            <Input
+              inputMode="decimal"
+              min={0}
+              max={100}
+              value={discountPercentage || ""}
+              onChange={(event) => {
+                resetOperation();
+                setDiscountPercentage(Math.min(100, Math.max(0, toNumber(event.target.value))));
+              }}
+              placeholder="۰"
+            />
+            <span className="text-xs font-normal text-[var(--muted-foreground)]">
+              تخفیف فقط در صورتحساب داخلی آساما اعمال می‌شود.
+            </span>
+          </label>
+        </section>
+        <section className="border-b border-[var(--border)] py-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-[var(--foreground)]">
               روش پرداخت
@@ -556,7 +582,11 @@ export function StoreOrderForm() {
             label="تعداد اقلام"
             value={formatNumber(selectedItems.length)}
           />
-          <Summary label="مبلغ کل" value={formatCurrency(totalAmount)} />
+          <Summary label="جمع کالاها" value={formatCurrency(totalAmount)} />
+          <Summary label="تخفیف" value={formatCurrency(discountAmount)} />
+          <Summary label="مبلغ مشمول مالیات" value={formatCurrency(taxableAmount)} />
+          <Summary label="مالیات" value={formatCurrency(taxAmount)} />
+          <Summary label="مبلغ نهایی" value={formatCurrency(finalAmount)} />
         </dl>
         {submitted ? (
           <div className="mt-5 rounded-lg border border-[var(--border)] bg-muted/40 p-4 text-sm text-[var(--foreground)]">
@@ -565,7 +595,7 @@ export function StoreOrderForm() {
                 <p className="font-semibold">
                   سفارش و پیش‌فاکتور سپیدار با موفقیت ثبت شد.
                 </p>
-                {selectedItems.some(({ row }) => options?.stocks.find((stock) => stock.objectId === row.stockObjectId)?.code === 999) && submitted.orderObjectId ? (
+                {selectedItems.some(({ row }) => options?.stocks.find((stock) => stock.objectId === row.stockObjectId)?.sepidarStockId === 56) && submitted.orderObjectId ? (
                   <Link
                     className="block text-primary underline"
                     href={`/store-expert/orders/${submitted.orderObjectId}/exit-slip`}

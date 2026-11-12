@@ -22,6 +22,14 @@ export interface OrderItem {
   pricingSource?: string | null;
   productIdentifier: string | null;
   trackingCode: string | null;
+  stockObjectId?: string | null;
+  sepidarStockId?: number | null;
+  stockAllocations?: Array<{
+    stockObjectId?: string | null;
+    sepidarStockId?: number | null;
+    stockTitle?: string | null;
+    quantity?: number;
+  }>;
 }
 
 export interface Order {

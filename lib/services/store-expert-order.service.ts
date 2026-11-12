@@ -47,6 +47,7 @@ export async function previewStoreOrder(payload: {
   customerObjectId: string;
   paymentMethod: "cash" | "credit";
   paymentTerms?: string;
+  discountPercentage?: number;
   items: Array<{ productObjectId: string; stockObjectId: string; quantity: number; unitPrice?: number }>;
 }) {
   return httpClient.post("/api/store-expert/order-preview", payload);
@@ -104,6 +105,7 @@ export async function createStoreOrder(payload: {
   customerObjectId: string;
   paymentMethod: "cash" | "credit";
   paymentTerms?: string;
+  discountPercentage?: number;
   items: Array<{ productObjectId: string; stockObjectId: string; quantity: number }>;
 }): Promise<StoreOrderSubmission> {
   return httpClient.post("/api/store-expert/orders", payload);
