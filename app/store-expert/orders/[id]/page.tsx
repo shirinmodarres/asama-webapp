@@ -64,10 +64,10 @@ function hasRetailItems(order: Order) {
   const retailStockIds = new Set(order.retailStockObjectIds || []);
   return order.items.some(
     (item) =>
-      item.sepidarStockId === RETAIL_SEPIDAR_STOCK_ID ||
+      Number(item.sepidarStockId) === RETAIL_SEPIDAR_STOCK_ID ||
       (item.stockObjectId ? retailStockIds.has(item.stockObjectId) : false) ||
       item.stockAllocations?.some(
-        (allocation) => allocation.sepidarStockId === RETAIL_SEPIDAR_STOCK_ID || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId)),
+        (allocation) => Number(allocation.sepidarStockId) === RETAIL_SEPIDAR_STOCK_ID || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId)),
       ),
   );
 }

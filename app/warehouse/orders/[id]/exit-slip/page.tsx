@@ -27,6 +27,7 @@ import type {
 } from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { getOrder } from "@/lib/services/order.service";
+import { getStoreOrder } from "@/lib/services/store-expert-order.service";
 import {
   createExitSlip,
   validateExitSlipScan,
@@ -81,7 +82,9 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
       setIsLoading(true);
       setError("");
       try {
-        const data = await getOrder(params.id);
+        const data = dashboardRole === "store-expert"
+          ? await getStoreOrder(params.id)
+          : await getOrder(params.id);
         if (isMounted) setOrder(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -94,7 +97,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [dashboardRole, params.id]);
 
   useEffect(() => {
     if (!order) return;
@@ -154,7 +157,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     if (!order) return [];
     const itemsByProduct = new Map<string, OrderItem>();
     const visibleItems = dashboardRole === "store-expert"
-      ? order.items.filter(itemIsAssignedToRetailWarehouse)
+      ? order.items.filter((item) => itemIsAssignedToRetailWarehouse(item, order.retailStockObjectIds))
       : order.items;
 
     for (const item of visibleItems) {
@@ -905,8 +908,16 @@ function unitMatchesOrderItem(
   );
 }
 
-function itemIsAssignedToRetailWarehouse(item: OrderItem): boolean {
-  return item.sepidarStockId === 56 || Boolean(item.stockAllocations?.some((allocation) => allocation.sepidarStockId === 56));
+function itemIsAssignedToRetailWarehouse(
+  item: OrderItem,
+  retailStockObjectIds: string[] = [],
+): boolean {
+  const retailStockIds = new Set(retailStockObjectIds);
+  return Number(item.sepidarStockId) === 56
+    || Boolean(item.stockObjectId && retailStockIds.has(item.stockObjectId))
+    || Boolean(item.stockAllocations?.some((allocation) =>
+      Number(allocation.sepidarStockId) === 56
+      || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId))));
 }
 
 function getOrderItemProductKey(item: OrderItem, includeStock = false): string {
