@@ -91,6 +91,7 @@ export interface Order {
   stockCode: number | null;
   selectedStockObjectIds?: string[];
   retailStockObjectIds?: string[];
+  retailOrderItemObjectIds?: string[];
   sepidarStockId: number | null;
   stockTitle: string | null;
   selectedStockTitles: string[];

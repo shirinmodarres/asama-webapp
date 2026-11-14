@@ -241,6 +241,9 @@ export function mapOrderDto(dto: unknown): Order {
     retailStockObjectIds: toArray(record.retailStockObjectIds)
       .map(toStringValue)
       .filter(Boolean),
+    retailOrderItemObjectIds: toArray(record.retailOrderItemObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),

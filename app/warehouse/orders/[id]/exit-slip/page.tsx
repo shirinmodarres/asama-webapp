@@ -157,7 +157,11 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     if (!order) return [];
     const itemsByProduct = new Map<string, OrderItem>();
     const visibleItems = dashboardRole === "store-expert"
-      ? order.items.filter((item) => itemIsAssignedToRetailWarehouse(item, order.retailStockObjectIds))
+      ? order.items.filter((item) => itemIsAssignedToRetailWarehouse(
+        item,
+        order.retailStockObjectIds,
+        order.retailOrderItemObjectIds,
+      ))
       : order.items;
 
     for (const item of visibleItems) {
@@ -911,9 +915,12 @@ function unitMatchesOrderItem(
 function itemIsAssignedToRetailWarehouse(
   item: OrderItem,
   retailStockObjectIds: string[] = [],
+  retailOrderItemObjectIds: string[] = [],
 ): boolean {
   const retailStockIds = new Set(retailStockObjectIds);
-  return Number(item.sepidarStockId) === 56
+  const retailItemIds = new Set(retailOrderItemObjectIds);
+  return retailItemIds.has(item.objectId)
+    || Number(item.sepidarStockId) === 56
     || Boolean(item.stockObjectId && retailStockIds.has(item.stockObjectId))
     || Boolean(item.stockAllocations?.some((allocation) =>
       Number(allocation.sepidarStockId) === 56

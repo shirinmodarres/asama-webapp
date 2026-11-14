@@ -62,8 +62,10 @@ function invoiceStatusLabel(status: string | null) {
 
 function hasRetailItems(order: Order) {
   const retailStockIds = new Set(order.retailStockObjectIds || []);
+  const retailItemIds = new Set(order.retailOrderItemObjectIds || []);
   return order.items.some(
     (item) =>
+      retailItemIds.has(item.objectId) ||
       Number(item.sepidarStockId) === RETAIL_SEPIDAR_STOCK_ID ||
       (item.stockObjectId ? retailStockIds.has(item.stockObjectId) : false) ||
       item.stockAllocations?.some(

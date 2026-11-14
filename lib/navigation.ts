@@ -194,18 +194,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "بررسی درخواست‌های در انتظار حسابدار فروش",
     },
     {
-      label: "آماده فاکتور",
-      href: "/finance/ready",
-      icon: "layers",
-      description: "آماده بررسی مالی",
-    },
-    {
-      label: "فاکتورها",
-      href: "/finance/invoices",
-      icon: "file-text",
-      description: "اسناد مالی صادرشده",
-    },
-    {
       label: "لیست قیمت‌ها",
       href: "/finance/pricing/price-lists",
       icon: "layers",

@@ -50,6 +50,9 @@ function documentFor(invoice: InternalInvoice) {
     detailRows: [],
     showAmounts: true,
     summaryTitle: "اقلام فاکتور",
+    showSummaryMeta: false,
+    showSignatures: false,
+    noteLayout: "single-column-left" as const,
     noteFields: [
       { label: "جمع کالاها", value: formatFaCurrency(invoice.grossAmount) },
       { label: `تخفیف (${formatFaDigits(discountPercentage)}٪)`, value: formatFaCurrency(invoice.discount) },
@@ -57,6 +60,6 @@ function documentFor(invoice: InternalInvoice) {
       { label: "مالیات بر ارزش افزوده", value: formatFaCurrency(invoice.tax) },
       { label: "مبلغ نهایی", value: formatFaCurrency(invoice.netAmount) },
     ],
-    signatureLabels: ["امضای فروشنده", "امضای خریدار"] as [string, string],
+    signatureLabels: ["", ""] as [string, string],
   };
 }

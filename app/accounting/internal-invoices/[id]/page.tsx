@@ -170,7 +170,7 @@ export default function InternalInvoiceDetailPage() {
         <div className="space-y-5">
           <SectionHeader
             title={`فاکتور داخلی ${formatFaDigits(invoice.invoiceNumber || invoice.id)}`}
-            description="اطلاعات حواله خروج و مبالغ سفارش را پیش از ثبت دستی بررسی کنید."
+            description="مبالغ و اطلاعات سفارش را پیش از ثبت در سیستم حسابداری بررسی کنید."
             actions={
               <div className="flex flex-wrap gap-2">
                 {invoice.pdfUrl ? (
@@ -189,7 +189,7 @@ export default function InternalInvoiceDetailPage() {
                 </Button>
                 {invoice.status === "ready_for_accounting" ? (
                   <Button type="button" onClick={() => setIsDialogOpen(true)}>
-                    علامت‌گذاری به عنوان ثبت‌شده در حسابداری
+                    ثبت در سیستم حسابداری
                   </Button>
                 ) : null}
               </div>
