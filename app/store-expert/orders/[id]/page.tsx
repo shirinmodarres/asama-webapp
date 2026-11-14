@@ -61,11 +61,13 @@ function invoiceStatusLabel(status: string | null) {
 }
 
 function hasRetailItems(order: Order) {
+  const retailStockIds = new Set(order.retailStockObjectIds || []);
   return order.items.some(
     (item) =>
       item.sepidarStockId === RETAIL_SEPIDAR_STOCK_ID ||
+      (item.stockObjectId ? retailStockIds.has(item.stockObjectId) : false) ||
       item.stockAllocations?.some(
-        (allocation) => allocation.sepidarStockId === RETAIL_SEPIDAR_STOCK_ID,
+        (allocation) => allocation.sepidarStockId === RETAIL_SEPIDAR_STOCK_ID || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId)),
       ),
   );
 }
@@ -260,7 +262,10 @@ export default function StoreExpertOrderDetailPage() {
                 label="مبلغ مشمول مالیات"
                 value={formatFaCurrency(financials.taxable)}
               />
-              <Info label="مالیات" value={formatFaCurrency(financials.tax)} />
+              <Info
+                label="مالیات بر ارزش افزوده"
+                value={formatFaCurrency(financials.tax)}
+              />
               <Info
                 label="مبلغ نهایی"
                 value={formatFaCurrency(financials.total)}

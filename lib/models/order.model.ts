@@ -90,6 +90,7 @@ export interface Order {
   stockObjectId: string | null;
   stockCode: number | null;
   selectedStockObjectIds?: string[];
+  retailStockObjectIds?: string[];
   sepidarStockId: number | null;
   stockTitle: string | null;
   selectedStockTitles: string[];

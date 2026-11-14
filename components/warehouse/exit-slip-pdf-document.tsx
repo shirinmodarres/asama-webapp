@@ -17,6 +17,8 @@ export interface SlipSummaryRow {
   key: string;
   productName: string;
   quantity: number;
+  unitPrice?: number;
+  lineTotal?: number;
 }
 
 export interface SlipDetailRow {
@@ -36,6 +38,8 @@ interface ExitSlipPdfDocumentProps {
   detailRows: SlipDetailRow[];
   noteFields?: SlipInfoField[];
   signatureLabels: [string, string];
+  showAmounts?: boolean;
+  summaryTitle?: string;
 }
 
 const SUMMARY_ROWS_FIRST_PAGE = 16;
@@ -51,6 +55,8 @@ export function ExitSlipPdfDocument({
   detailRows,
   noteFields = [],
   signatureLabels,
+  showAmounts = false,
+  summaryTitle = "خلاصه کالاها",
 }: ExitSlipPdfDocumentProps) {
   const summaryPages = paginateRows(
     summaryRows,
@@ -85,6 +91,8 @@ export function ExitSlipPdfDocument({
             ) : null}
             <SummaryTable
               rows={rows}
+              showAmounts={showAmounts}
+              title={summaryTitle}
               startIndex={
                 index === 0
                   ? 0
@@ -172,14 +180,18 @@ function InformationSection({ section }: { section: SlipInfoSection }) {
 function SummaryTable({
   rows,
   startIndex,
+  showAmounts,
+  title,
 }: {
   rows: SlipSummaryRow[];
   startIndex: number;
+  showAmounts: boolean;
+  title: string;
 }) {
   return (
     <section className="print-section print-table-section rounded-md border border-[#94A3B8] bg-white/95">
       <h2 className="border-b border-[#94A3B8] px-3 py-1.5 text-[10.5px] font-bold text-[#1F3A5F]">
-        خلاصه کالاها
+        {title}
       </h2>
       <table className="summary-table items-table w-full table-fixed border-collapse text-right text-[10px] leading-4">
         <thead>
@@ -187,6 +199,7 @@ function SummaryTable({
             <TableHeader className="w-10">ردیف</TableHeader>
             <TableHeader>نام کالا</TableHeader>
             <TableHeader className="w-16">تعداد</TableHeader>
+            {showAmounts ? <><TableHeader className="w-24">قیمت واحد</TableHeader><TableHeader className="w-28">مبلغ</TableHeader></> : null}
           </tr>
         </thead>
         <tbody>
@@ -195,6 +208,7 @@ function SummaryTable({
               <TableCell>{formatNumber(startIndex + index + 1)}</TableCell>
               <TableCell>{row.productName || "-"}</TableCell>
               <TableCell>{formatNumber(row.quantity)}</TableCell>
+              {showAmounts ? <><TableCell>{formatFaDigits(row.unitPrice || 0)}</TableCell><TableCell>{formatFaDigits(row.lineTotal || 0)}</TableCell></> : null}
             </tr>
           ))}
         </tbody>
