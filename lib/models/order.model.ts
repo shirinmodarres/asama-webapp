@@ -186,6 +186,8 @@ export interface Order {
   exitSlipIssuedAt: string | null;
   internalInvoiceObjectId: string | null;
   internalInvoiceNumber: string | null;
+  modCenterInvoiceObjectId: string | null;
+  modCenterInvoiceNumber: string | null;
   accountingStatus: string | null;
   inventoryReservationStatus: string | null;
   storePaymentMethod: "cash" | "credit" | null;

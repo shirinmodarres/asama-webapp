@@ -54,6 +54,7 @@ export interface InternalInvoice {
   recipientMobile: string | null;
   najaOrderNumber: string | null;
   grossAmount: number;
+  discountPercentage?: number | null;
   discount: number;
   tax: number;
   duty: number;

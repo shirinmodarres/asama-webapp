@@ -182,6 +182,9 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
         )
       : null,
     grossAmount: toNumberValue(record.grossAmount ?? record.totalAmount),
+    discountPercentage: record.discountPercentage === null || record.discountPercentage === undefined
+      ? null
+      : toNumberValue(record.discountPercentage),
     discount: toNumberValue(record.discountAmount ?? record.discount),
     tax: toNumberValue(record.taxAmount ?? record.tax),
     duty: toNumberValue(record.dutyAmount ?? record.duty),

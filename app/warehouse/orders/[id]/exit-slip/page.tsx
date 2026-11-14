@@ -795,19 +795,18 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
                 <div>
                   <div className="flex items-center gap-2 font-semibold text-[#2F6B3A]">
                     <CheckCircle2 className="size-5" />
-                    حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.
+                    حواله خروج صادر شد{createdSlip.internalInvoiceObjectId ? " و فاکتور داخلی برای حسابداری ایجاد شد." : "."}
                   </div>
                   <div className="mt-3 grid gap-2 text-sm text-[#334155]">
                     <span>
                       شماره حواله:{" "}
                       {formatFaDigits(createdSlip.slipCode || createdSlip.id)}
                     </span>
-                    <span>
-                      شماره فاکتور داخلی:{" "}
-                      {createdSlip.internalInvoiceNumber
-                        ? formatFaDigits(createdSlip.internalInvoiceNumber)
-                        : "-"}
-                    </span>
+                    {createdSlip.internalInvoiceNumber ? (
+                      <span>
+                        شماره فاکتور داخلی: {formatFaDigits(createdSlip.internalInvoiceNumber)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">

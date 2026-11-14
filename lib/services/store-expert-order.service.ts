@@ -5,6 +5,8 @@ import type { ExitSlip } from "@/lib/models/warehouse.model";
 import type { Order } from "@/lib/models/order.model";
 import { mapExitSlipDto } from "@/lib/mappers/warehouse.mapper";
 import { mapOrderDto, mapOrderListDto } from "@/lib/mappers/order.mapper";
+import { mapInternalInvoiceDto } from "@/lib/mappers/internal-invoice.mapper";
+import type { InternalInvoice } from "@/lib/models/internal-invoice.model";
 import { toArray, toRecord } from "@/lib/mappers/mapper-utils";
 
 export type StoreStock = { objectId: string; id: string; sepidarStockId: number | null; code: number | null; title: string };
@@ -59,6 +61,7 @@ export type StoreOrderSubmission = {
   orderObjectId: string | null;
   orderCode?: string | null;
   internalInvoiceObjectId: string | null;
+  modCenterInvoiceObjectId?: string | null;
   errorMessage: string | null;
   canReconcile: boolean;
   dryRun?: boolean;
@@ -99,6 +102,12 @@ export async function listStoreOrders(filters: {
 
 export async function getStoreOrder(orderObjectId: string): Promise<Order> {
   return mapOrderDto(await httpClient.get<unknown>(`/api/store-expert/orders/${orderObjectId}`));
+}
+
+export async function getModCenterInvoice(invoiceObjectId: string): Promise<InternalInvoice> {
+  return mapInternalInvoiceDto(
+    await httpClient.get<unknown>(`/api/store-expert/mod-center-invoices/${invoiceObjectId}`),
+  );
 }
 
 export async function createStoreOrder(payload: {

@@ -433,6 +433,8 @@ export function mapOrderDto(dto: unknown): Order {
     exitSlipIssuedAt: toNullableString(record.exitSlipIssuedAt),
     internalInvoiceObjectId: toNullableString(record.internalInvoiceObjectId),
     internalInvoiceNumber: toNullableString(record.internalInvoiceNumber),
+    modCenterInvoiceObjectId: toNullableString(record.modCenterInvoiceObjectId),
+    modCenterInvoiceNumber: toNullableString(record.modCenterInvoiceNumber),
     accountingStatus: toNullableString(record.accountingStatus),
     inventoryReservationStatus: toNullableString(record.inventoryReservationStatus),
     storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
