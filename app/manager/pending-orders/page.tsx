@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { REVIEW_REASONS } from "@/lib/domain/order-action-reasons";
+import { FINANCIAL_CORRECTION_REASONS } from "@/lib/domain/order-action-reasons";
 import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -30,7 +30,7 @@ import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   approveOrder,
   listOrders,
-  markOrderNeedsReview,
+  returnFinancialOrder,
 } from "@/lib/services/order.service";
 import { ListFilter, Search, X } from "lucide-react";
 import Link from "next/link";
@@ -185,9 +185,9 @@ export default function ManagerPendingOrdersPage() {
           const result = await approveOrder(order.objectId);
           successes.push({ id: order.objectId, order: result.order });
         } else {
-          const updated = await markOrderNeedsReview(order.objectId, {
-            reasonCode: bulkReasonCode,
-            requestedByName,
+          const updated = await returnFinancialOrder(order.objectId, {
+            correctionReasonCode: bulkReasonCode,
+            returnedByName: requestedByName,
           });
           successes.push({ id: order.objectId, order: updated });
         }
@@ -517,7 +517,7 @@ export default function ManagerPendingOrdersPage() {
           <Select value={bulkReasonCode} onValueChange={setBulkReasonCode} disabled={isBulkSubmitting}>
             <SelectTrigger><SelectValue placeholder="دلیل ارجاع برای اصلاح" /></SelectTrigger>
             <SelectContent>
-              {REVIEW_REASONS.map((reason) => (
+              {FINANCIAL_CORRECTION_REASONS.sales_manager.map((reason) => (
                 <SelectItem key={reason.code} value={reason.code}>{reason.label}</SelectItem>
               ))}
             </SelectContent>
