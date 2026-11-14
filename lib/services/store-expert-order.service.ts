@@ -57,6 +57,7 @@ export type StoreOrderSubmission = {
   operationKey: string;
   status: "completed" | "pending_verification" | "invoice_pending" | "failed" | string;
   orderObjectId: string | null;
+  orderCode?: string | null;
   internalInvoiceObjectId: string | null;
   errorMessage: string | null;
   canReconcile: boolean;

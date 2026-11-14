@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PlusCircle, Trash2, UserRoundPlus } from "lucide-react";
+import { CheckCircle2, PlusCircle, Trash2, UserRoundPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
@@ -50,6 +52,7 @@ const emptyRow = (): DraftRow => ({
   quantity: 1,
 });
 export function StoreOrderForm() {
+  const router = useRouter();
   const [customers, setCustomers] = useState<
     Awaited<ReturnType<typeof listStoreExpertCustomers>>["items"]
   >([]);
@@ -65,8 +68,17 @@ export function StoreOrderForm() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<StoreOrderSubmission | null>(null);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [error, setError] = useState("");
   const operationKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!successModalOpen || !submitted?.orderObjectId) return;
+    const timeout = window.setTimeout(() => {
+      router.replace(`/store-expert/orders/${submitted.orderObjectId}`);
+    }, 1800);
+    return () => window.clearTimeout(timeout);
+  }, [router, submitted?.orderObjectId, successModalOpen]);
 
   useEffect(() => {
     void listStoreExpertCustomers({ limit: 20, offset: 0 })
@@ -240,6 +252,7 @@ export function StoreOrderForm() {
         })),
       });
       setSubmitted(result);
+      setSuccessModalOpen(result.status === "completed" && Boolean(result.orderObjectId));
       if (result.status === "dry_run") {
         console.info("[MAD CENTER][DRY RUN] quotation", result.sepidarPayloadPreview || {});
         window.sessionStorage.removeItem("asama:store-expert:order-operation");
@@ -255,6 +268,7 @@ export function StoreOrderForm() {
   };
 
   return (
+    <>
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
       <Card className="min-w-0 p-5 md:p-6">
         {error ? <InlineErrorMessage message={error} /> : null}
@@ -591,33 +605,7 @@ export function StoreOrderForm() {
         {submitted ? (
           <div className="mt-5 rounded-lg border border-[var(--border)] bg-muted/40 p-4 text-sm text-[var(--foreground)]">
             {submitted.status === "completed" ? (
-              <div className="space-y-2">
-                <p className="font-semibold">
-                  سفارش و پیش‌فاکتور سپیدار با موفقیت ثبت شد.
-                </p>
-                {selectedItems.some(({ row }) => options?.stocks.find((stock) => stock.objectId === row.stockObjectId)?.sepidarStockId === 56) && submitted.orderObjectId ? (
-                  <Link
-                    className="block text-primary underline"
-                    href={`/store-expert/orders/${submitted.orderObjectId}/exit-slip`}
-                  >
-                    ثبت خروج کالا با کد رهگیری
-                  </Link>
-                ) : (
-                  <p>
-                    سفارش در صف خروج انبار قرار گرفت و وضعیت آن توسط انباردار
-                    پیگیری می‌شود.
-                  </p>
-                )}
-                {submitted.internalInvoiceObjectId ? (
-                  <Link
-                    className="block text-primary underline"
-                    href={`/accounting/internal-invoices/${submitted.internalInvoiceObjectId}/print`}
-                    target="_blank"
-                  >
-                    دانلود صورتحساب داخلی ماد سنتر
-                  </Link>
-                ) : null}
-              </div>
+              <p>سفارش با موفقیت ثبت شد.</p>
             ) : submitted.status === "dry_run" ? (
               <p>
                 ارسال پیش‌فاکتور به سپیدار غیرفعال است؛ هیچ رزرو یا حواله‌ای
@@ -642,6 +630,25 @@ export function StoreOrderForm() {
         </div>
       </Card>
     </div>
+    <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><CheckCircle2 className="size-5 text-primary" />سفارش با موفقیت ثبت شد</DialogTitle>
+          <DialogDescription>
+            پیش‌فاکتور سپیدار ثبت شد و سفارش برای پیگیری و خروج کالا آماده است. تا لحظاتی دیگر به جزئیات سفارش منتقل می‌شوید.
+          </DialogDescription>
+        </DialogHeader>
+        <p className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+          شماره سفارش: {submitted?.orderCode || "-"}
+        </p>
+        <DialogFooter>
+          <Button type="button" onClick={() => submitted?.orderObjectId && router.push(`/store-expert/orders/${submitted.orderObjectId}`)}>
+            مشاهده جزئیات سفارش
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 

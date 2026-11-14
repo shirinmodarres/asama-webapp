@@ -110,6 +110,7 @@ function InvoiceDocument({
   rows: InternalInvoice["items"];
   showTotals: boolean;
 }) {
+  const isStoreInvoice = invoice.orderType === "store";
   return (
     <div className="space-y-5 text-[#102034]">
       {/* <header className="relative min-h-33 pb-4 pt-14">
@@ -151,10 +152,10 @@ function InvoiceDocument({
           <h2 className="text-base font-bold">اطلاعات سفارش</h2>
         </div>
         <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-          <InlineInfo
+          {!isStoreInvoice ? <InlineInfo
             label="شماره حواله خروج"
             value={formatFaDigits(invoice.exitSlipNumber) || "-"}
-          />
+          /> : null}
           <InlineInfo label="مشتری" value={invoice.customerName || "-"} />
 
           <InlineInfo
@@ -164,7 +165,7 @@ function InvoiceDocument({
               "-"
             }
           />
-          <InlineInfo label="انبار خروج" value={invoice.stockTitle || "-"} />
+          {!isStoreInvoice ? <InlineInfo label="انبار خروج" value={invoice.stockTitle || "-"} /> : null}
           <div className="sm:col-span-2">
             <InlineInfo
               label="آدرس مشتری"
@@ -215,7 +216,7 @@ function InvoiceDocument({
                 "تعداد",
                 "قیمت واحد",
                 "مبلغ کل",
-                "سریال / رهگیری / شناسه",
+                ...(!isStoreInvoice ? ["سریال / رهگیری / شناسه"] : []),
               ].map((header) => (
                 <th
                   key={header}
@@ -238,7 +239,7 @@ function InvoiceDocument({
                 <Cell>{formatFaNumber(item.quantity)}</Cell>
                 <Cell>{formatFaCurrency(item.unitPrice)}</Cell>
                 <Cell>{formatFaCurrency(item.lineTotal)}</Cell>
-                <Cell>{formatUnitCodes(item)}</Cell>
+                {!isStoreInvoice ? <Cell>{formatUnitCodes(item)}</Cell> : null}
               </tr>
             ))}
           </tbody>
@@ -250,9 +251,9 @@ function InvoiceDocument({
           <Total label="مبلغ ناخالص" value={invoice.grossAmount} />
           <Total label="تخفیف" value={invoice.discount} />
           <Total label="مبلغ مشمول مالیات" value={Math.max(invoice.grossAmount - invoice.discount, 0)} />
-          <Total label="ارزش افزوده" value={invoice.tax} />
-          <Total label="عوارض" value={invoice.duty} />
-          <Total label="اضافات" value={invoice.addition} />
+          <Total label="مالیات بر ارزش افزوده" value={invoice.tax} />
+          {!isStoreInvoice ? <Total label="عوارض" value={invoice.duty} /> : null}
+          {!isStoreInvoice ? <Total label="اضافات" value={invoice.addition} /> : null}
           <Total label="مبلغ نهایی" value={invoice.netAmount} emphasis />
         </section>
       ) : null}
