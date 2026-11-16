@@ -129,6 +129,7 @@ function mapNajaRialReportRow(dto: unknown): NajaRialReportRow {
     id: toStringValue(record.id),
     orderObjectId: toStringValue(record.orderObjectId),
     orderCode: toStringValue(record.orderCode),
+    manualInvoiceNumber: nullableString(record.manualInvoiceNumber),
     createdAt: nullableString(record.createdAt),
     najaPurchaseDate: nullableString(record.najaPurchaseDate),
     customerObjectId: nullableString(record.customerObjectId),

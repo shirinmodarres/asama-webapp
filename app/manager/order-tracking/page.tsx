@@ -181,6 +181,14 @@ export default function ManagerOrderTrackingPage() {
       render: (row) => row.customerName ?? "-",
     },
     {
+      key: "manual-invoice-number",
+      header: "شماره فاکتور ناجا",
+      render: (row) =>
+        row.orderType === "naja" && row.manualInvoiceNumber
+          ? formatFaDigits(row.manualInvoiceNumber)
+          : "-",
+    },
+    {
       key: "order-status",
       header: "وضعیت سفارش",
       render: (row) => (

@@ -152,6 +152,7 @@ export interface Order {
   returnReason: string | null;
   sepidarQuotationId: number | null;
   sepidarQuotationNumber: number | string | null;
+  manualInvoiceNumber: string | null;
   quotationStatus: QuotationStatus;
   sepidarIntegrationStatus: string | null;
   quotationSyncError: string | null;

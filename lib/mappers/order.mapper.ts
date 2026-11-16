@@ -394,6 +394,7 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarQuotationNumber === null
         ? null
         : toStringValue(record.sepidarQuotationNumber),
+    manualInvoiceNumber: toNullableString(record.manualInvoiceNumber),
     quotationStatus: mapQuotationStatus(
       record.quotationStatus,
       record.sepidarIntegrationStatus,

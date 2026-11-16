@@ -97,6 +97,7 @@ export default function NajaRialReportPage() {
         row.recipientNationalId,
         row.recipientMobile,
         row.najaOrderNumber,
+        row.manualInvoiceNumber,
         row.productName,
         row.stockTitle,
         row.saleTypeTitle,
@@ -163,6 +164,12 @@ export default function NajaRialReportPage() {
       header: "شماره سفارش",
       render: (row) =>
         row.najaOrderNumber ? formatFaDigits(row.najaOrderNumber) : "-",
+    },
+    {
+      key: "manualInvoiceNumber",
+      header: "شماره فاکتور",
+      render: (row) =>
+        row.manualInvoiceNumber ? formatFaDigits(row.manualInvoiceNumber) : "-",
     },
     {
       key: "productName",

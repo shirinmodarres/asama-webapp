@@ -257,6 +257,10 @@ export default function NajaOrderDetailsPage() {
                 value={invoice ? `صادر شده - ${invoice.invoiceCode}` : "هنوز صادر نشده"}
               />
               <InfoItem
+                label="شماره فاکتور"
+                value={order.manualInvoiceNumber ? formatFaDigits(order.manualInvoiceNumber) : "ثبت نشده"}
+              />
+              <InfoItem
                 label="وضعیت پیش‌فاکتور سپیدار"
                 value={getQuotationStatusLabel(order)}
               />

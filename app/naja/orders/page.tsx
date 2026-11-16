@@ -140,6 +140,12 @@ export default function NajaOrdersPage() {
         row.najaOrderNumber ? formatFaDigits(row.najaOrderNumber) : "-",
     },
     {
+      key: "manualInvoiceNumber",
+      header: "شماره فاکتور",
+      render: (row) =>
+        row.manualInvoiceNumber ? formatFaDigits(row.manualInvoiceNumber) : "-",
+    },
+    {
       key: "stock",
       header: "انبار خروج",
       render: (row) => row.stockTitle || "-",

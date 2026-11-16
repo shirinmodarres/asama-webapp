@@ -582,6 +582,12 @@ export default function ManagerOrderReviewPage() {
                 label="روش پرداخت"
                 value={order.salesTypeTitle || "-"}
               />
+              {order.orderType === "naja" ? (
+                <InfoItem
+                  label="شماره فاکتور"
+                  value={order.manualInvoiceNumber ? formatFaDigits(order.manualInvoiceNumber) : "ثبت نشده"}
+                />
+              ) : null}
               <InfoItem
                 label="لیست قیمت"
                 value={order.priceListTitle || order.priceList?.title || "-"}

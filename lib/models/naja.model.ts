@@ -59,6 +59,7 @@ export interface NajaRialReportRow {
   id: string;
   orderObjectId: string;
   orderCode: string;
+  manualInvoiceNumber: string | null;
   createdAt: string | null;
   najaPurchaseDate: string | null;
   customerObjectId: string | null;
