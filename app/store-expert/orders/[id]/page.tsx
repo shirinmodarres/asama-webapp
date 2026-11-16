@@ -156,7 +156,7 @@ export default function StoreExpertOrderDetailPage() {
     : "";
   const canCreateRetailExitSlip = Boolean(
     order &&
-    hasRetailItems(order) &&
+    (order.retailExitAvailable ?? hasRetailItems(order)) &&
     (order.quotationSyncStatus === "success" || order.sepidarQuotationId) &&
     !["dispatchIssued", "delivered"].includes(order.warehouseStatus),
   );

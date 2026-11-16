@@ -3,7 +3,7 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Printer, Trash2 } from "lucide-react";
+import { CheckCircle2, Printer, ScanLine, Trash2 } from "lucide-react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -671,6 +671,20 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
           </section>
 
           <Card className="p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <ScanLine className="size-5 text-primary" />
+                  اسکن کدهای خروج
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  شناسه کالا را وارد کنید، سپس سریال یا کد رهگیری را اسکن و ثبت کنید.
+                </p>
+              </div>
+              <span className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground">
+                {formatNumber(totalScannedCount)} از {formatNumber(totalItemCount)} اسکن شده
+              </span>
+            </div>
             <div className="grid gap-4 md:grid-cols-3">
               <ScanField
                 ref={productIdentifierRef}

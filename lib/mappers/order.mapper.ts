@@ -244,6 +244,10 @@ export function mapOrderDto(dto: unknown): Order {
     retailOrderItemObjectIds: toArray(record.retailOrderItemObjectIds)
       .map(toStringValue)
       .filter(Boolean),
+    retailExitAvailable:
+      typeof record.retailExitAvailable === "boolean"
+        ? record.retailExitAvailable
+        : undefined,
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),

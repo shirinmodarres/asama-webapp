@@ -42,6 +42,14 @@ const WORKFLOW_PENDING_STATUSES = [
   "pending_manager_approval",
 ];
 
+function isManagerApprovalEligible(order: Order): boolean {
+  return (
+    order.orderType !== "naja" &&
+    order.orderStatus === "pending_manager_approval" &&
+    order.financialApprovalStage !== "systems_transfer"
+  );
+}
+
 export default function ManagerPendingOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -130,8 +138,7 @@ export default function ManagerPendingOrdersPage() {
     () =>
       filteredOrders.filter(
         (order) =>
-          order.orderType !== "naja" &&
-          order.orderStatus === "pending_manager_approval",
+          isManagerApprovalEligible(order),
       ),
     [filteredOrders],
   );
@@ -268,8 +275,7 @@ export default function ManagerPendingOrdersPage() {
       ),
       render: (row) => {
         const selectable =
-          row.orderType !== "naja" &&
-          row.orderStatus === "pending_manager_approval";
+          isManagerApprovalEligible(row);
         return selectable ? (
           <input
             type="checkbox"
@@ -333,7 +339,7 @@ export default function ManagerPendingOrdersPage() {
       header: "عملیات",
       render: (row) => (
         <div className="flex flex-wrap gap-2">
-          {row.orderType !== "naja" && row.orderStatus === "pending_manager_approval" ? (
+          {isManagerApprovalEligible(row) ? (
             <Button
               size="sm"
               disabled={approvingOrderId === row.objectId}

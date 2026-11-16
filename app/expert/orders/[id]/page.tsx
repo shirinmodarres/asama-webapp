@@ -92,6 +92,14 @@ export default function ExpertOrderDetailsPage() {
   const paymentMethodTitle = order?.salesTypeTitle ?? null;
   const needsFinancialCorrection =
     order?.financialApprovalStatus === "needs_correction";
+  const financialCorrectionReason = order
+    ? [
+        order.financialCorrectionReasonLabel,
+        order.financialCorrectionReason,
+      ]
+        .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
+        .join(" - ")
+    : "";
 
   const handleResolveReview = async () => {
     if (!order) return;
@@ -282,32 +290,32 @@ export default function ExpertOrderDetailsPage() {
           ) : null}
 
           {needsFinancialCorrection ? (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
                   <AlertTriangle className="size-5" />
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge type="financial" status="needs_correction" />
-                    <h3 className="text-sm font-semibold text-foreground">
-                      این سفارش برای اصلاح برگشت خورده است.
+                    <h3 className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                      این سفارش برای اصلاح به شما بازگشته است.
                     </h3>
                   </div>
 
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                    {order.financialCorrectionReason ||
+                  <p className="mt-2 text-sm leading-7 text-amber-950/80 dark:text-amber-100/80">
+                    {financialCorrectionReason ||
                       "دلیل مشخصی ثبت نشده است."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-amber-200 pt-3 dark:border-amber-900/60">
                 {order.canEdit ? (
                   <Link
                     href={`/expert/orders/${order.objectId}/edit`}
-                    className="inline-flex items-center justify-center rounded-xl border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                    className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-amber-100/60 dark:border-amber-800 dark:hover:bg-amber-900/30"
                   >
                     <Pencil className="size-4" />
                     اصلاح سفارش

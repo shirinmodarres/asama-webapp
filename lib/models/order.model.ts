@@ -92,6 +92,7 @@ export interface Order {
   selectedStockObjectIds?: string[];
   retailStockObjectIds?: string[];
   retailOrderItemObjectIds?: string[];
+  retailExitAvailable?: boolean;
   sepidarStockId: number | null;
   stockTitle: string | null;
   selectedStockTitles: string[];
