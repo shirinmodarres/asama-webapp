@@ -60,7 +60,9 @@ export default function ManagerPendingOrdersPage() {
   const [dateTo, setDateTo] = useState("");
   const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] = useState<"approve" | "needs_review" | null>(null);
+  const [bulkAction, setBulkAction] = useState<
+    "approve" | "needs_review" | null
+  >(null);
   const [bulkReasonCode, setBulkReasonCode] = useState("");
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
   const [bulkSummary, setBulkSummary] = useState<string>("");
@@ -110,7 +112,9 @@ export default function ManagerPendingOrdersPage() {
       .filter((order) => {
         const matchesSearch =
           order.code.toLowerCase().includes(search.toLowerCase()) ||
-          (order.createdByName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+          (order.createdByName ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase()) ||
           (order.customerName ?? "")
             .toLowerCase()
             .includes(search.toLowerCase());
@@ -135,11 +139,7 @@ export default function ManagerPendingOrdersPage() {
     dateTo.length > 0;
 
   const selectableOrders = useMemo(
-    () =>
-      filteredOrders.filter(
-        (order) =>
-          isManagerApprovalEligible(order),
-      ),
+    () => filteredOrders.filter((order) => isManagerApprovalEligible(order)),
     [filteredOrders],
   );
   const selectableOrderIds = useMemo(
@@ -184,7 +184,9 @@ export default function ManagerPendingOrdersPage() {
     const successes: Array<{ id: string; order: Order | null }> = [];
     const failures: Array<{ code: string; message: string }> = [];
     const requestedByName =
-      getStoredCurrentUser()?.fullName || getStoredCurrentUser()?.username || "مدیر فروش";
+      getStoredCurrentUser()?.fullName ||
+      getStoredCurrentUser()?.username ||
+      "مدیر فروش";
 
     for (const order of selected) {
       try {
@@ -199,7 +201,10 @@ export default function ManagerPendingOrdersPage() {
           successes.push({ id: order.objectId, order: updated });
         }
       } catch (actionError) {
-        failures.push({ code: order.code, message: getErrorMessage(actionError) });
+        failures.push({
+          code: order.code,
+          message: getErrorMessage(actionError),
+        });
       }
     }
 
@@ -211,36 +216,42 @@ export default function ManagerPendingOrdersPage() {
     }
     setBulkSummary(
       `${formatFaDigits(successes.length)} سفارش انجام شد${
-        failures.length ? `؛ ${formatFaDigits(failures.length)} سفارش ناموفق بود: ${failures.map((failure) => failure.code).join("، ")}` : ""
+        failures.length
+          ? `؛ ${formatFaDigits(failures.length)} سفارش ناموفق بود: ${failures.map((failure) => failure.code).join("، ")}`
+          : ""
       }`,
     );
     if (failures.length) {
-      setBulkError(failures.map((failure) => `${failure.code}: ${failure.message}`).join(" | "));
+      setBulkError(
+        failures
+          .map((failure) => `${failure.code}: ${failure.message}`)
+          .join(" | "),
+      );
     }
     setBulkAction(null);
     setBulkReasonCode("");
     setIsBulkSubmitting(false);
   };
 
-  const statusOptions = useMemo(
-    () => {
-      const legacyAndQueueStatuses = [
-        "pending_financial_approval",
-        "pending_manager_approval",
-        "needs_review",
-        "review_resolved",
-      ];
-      return Array.from(
-        new Set([
-          ...legacyAndQueueStatuses,
-          ...orders
-            .map((order) => order.orderStatus)
-            .filter((value): value is string => Boolean(value) && value !== "pending_approval"),
-        ]),
-      );
-    },
-    [orders],
-  );
+  const statusOptions = useMemo(() => {
+    const legacyAndQueueStatuses = [
+      "pending_financial_approval",
+      "pending_manager_approval",
+      "needs_review",
+      "review_resolved",
+    ];
+    return Array.from(
+      new Set([
+        ...legacyAndQueueStatuses,
+        ...orders
+          .map((order) => order.orderStatus)
+          .filter(
+            (value): value is string =>
+              Boolean(value) && value !== "pending_approval",
+          ),
+      ]),
+    );
+  }, [orders]);
 
   const approveFromList = async (order: Order) => {
     setApprovingOrderId(order.objectId);
@@ -248,9 +259,13 @@ export default function ManagerPendingOrdersPage() {
     try {
       // Use the same canonical manager-approval endpoint as the detail page.
       const result = await approveOrder(order.objectId);
-      setOrders((current) => current.map((entry) => (
-        entry.objectId === order.objectId && result.order ? result.order : entry
-      )));
+      setOrders((current) =>
+        current.map((entry) =>
+          entry.objectId === order.objectId && result.order
+            ? result.order
+            : entry,
+        ),
+      );
     } catch (approvalError) {
       setError(getErrorMessage(approvalError));
     } finally {
@@ -274,14 +289,15 @@ export default function ManagerPendingOrdersPage() {
         />
       ),
       render: (row) => {
-        const selectable =
-          isManagerApprovalEligible(row);
+        const selectable = isManagerApprovalEligible(row);
         return selectable ? (
           <input
             type="checkbox"
             aria-label={`انتخاب ${row.code}`}
             checked={selectedOrderIds.includes(row.objectId)}
-            onChange={(event) => toggleOrderSelection(row.objectId, event.target.checked)}
+            onChange={(event) =>
+              toggleOrderSelection(row.objectId, event.target.checked)
+            }
             disabled={isBulkSubmitting}
           />
         ) : null;
@@ -339,15 +355,6 @@ export default function ManagerPendingOrdersPage() {
       header: "عملیات",
       render: (row) => (
         <div className="flex flex-wrap gap-2">
-          {isManagerApprovalEligible(row) ? (
-            <Button
-              size="sm"
-              disabled={approvingOrderId === row.objectId}
-              onClick={() => void approveFromList(row)}
-            >
-              {approvingOrderId === row.objectId ? "در حال تأیید..." : "تأیید"}
-            </Button>
-          ) : null}
           <Link
             href={`/manager/orders/${row.objectId}`}
             className="rounded-xl border border-[#1F3A5F] bg-[#1F3A5F] px-3 py-1.5 text-xs text-white!"
@@ -388,9 +395,18 @@ export default function ManagerPendingOrdersPage() {
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 options={[
-                  { value: "workflow_pending", label: "در انتظار تأیید مالی و مدیر" },
-                  { value: "pending_manager_approval", label: getOrderStatusLabel("pending_manager_approval") },
-                  { value: "pending_financial_approval", label: getOrderStatusLabel("pending_financial_approval") },
+                  {
+                    value: "workflow_pending",
+                    label: "در انتظار تأیید مالی و مدیر",
+                  },
+                  {
+                    value: "pending_manager_approval",
+                    label: getOrderStatusLabel("pending_manager_approval"),
+                  },
+                  {
+                    value: "pending_financial_approval",
+                    label: getOrderStatusLabel("pending_financial_approval"),
+                  },
                   { value: "needs_review", label: "نیازمند بررسی" },
                   { value: "review_resolved", label: "مشکل برطرف شد" },
                   { value: "all", label: "همه وضعیت‌ها" },
@@ -429,12 +445,12 @@ export default function ManagerPendingOrdersPage() {
               type="button"
               variant="outline"
               className="inline-flex w-fit shrink-0 items-center gap-2"
-            onClick={() => {
-              setSearch("");
-              setStatusFilter("workflow_pending");
-              setDateFrom("");
-              setDateTo("");
-            }}
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("workflow_pending");
+                setDateFrom("");
+                setDateTo("");
+              }}
             >
               <span>حذف فیلترها</span>
               <X className="size-4" />
@@ -466,7 +482,9 @@ export default function ManagerPendingOrdersPage() {
                 <Button
                   type="button"
                   size="sm"
-                  disabled={!selectedSelectableOrderIds.length || isBulkSubmitting}
+                  disabled={
+                    !selectedSelectableOrderIds.length || isBulkSubmitting
+                  }
                   onClick={() => setBulkAction("approve")}
                 >
                   تأیید گروهی
@@ -475,7 +493,9 @@ export default function ManagerPendingOrdersPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={!selectedSelectableOrderIds.length || isBulkSubmitting}
+                  disabled={
+                    !selectedSelectableOrderIds.length || isBulkSubmitting
+                  }
                   onClick={() => setBulkAction("needs_review")}
                 >
                   ارجاع گروهی برای اصلاح
@@ -500,13 +520,19 @@ export default function ManagerPendingOrdersPage() {
       )}
       <ConfirmationModal
         open={bulkAction !== null}
-        title={bulkAction === "approve" ? "تأیید گروهی سفارش‌ها" : "ارجاع گروهی برای اصلاح"}
+        title={
+          bulkAction === "approve"
+            ? "تأیید گروهی سفارش‌ها"
+            : "ارجاع گروهی برای اصلاح"
+        }
         message={
           bulkAction === "approve"
             ? "هر سفارش انتخاب‌شده با همان فرایند تأیید تکی بررسی و پردازش می‌شود. خطای یک سفارش مانع ادامه بقیه نخواهد شد."
             : "همه سفارش‌های انتخاب‌شده با دلیل یکسان برای اصلاح به کارشناس فروش بازگردانده می‌شوند."
         }
-        confirmText={bulkAction === "approve" ? "تأیید سفارش‌ها" : "ثبت ارجاع برای اصلاح"}
+        confirmText={
+          bulkAction === "approve" ? "تأیید سفارش‌ها" : "ثبت ارجاع برای اصلاح"
+        }
         tone={bulkAction === "needs_review" ? "danger" : "success"}
         busy={isBulkSubmitting}
         onConfirm={() => void executeBulkAction()}
@@ -517,14 +543,23 @@ export default function ManagerPendingOrdersPage() {
         }}
       >
         <p className="text-sm text-[#475569]">
-          تعداد سفارش‌های انتخاب‌شده: {formatFaDigits(selectedSelectableOrderIds.length)}
+          تعداد سفارش‌های انتخاب‌شده:{" "}
+          {formatFaDigits(selectedSelectableOrderIds.length)}
         </p>
         {bulkAction === "needs_review" ? (
-          <Select value={bulkReasonCode} onValueChange={setBulkReasonCode} disabled={isBulkSubmitting}>
-            <SelectTrigger><SelectValue placeholder="دلیل ارجاع برای اصلاح" /></SelectTrigger>
+          <Select
+            value={bulkReasonCode}
+            onValueChange={setBulkReasonCode}
+            disabled={isBulkSubmitting}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="دلیل ارجاع برای اصلاح" />
+            </SelectTrigger>
             <SelectContent>
               {FINANCIAL_CORRECTION_REASONS.sales_manager.map((reason) => (
-                <SelectItem key={reason.code} value={reason.code}>{reason.label}</SelectItem>
+                <SelectItem key={reason.code} value={reason.code}>
+                  {reason.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

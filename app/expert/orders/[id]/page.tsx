@@ -24,9 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/api/api-error";
-import {
-  getFinancialApprovalStageLabel,
-} from "@/lib/domain/statuses";
+import { getFinancialApprovalStageLabel } from "@/lib/domain/statuses";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -93,11 +91,11 @@ export default function ExpertOrderDetailsPage() {
   const needsFinancialCorrection =
     order?.financialApprovalStatus === "needs_correction";
   const financialCorrectionReason = order
-    ? [
-        order.financialCorrectionReasonLabel,
-        order.financialCorrectionReason,
-      ]
-        .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
+    ? [order.financialCorrectionReasonLabel, order.financialCorrectionReason]
+        .filter(
+          (value, index, values) =>
+            Boolean(value) && values.indexOf(value) === index,
+        )
         .join(" - ")
     : "";
 
@@ -217,7 +215,8 @@ export default function ExpertOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code)}`}
             description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
             actions={
-              (!needsFinancialCorrection && order.canEdit) || order.canCancel ? (
+              (!needsFinancialCorrection && order.canEdit) ||
+              order.canCancel ? (
                 <div className="flex flex-wrap gap-2">
                   {!needsFinancialCorrection && order.canEdit ? (
                     <Link
@@ -290,41 +289,43 @@ export default function ExpertOrderDetailsPage() {
           ) : null}
 
           {needsFinancialCorrection ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/20">
-              <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+            <section className="overflow-hidden rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] shadow-sm">
+              <div className="flex items-start gap-3 p-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#F1D7AA] bg-white/70 text-[#9A6C18]">
                   <AlertTriangle className="size-5" />
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge type="financial" status="needs_correction" />
-                    <h3 className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                    <h3 className="text-sm font-semibold text-[#9A6C18]">
                       این سفارش برای اصلاح به شما بازگشته است.
                     </h3>
                   </div>
 
-                  <p className="mt-2 text-sm leading-7 text-amber-950/80 dark:text-amber-100/80">
-                    {financialCorrectionReason ||
-                      "دلیل مشخصی ثبت نشده است."}
+                  <p className="mt-2 text-sm leading-7 text-[#9A6C18]">
+                    {financialCorrectionReason || "دلیل مشخصی ثبت نشده است."}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-amber-200 pt-3 dark:border-amber-900/60">
+              <div className="flex flex-wrap items-center gap-2 border-t border-[#F1D7AA] px-4 py-3 sm:px-5">
                 {order.canEdit ? (
-                  <Link
-                    href={`/expert/orders/${order.objectId}/edit`}
-                    className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-amber-100/60 dark:border-amber-800 dark:hover:bg-amber-900/30"
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 gap-2 rounded-xl border-[#F1D7AA] bg-white text-[#9A6C18] hover:bg-[#FFF1D6] hover:text-[#7A520F]"
                   >
-                    <Pencil className="size-4" />
-                    اصلاح سفارش
-                  </Link>
+                    <Link href={`/expert/orders/${order.objectId}/edit`}>
+                      <Pencil className="size-4" />
+                      اصلاح سفارش
+                    </Link>
+                  </Button>
                 ) : null}
 
                 <Button
                   type="button"
-                  className="rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  className="h-10 gap-2 rounded-xl bg-[#9A6C18] text-white hover:bg-[#7A520F]"
                   disabled={isSubmitting || !order.canEdit}
                   onClick={handleResubmitFinancialReview}
                 >
@@ -333,7 +334,7 @@ export default function ExpertOrderDetailsPage() {
                     : "ارسال مجدد برای بررسی مالی"}
                 </Button>
               </div>
-            </div>
+            </section>
           ) : null}
 
           <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
