@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
+import { Card } from "@/components/ui/card";
 import { getErrorMessage } from "@/lib/api/api-error";
 import type { Order } from "@/lib/models/order.model";
 import { getOrder } from "@/lib/services/order.service";
@@ -53,6 +54,12 @@ export default function FinanceReconciliationPage() {
             title={`تطبیق ${formatFaDigits(order.code || order.id)}`}
             description="اطلاعات مشتری و آدرس تحویل برای صدور فاکتور"
           />
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground">شماره پیش‌فاکتور سپیدار</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {formatFaDigits(order.sepidarQuotationNumber || "ثبت نشده")}
+            </p>
+          </Card>
           <CustomerInfoCard order={order} />
           <EmptyState title="جزئیات تطبیق در انتظار endpoint نهایی است" description="اطلاعات مشتری از سفارش backend نمایش داده می شود." />
         </>

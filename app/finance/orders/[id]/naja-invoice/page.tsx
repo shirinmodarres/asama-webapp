@@ -132,6 +132,10 @@ export default function FinanceNajaInvoicePage() {
               <InfoItem label="کالا" value={firstItem?.productName ?? "-"} />
               <InfoItem label="شناسه کالا" value={firstItem?.productIdentifier ? formatFaDigits(firstItem.productIdentifier) : "-"} />
               <InfoItem label="کد رهگیری" value={firstItem?.trackingCode ? formatFaDigits(firstItem.trackingCode) : "-"} />
+              <InfoItem
+                label="شماره پیش‌فاکتور سپیدار"
+                value={formatFaDigits(order.sepidarQuotationNumber || "ثبت نشده")}
+              />
               <InfoItem label="تاریخ ثبت سفارش" value={formatDate(order.createdAt)} />
               <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />
             </div>
