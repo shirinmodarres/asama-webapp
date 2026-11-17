@@ -128,6 +128,14 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
     sepidarCustomerCode: toNullableString(
       record.sepidarCustomerCode ?? record.customerCode,
     ),
+    sepidarQuotationId:
+      record.sepidarQuotationId === undefined || record.sepidarQuotationId === null
+        ? null
+        : toNumberValue(record.sepidarQuotationId),
+    sepidarQuotationNumber:
+      record.sepidarQuotationNumber === undefined || record.sepidarQuotationNumber === null
+        ? null
+        : toStringValue(record.sepidarQuotationNumber),
     customerMobile: toNullableString(
       record.customerMobile ?? order.customerMobile ?? order.customerPhone,
     )

@@ -34,6 +34,8 @@ export interface InternalInvoice {
   customerName: string | null;
   customerCode: string | null;
   sepidarCustomerCode: string | null;
+  sepidarQuotationId: number | null;
+  sepidarQuotationNumber: number | string | null;
   customerMobile: string | null;
   customerPhone: string | null;
   customerAddress: string | null;

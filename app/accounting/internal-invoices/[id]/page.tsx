@@ -204,6 +204,10 @@ export default function InternalInvoiceDetailPage() {
           <Card className="p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Info label="شماره سفارش" value={formatFaDigits(invoice.orderNumber) || "-"} />
+              <Info
+                label="شماره پیش‌فاکتور سپیدار"
+                value={formatFaDigits(invoice.sepidarQuotationNumber || "ثبت نشده")}
+              />
               <Info label="شماره حواله خروج" value={formatFaDigits(invoice.exitSlipNumber) || "-"} />
               <Info label="مشتری" value={invoice.customerName || "-"} />
               <Info
