@@ -134,7 +134,11 @@ export default function FinanceNajaInvoicePage() {
               <InfoItem label="کد رهگیری" value={firstItem?.trackingCode ? formatFaDigits(firstItem.trackingCode) : "-"} />
               <InfoItem
                 label="شماره پیش‌فاکتور سپیدار"
-                value={formatFaDigits(order.sepidarQuotationNumber || "ثبت نشده")}
+                value={
+                  order.sepidarQuotationNumber === null
+                    ? "ثبت نشده"
+                    : String(order.sepidarQuotationNumber)
+                }
               />
               <InfoItem label="تاریخ ثبت سفارش" value={formatDate(order.createdAt)} />
               <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />

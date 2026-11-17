@@ -206,7 +206,11 @@ export default function InternalInvoiceDetailPage() {
               <Info label="شماره سفارش" value={formatFaDigits(invoice.orderNumber) || "-"} />
               <Info
                 label="شماره پیش‌فاکتور سپیدار"
-                value={formatFaDigits(invoice.sepidarQuotationNumber || "ثبت نشده")}
+                value={
+                  invoice.sepidarQuotationNumber === null
+                    ? "ثبت نشده"
+                    : String(invoice.sepidarQuotationNumber)
+                }
               />
               <Info label="شماره حواله خروج" value={formatFaDigits(invoice.exitSlipNumber) || "-"} />
               <Info label="مشتری" value={invoice.customerName || "-"} />

@@ -57,7 +57,9 @@ export default function FinanceReconciliationPage() {
           <Card className="p-4">
             <p className="text-xs text-muted-foreground">شماره پیش‌فاکتور سپیدار</p>
             <p className="mt-1 text-sm font-semibold text-foreground">
-              {formatFaDigits(order.sepidarQuotationNumber || "ثبت نشده")}
+              {order.sepidarQuotationNumber === null
+                ? "ثبت نشده"
+                : String(order.sepidarQuotationNumber)}
             </p>
           </Card>
           <CustomerInfoCard order={order} />
