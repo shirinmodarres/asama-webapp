@@ -874,9 +874,21 @@ export function OrderForm({
       );
 
       setProducts((current) => {
-        const byId = new Map(current.map((product) => [product.objectId, product]));
-        selectableProducts.forEach((product) => byId.set(product.objectId, product));
-        return Array.from(byId.values());
+        // The searchable dropdown calls this loader whenever its callback
+        // changes. Replacing the whole list for an identical remote result
+        // changes this callback again and creates an endless request loop.
+        // Initial loading already refreshes known products for the selected
+        // customer/price list/stock; only retain search results that are not
+        // present locally yet.
+        const knownProductIds = new Set(
+          current.map((product) => product.objectId),
+        );
+        const missingProducts = selectableProducts.filter(
+          (product) => !knownProductIds.has(product.objectId),
+        );
+        return missingProducts.length
+          ? [...current, ...missingProducts]
+          : current;
       });
 
       return selectableProducts.map((product) => ({
