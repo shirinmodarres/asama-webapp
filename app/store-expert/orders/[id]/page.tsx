@@ -15,10 +15,9 @@ import { Card } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoreOrder } from "@/lib/services/store-expert-order.service";
+import { hasPendingRetailFulfillment } from "@/lib/store-expert/retail-exit-eligibility";
 import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 import { QuotationState } from "../page";
-
-const RETAIL_SEPIDAR_STOCK_ID = 56;
 
 function storeFinancials(order: Order) {
   const subtotal =
@@ -58,20 +57,6 @@ function invoiceStatusLabel(status: string | null) {
     pending: "در انتظار صدور",
   };
   return status ? labels[status] || status : "ثبت نشده";
-}
-
-function hasRetailItems(order: Order) {
-  const retailStockIds = new Set(order.retailStockObjectIds || []);
-  const retailItemIds = new Set(order.retailOrderItemObjectIds || []);
-  return order.items.some(
-    (item) =>
-      retailItemIds.has(item.objectId) ||
-      Number(item.sepidarStockId) === RETAIL_SEPIDAR_STOCK_ID ||
-      (item.stockObjectId ? retailStockIds.has(item.stockObjectId) : false) ||
-      item.stockAllocations?.some(
-        (allocation) => Number(allocation.sepidarStockId) === RETAIL_SEPIDAR_STOCK_ID || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId)),
-      ),
-  );
 }
 
 export default function StoreExpertOrderDetailPage() {
@@ -154,11 +139,13 @@ export default function StoreExpertOrderDetailPage() {
         ),
       ].join("، ")
     : "";
+  const hasPendingRetailItems = Boolean(
+    order && hasPendingRetailFulfillment(order),
+  );
   const canCreateRetailExitSlip = Boolean(
     order &&
-    (order.retailExitAvailable ?? hasRetailItems(order)) &&
-    (order.quotationSyncStatus === "success" || order.sepidarQuotationId) &&
-    !["dispatchIssued", "delivered"].includes(order.warehouseStatus),
+    hasPendingRetailItems &&
+    (order.quotationSyncStatus === "success" || order.sepidarQuotationId),
   );
 
   return (

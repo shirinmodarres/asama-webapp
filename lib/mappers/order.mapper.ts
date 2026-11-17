@@ -244,6 +244,9 @@ export function mapOrderDto(dto: unknown): Order {
     retailOrderItemObjectIds: toArray(record.retailOrderItemObjectIds)
       .map(toStringValue)
       .filter(Boolean),
+    retailPendingOrderItemObjectIds: toArray(record.retailPendingOrderItemObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
     retailExitAvailable:
       typeof record.retailExitAvailable === "boolean"
         ? record.retailExitAvailable
