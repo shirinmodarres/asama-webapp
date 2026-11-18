@@ -253,16 +253,36 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
           expertUserId: getStoredCurrentUser()?.objectId,
           stockObjectId: selectedStockObjectId,
           priceListId: selectedPriceListId || undefined,
+          includeUnavailable: true,
         };
         const data = hasAssignedPriceLists
           ? await listOrderProductsForAssignment(context)
           : await listOrderProductsBySaleType(saleTypeId ?? 0, context);
         if (isMounted) {
-          setProducts(data);
+          const productsForSelectedStock = hasAssignedPriceLists
+            ? data
+                .map((product) => {
+                  const availableStocks = (product.availableStocks ?? []).filter(
+                    (stock) => stock.stockObjectId === selectedStockObjectId,
+                  );
+                  const availableForSale = availableStocks.reduce(
+                    (sum, stock) => sum + Number(stock.availableForSale ?? 0),
+                    0,
+                  );
+                  return {
+                    ...product,
+                    availableStocks,
+                    availableForSale,
+                    availableSalesQuantity: availableForSale,
+                  };
+                })
+                .filter((product) => product.availableForSale > 0)
+            : data;
+          setProducts(productsForSelectedStock);
           if (process.env.NODE_ENV === "development") {
             console.debug(
               "[NajaOrderForm] assignment product availability",
-              data.map((product) => ({
+              productsForSelectedStock.map((product) => ({
                 productObjectId: product.objectId,
                 productName: product.name,
                 availableQuantity: product.availableForSale,
