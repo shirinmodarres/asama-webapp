@@ -228,19 +228,25 @@ export default function ManagerOrderReviewPage() {
     financialGateOpen;
   const canNeedReview = false;
   const shouldShowNeedReviewButton = false;
-  const canCancel =
+  const canCancelNajaInWarehouseReview =
     isSalesManagerUser &&
-    workflowStage === "sales_manager" &&
-    !isNajaOrder &&
-    [
-      "pending_manager_approval",
-      "needs_review",
-      "review_resolved",
-      "approved",
-    ].includes(order.orderStatus) &&
-    !["dispatchIssued", "delivered"].includes(order.warehouseStatus) &&
-    order.orderStatus !== "cancelled" &&
-    order.orderStatus !== "voided";
+    isNajaOrder &&
+    order.orderStatus === "approved" &&
+    order.warehouseStatus === "reviewing";
+  const canCancel =
+    canCancelNajaInWarehouseReview ||
+    (isSalesManagerUser &&
+      workflowStage === "sales_manager" &&
+      !isNajaOrder &&
+      [
+        "pending_manager_approval",
+        "needs_review",
+        "review_resolved",
+        "approved",
+      ].includes(order.orderStatus) &&
+      !["dispatchIssued", "delivered"].includes(order.warehouseStatus) &&
+      order.orderStatus !== "cancelled" &&
+      order.orderStatus !== "voided");
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
   const shipmentActionBlockedWarehouseStatuses = [
     "awaitingSystemsTransfer",

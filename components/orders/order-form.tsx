@@ -594,6 +594,7 @@ export function OrderForm({
               expertUserId: context.expertUserId,
               priceListId: selectedPriceListId,
               stockObjectId: selectedStockObjectId,
+              includeUnavailable: true,
             })
           : [];
         if (!isMounted) return;
@@ -846,6 +847,7 @@ export function OrderForm({
           initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         priceListId: selectedPriceListId,
         stockObjectId: selectedStockObjectId,
+        includeUnavailable: true,
         search,
       });
       const stockProducts = selectedStockObjectId
@@ -865,29 +867,19 @@ export function OrderForm({
             };
           })
         : data;
-      const selectableProducts = stockProducts.filter((product) =>
-        getEditableAvailableQuantity({
-          product,
-          mode,
-          oldQuantityByProductId,
-        }) > 0,
-      );
-
       setProducts((current) => {
         const byId = new Map(current.map((product) => [product.objectId, product]));
-        selectableProducts.forEach((product) => byId.set(product.objectId, product));
+        stockProducts.forEach((product) => byId.set(product.objectId, product));
         return Array.from(byId.values());
       });
 
-      return selectableProducts.map((product) => ({
+      return stockProducts.map((product) => ({
         value: product.objectId,
         label: productIdentityLabel(product),
       }));
     },
     [
       initialOrder?.expertUserId,
-      mode,
-      oldQuantityByProductId,
       requiresPriceListSelection,
       selectedCustomerId,
       selectedPriceListId,
