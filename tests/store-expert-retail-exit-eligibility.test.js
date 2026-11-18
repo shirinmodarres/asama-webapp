@@ -38,3 +38,15 @@ test("Store exit is unavailable when no retail reservation remains active", () =
 
   assert.equal(hasPendingRetailFulfillment(order), false);
 });
+
+test("Store detail trusts the server retail eligibility for an active reservation", () => {
+  const order = {
+    // The detail response may not contain a complete item snapshot for every
+    // legacy order. Backend eligibility remains the canonical decision.
+    retailExitAvailable: true,
+    retailPendingOrderItemObjectIds: [],
+    items: [],
+  };
+
+  assert.equal(hasPendingRetailFulfillment(order), true);
+});

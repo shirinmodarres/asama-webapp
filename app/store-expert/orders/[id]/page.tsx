@@ -15,7 +15,6 @@ import { Card } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoreOrder } from "@/lib/services/store-expert-order.service";
-import { hasPendingRetailFulfillment } from "@/lib/store-expert/retail-exit-eligibility";
 import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 import { QuotationState } from "../page";
 
@@ -139,12 +138,11 @@ export default function StoreExpertOrderDetailPage() {
         ),
       ].join("، ")
     : "";
-  const hasPendingRetailItems = Boolean(
-    order && hasPendingRetailFulfillment(order),
-  );
   const canCreateRetailExitSlip = Boolean(
     order &&
-    hasPendingRetailItems &&
+    // The server calculates this from active reservations for StockID=56.
+    // Do not rederive it from a partial order snapshot in the browser.
+    order.retailExitAvailable === true &&
     (order.quotationSyncStatus === "success" || order.sepidarQuotationId),
   );
 
