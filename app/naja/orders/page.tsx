@@ -10,6 +10,7 @@ import { DateRangeFilter } from "@/components/shared/date-range-filter";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,8 @@ import type { Order } from "@/lib/models/order.model";
 import { listOrders } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
+const PAGE_SIZE = 20;
+
 export default function NajaOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,6 +33,7 @@ export default function NajaOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     let isMounted = true;
@@ -91,6 +95,20 @@ export default function NajaOrdersPage() {
     statusFilter !== "all" ||
     dateFrom.length > 0 ||
     dateTo.length > 0;
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageRows = useMemo(
+    () => rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [currentPage, rows],
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const statusOptions = useMemo(
     () => [
@@ -255,6 +273,7 @@ export default function NajaOrdersPage() {
                 setStatusFilter("all");
                 setDateFrom("");
                 setDateTo("");
+                setCurrentPage(1);
               }}
             >
               <span>حذف فیلترها</span>
@@ -272,11 +291,19 @@ export default function NajaOrdersPage() {
           message={error}
         />
       ) : rows.length > 0 ? (
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(row) => row.objectId || row.id}
-        />
+        <section className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-sm">
+          <DataTable
+            columns={columns}
+            rows={pageRows}
+            rowKey={(row) => row.objectId || row.id}
+          />
+          <PaginationBar
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={rows.length}
+            onPageChange={setCurrentPage}
+          />
+        </section>
       ) : (
         <EmptyState
           title="سفارش ناجایی یافت نشد"
