@@ -66,3 +66,16 @@ test("Store detail can show an unfulfilled retail allocation when a legacy reser
 
   assert.equal(hasRetailFulfillmentRemaining(order), true);
 });
+
+test("Store detail recognizes the retail showroom title when a legacy allocation lacks StockID", () => {
+  const order = {
+    items: [{
+      objectId: "retail-item",
+      quantity: 1,
+      dispatchedQuantity: 0,
+      stockAllocations: [{ stockObjectId: "retail-stock", stockTitle: "نمایشگاه تک فروشی" }],
+    }],
+  };
+
+  assert.equal(hasRetailFulfillmentRemaining(order), true);
+});
