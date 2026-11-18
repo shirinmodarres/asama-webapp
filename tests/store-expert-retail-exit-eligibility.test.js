@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
   hasPendingRetailFulfillment,
+  hasRetailFulfillmentRemaining,
   retailItems,
 } = require("../lib/store-expert/retail-exit-eligibility");
 
@@ -49,4 +50,19 @@ test("Store detail trusts the server retail eligibility for an active reservatio
   };
 
   assert.equal(hasPendingRetailFulfillment(order), true);
+});
+
+test("Store detail can show an unfulfilled retail allocation when a legacy reservation omits its item id", () => {
+  const order = {
+    retailExitAvailable: false,
+    retailStockObjectIds: ["retail-stock"],
+    items: [{
+      objectId: "retail-item",
+      quantity: 1,
+      dispatchedQuantity: 0,
+      stockAllocations: [{ stockObjectId: "retail-stock", sepidarStockId: 56 }],
+    }],
+  };
+
+  assert.equal(hasRetailFulfillmentRemaining(order), true);
 });
