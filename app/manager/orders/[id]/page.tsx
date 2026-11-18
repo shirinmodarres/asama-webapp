@@ -176,13 +176,22 @@ export default function ManagerOrderReviewPage() {
   const canNeedReview = !isNajaOrder && order.orderStatus === "pending_manager_approval";
   const shouldShowNeedReviewButton =
     !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
+  const canCancelNajaInWarehouseReview =
+    isNajaOrder &&
+    order.orderStatus === "approved" &&
+    order.warehouseStatus === "reviewing";
   const canCancel =
-    !isNajaOrder &&
-    ["pending_manager_approval", "needs_review", "review_resolved", "approved"].includes(
-      order.orderStatus,
-    ) && !["dispatchIssued", "delivered"].includes(order.warehouseStatus) &&
-    order.orderStatus !== "cancelled" &&
-    order.orderStatus !== "voided";
+    canCancelNajaInWarehouseReview ||
+    (!isNajaOrder &&
+      [
+        "pending_manager_approval",
+        "needs_review",
+        "review_resolved",
+        "approved",
+      ].includes(order.orderStatus) &&
+      !["dispatchIssued", "delivered"].includes(order.warehouseStatus) &&
+      order.orderStatus !== "cancelled" &&
+      order.orderStatus !== "voided");
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
   const shipmentActionBlockedWarehouseStatuses = [
     "dispatchIssued",

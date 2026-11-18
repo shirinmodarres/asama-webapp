@@ -594,6 +594,7 @@ export function OrderForm({
               expertUserId: context.expertUserId,
               priceListId: selectedPriceListId,
               stockObjectId: selectedStockObjectId,
+              includeUnavailable: true,
             })
           : [];
         if (!isMounted) return;
@@ -846,6 +847,7 @@ export function OrderForm({
           initialOrder?.expertUserId ?? getStoredCurrentUser()?.objectId,
         priceListId: selectedPriceListId,
         stockObjectId: selectedStockObjectId,
+        includeUnavailable: true,
         search,
       });
       const stockProducts = selectedStockObjectId
@@ -865,41 +867,19 @@ export function OrderForm({
             };
           })
         : data;
-      const selectableProducts = stockProducts.filter((product) =>
-        getEditableAvailableQuantity({
-          product,
-          mode,
-          oldQuantityByProductId,
-        }) > 0,
-      );
-
       setProducts((current) => {
-        // The searchable dropdown calls this loader whenever its callback
-        // changes. Replacing the whole list for an identical remote result
-        // changes this callback again and creates an endless request loop.
-        // Initial loading already refreshes known products for the selected
-        // customer/price list/stock; only retain search results that are not
-        // present locally yet.
-        const knownProductIds = new Set(
-          current.map((product) => product.objectId),
-        );
-        const missingProducts = selectableProducts.filter(
-          (product) => !knownProductIds.has(product.objectId),
-        );
-        return missingProducts.length
-          ? [...current, ...missingProducts]
-          : current;
+        const byId = new Map(current.map((product) => [product.objectId, product]));
+        stockProducts.forEach((product) => byId.set(product.objectId, product));
+        return Array.from(byId.values());
       });
 
-      return selectableProducts.map((product) => ({
+      return stockProducts.map((product) => ({
         value: product.objectId,
         label: productIdentityLabel(product),
       }));
     },
     [
       initialOrder?.expertUserId,
-      mode,
-      oldQuantityByProductId,
       requiresPriceListSelection,
       selectedCustomerId,
       selectedPriceListId,
