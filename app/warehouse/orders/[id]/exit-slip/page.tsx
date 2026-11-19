@@ -33,6 +33,7 @@ import {
   validateExitSlipScan,
 } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
+import { isRetailShowroomTitle } from "@/lib/store-expert/retail-exit-eligibility";
 
 interface ExpectedRow {
   item: OrderItem;
@@ -153,19 +154,25 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     if (!isLoading) serialNumberRef.current?.focus();
   }, [isLoading]);
 
+  const retailStockObjectIds = order?.retailStockObjectIds ?? [];
+
   const expectedRows = useMemo<ExpectedRow[]>(() => {
     if (!order) return [];
     const itemsByProduct = new Map<string, OrderItem>();
     const visibleItems = dashboardRole === "store-expert"
       ? order.items.filter((item) => itemIsAssignedToRetailWarehouse(
         item,
-        order.retailStockObjectIds,
+        retailStockObjectIds,
         order.retailOrderItemObjectIds,
       ))
       : order.items;
 
     for (const item of visibleItems) {
-      const key = getOrderItemProductKey(item, dashboardRole === "store-expert");
+      const key = getOrderItemProductKey(
+        item,
+        dashboardRole === "store-expert",
+        retailStockObjectIds,
+      );
       const existing = itemsByProduct.get(key);
       if (existing) {
         existing.quantity += item.quantity;
@@ -178,7 +185,12 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
 
     return Array.from(itemsByProduct.values()).map((item) => {
       const scannedQuantity = scannedUnits.filter((unit) =>
-        unitMatchesOrderItem(unit, item),
+        unitMatchesOrderItem(
+          unit,
+          item,
+          dashboardRole === "store-expert",
+          retailStockObjectIds,
+        ),
       ).length;
       return {
         item,
@@ -193,7 +205,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         ),
       };
     });
-  }, [dashboardRole, order, scannedUnits]);
+  }, [dashboardRole, order, retailStockObjectIds, scannedUnits]);
   const totalItemCount = useMemo(
     () =>
       expectedRows.reduce(
@@ -237,7 +249,12 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
     scannedUnits.length > 0 &&
     expectedRows.length > 0 &&
     scannedUnits.every((unit) =>
-      expectedRows.some((row) => unitMatchesOrderItem(unit, row.item, dashboardRole === "store-expert")),
+      expectedRows.some((row) => unitMatchesOrderItem(
+        unit,
+        row.item,
+        dashboardRole === "store-expert",
+        retailStockObjectIds,
+      )),
     );
 
   const expectedColumns: DataTableColumn<ExpectedRow>[] = [
@@ -435,7 +452,12 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         return;
       }
       const expectedRow = expectedRows.find((row) =>
-        unitMatchesOrderItem(unit, row.item),
+        unitMatchesOrderItem(
+          unit,
+          row.item,
+          dashboardRole === "store-expert",
+          retailStockObjectIds,
+        ),
       );
       if (!expectedRow) {
         setError("کالای اسکن‌شده در این سفارش وجود ندارد.");
@@ -911,8 +933,9 @@ function unitMatchesOrderItem(
   unit: WarehouseItemUnit,
   item: OrderItem,
   restrictToRetailStock = false,
+  retailStockObjectIds: string[] = [],
 ): boolean {
-  if (restrictToRetailStock && unit.sepidarStockId !== 56) return false;
+  if (restrictToRetailStock && !unitIsInRetailAllocation(unit, item, retailStockObjectIds)) return false;
   if (unit.productObjectId && item.productId) {
     return unit.productObjectId === item.productId;
   }
@@ -934,16 +957,37 @@ function itemIsAssignedToRetailWarehouse(
   const retailStockIds = new Set(retailStockObjectIds);
   const retailItemIds = new Set(retailOrderItemObjectIds);
   return retailItemIds.has(item.objectId)
-    || Number(item.sepidarStockId) === 56
     || Boolean(item.stockObjectId && retailStockIds.has(item.stockObjectId))
     || Boolean(item.stockAllocations?.some((allocation) =>
-      Number(allocation.sepidarStockId) === 56
-      || Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId))));
+      Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId))
+      || isRetailShowroomTitle(allocation.stockTitle)));
 }
 
-function getOrderItemProductKey(item: OrderItem, includeStock = false): string {
-  const stockKey = includeStock ? `:${item.stockAllocations?.find((allocation) => allocation.sepidarStockId === 56)?.stockObjectId || item.stockObjectId || "retail"}` : "";
+function getOrderItemProductKey(
+  item: OrderItem,
+  includeStock = false,
+  retailStockObjectIds: string[] = [],
+): string {
+  const retailStockIds = new Set(retailStockObjectIds);
+  const stockKey = includeStock ? `:${item.stockAllocations?.find((allocation) => (
+    retailStockIds.has(allocation.stockObjectId || "")
+    || isRetailShowroomTitle(allocation.stockTitle)
+  ))?.stockObjectId || item.stockObjectId || "retail"}` : "";
   if (item.productId) return `${item.productId}${stockKey}`;
   if (item.productSku) return `sku:${item.productSku}${stockKey}`;
   return `name:${item.productName}${stockKey}`;
+}
+
+function unitIsInRetailAllocation(
+  unit: WarehouseItemUnit,
+  item: OrderItem,
+  retailStockObjectIds: string[],
+): boolean {
+  const retailStockIds = new Set(retailStockObjectIds);
+  const unitStockObjectId = unit.stockObjectId || "";
+  if (retailStockIds.has(unitStockObjectId)) return true;
+  return Boolean(item.stockAllocations?.some((allocation) => (
+    allocation.stockObjectId === unitStockObjectId
+    && isRetailShowroomTitle(allocation.stockTitle)
+  )));
 }

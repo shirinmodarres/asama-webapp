@@ -60,7 +60,7 @@ test("Store detail can show an unfulfilled retail allocation when a legacy reser
       objectId: "retail-item",
       quantity: 1,
       dispatchedQuantity: 0,
-      stockAllocations: [{ stockObjectId: "retail-stock", sepidarStockId: 56 }],
+      stockAllocations: [{ stockObjectId: "retail-stock", stockTitle: "نمایشگاه تک فروشی" }],
     }],
   };
 

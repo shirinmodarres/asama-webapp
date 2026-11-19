@@ -144,7 +144,7 @@ export default function StoreExpertOrderDetailPage() {
     // Prefer the reservation-backed server signal. Allocation fallback keeps
     // legacy rows visible until their Reservation snapshot is normalized.
     (order.retailExitAvailable === true || hasRetailFulfillmentRemaining(order)) &&
-    (order.quotationSyncStatus === "success" || order.sepidarQuotationId),
+    order.quotationSyncStatus === "success" && Boolean(order.sepidarQuotationId),
   );
 
   return (
