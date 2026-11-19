@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Printer, ScanLine, Trash2 } from "lucide-react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
@@ -55,6 +55,16 @@ interface ExitSlipDraftState {
 
 export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardRole?: "warehouse" | "store-expert" }) {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const warehouseStockObjectIds = useMemo(
+    () => new Set(
+      (searchParams.get("stockObjectIds") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+    [searchParams],
+  );
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const serialNumberRef = useRef<HTMLInputElement | null>(null);
   const trackingCodeRef = useRef<HTMLInputElement | null>(null);
@@ -165,7 +175,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         retailStockObjectIds,
         order.retailOrderItemObjectIds,
       ))
-      : order.items;
+      : order.items.filter((item) => itemIsAssignedToWarehouseStocks(item, warehouseStockObjectIds));
 
     for (const item of visibleItems) {
       const key = getOrderItemProductKey(
@@ -205,7 +215,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
         ),
       };
     });
-  }, [dashboardRole, order, retailStockObjectIds, scannedUnits]);
+  }, [dashboardRole, order, retailStockObjectIds, scannedUnits, warehouseStockObjectIds]);
   const totalItemCount = useMemo(
     () =>
       expectedRows.reduce(
@@ -961,6 +971,16 @@ function itemIsAssignedToRetailWarehouse(
     || Boolean(item.stockAllocations?.some((allocation) =>
       Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId))
       || isRetailShowroomTitle(allocation.stockTitle)));
+}
+
+function itemIsAssignedToWarehouseStocks(
+  item: OrderItem,
+  warehouseStockObjectIds: Set<string>,
+): boolean {
+  if (!warehouseStockObjectIds.size) return true;
+  if (item.stockObjectId && warehouseStockObjectIds.has(item.stockObjectId)) return true;
+  return Boolean(item.stockAllocations?.some((allocation) =>
+    Boolean(allocation.stockObjectId && warehouseStockObjectIds.has(allocation.stockObjectId))));
 }
 
 function getOrderItemProductKey(

@@ -15,7 +15,6 @@ import { Card } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import { getStoreOrder } from "@/lib/services/store-expert-order.service";
-import { hasRetailFulfillmentRemaining } from "@/lib/store-expert/retail-exit-eligibility";
 import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 import { QuotationState } from "../page";
 
@@ -141,9 +140,7 @@ export default function StoreExpertOrderDetailPage() {
     : "";
   const canCreateRetailExitSlip = Boolean(
     order &&
-    // Prefer the reservation-backed server signal. Allocation fallback keeps
-    // legacy rows visible until their Reservation snapshot is normalized.
-    (order.retailExitAvailable === true || hasRetailFulfillmentRemaining(order)) &&
+    order.retailExitAvailable === true &&
     order.quotationSyncStatus === "success" && Boolean(order.sepidarQuotationId),
   );
 

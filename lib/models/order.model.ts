@@ -94,6 +94,26 @@ export interface Order {
   retailOrderItemObjectIds?: string[];
   retailPendingOrderItemObjectIds?: string[];
   retailExitAvailable?: boolean;
+  retailFulfillmentStatus?: "pending" | "partial" | "completed" | "not_applicable";
+  retailAllocatedQuantity?: number;
+  retailDispatchedQuantity?: number;
+  retailRemainingQuantity?: number;
+  warehouseExitAvailable?: boolean;
+  warehouseStockObjectIds?: string[];
+  warehouseFulfillment?: {
+    stocks: Array<{
+      stockObjectId: string;
+      sepidarStockId: number | null;
+      stockTitle: string | null;
+      responsibleRole: "warehouse" | "store_sales_expert";
+      allocatedQuantity: number;
+      dispatchedQuantity: number;
+      remainingQuantity: number;
+    }>;
+    warehouseStockObjectIds: string[];
+    warehouseRemainingQuantity: number;
+    retailRemainingQuantity: number;
+  };
   sepidarStockId: number | null;
   stockTitle: string | null;
   selectedStockTitles: string[];

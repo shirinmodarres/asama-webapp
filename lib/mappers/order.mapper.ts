@@ -251,6 +251,50 @@ export function mapOrderDto(dto: unknown): Order {
       typeof record.retailExitAvailable === "boolean"
         ? record.retailExitAvailable
         : undefined,
+    retailFulfillmentStatus: toNullableString(record.retailFulfillmentStatus) as
+      | "pending"
+      | "partial"
+      | "completed"
+      | "not_applicable"
+      | undefined,
+    retailAllocatedQuantity: toNumberValue(record.retailAllocatedQuantity),
+    retailDispatchedQuantity: toNumberValue(record.retailDispatchedQuantity),
+    retailRemainingQuantity: toNumberValue(record.retailRemainingQuantity),
+    warehouseExitAvailable:
+      typeof record.warehouseExitAvailable === "boolean"
+        ? record.warehouseExitAvailable
+        : undefined,
+    warehouseStockObjectIds: toArray(record.warehouseStockObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    warehouseFulfillment: isObjectRecord(record.warehouseFulfillment)
+      ? {
+          stocks: toArray(toRecord(record.warehouseFulfillment).stocks)
+            .map((stock) => {
+              const stockRecord = toRecord(stock);
+              return {
+                stockObjectId: toStringValue(stockRecord.stockObjectId),
+                sepidarStockId:
+                  stockRecord.sepidarStockId === undefined || stockRecord.sepidarStockId === null
+                    ? null
+                    : toNumberValue(stockRecord.sepidarStockId),
+                stockTitle: toNullableString(stockRecord.stockTitle),
+                responsibleRole: (stockRecord.responsibleRole === "store_sales_expert"
+                  ? "store_sales_expert"
+                  : "warehouse") as "warehouse" | "store_sales_expert",
+                allocatedQuantity: toNumberValue(stockRecord.allocatedQuantity),
+                dispatchedQuantity: toNumberValue(stockRecord.dispatchedQuantity),
+                remainingQuantity: toNumberValue(stockRecord.remainingQuantity),
+              };
+            })
+            .filter((stock) => Boolean(stock.stockObjectId)),
+          warehouseStockObjectIds: toArray(toRecord(record.warehouseFulfillment).warehouseStockObjectIds)
+            .map(toStringValue)
+            .filter(Boolean),
+          warehouseRemainingQuantity: toNumberValue(toRecord(record.warehouseFulfillment).warehouseRemainingQuantity),
+          retailRemainingQuantity: toNumberValue(toRecord(record.warehouseFulfillment).retailRemainingQuantity),
+        }
+      : undefined,
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),

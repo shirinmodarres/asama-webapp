@@ -100,6 +100,24 @@ export async function listStoreOrders(filters: {
   };
 }
 
+export type StoreExpertDashboardStats = {
+  orderCount: number;
+  pendingExitCount: number;
+  partialExitCount: number;
+  completedExitCount: number;
+};
+
+export async function getStoreExpertDashboard(): Promise<StoreExpertDashboardStats> {
+  const data = await httpClient.get<unknown>("/api/store-expert/dashboard");
+  const record = toRecord(data);
+  return {
+    orderCount: Number(record.orderCount) || 0,
+    pendingExitCount: Number(record.pendingExitCount) || 0,
+    partialExitCount: Number(record.partialExitCount) || 0,
+    completedExitCount: Number(record.completedExitCount) || 0,
+  };
+}
+
 export async function getStoreOrder(orderObjectId: string): Promise<Order> {
   return mapOrderDto(await httpClient.get<unknown>(`/api/store-expert/orders/${orderObjectId}`));
 }

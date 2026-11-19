@@ -4,6 +4,12 @@ import type { SidebarItem } from "@/lib/types";
 export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
   "store-expert": [
     {
+      label: "داشبورد",
+      href: "/store-expert",
+      icon: "dashboard",
+      description: "خلاصه سفارش‌ها و خروج کالا",
+    },
+    {
       label: "ثبت سفارش فروشگاه",
       href: "/store-expert/orders/new",
       icon: "shopping-cart",
@@ -14,6 +20,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/store-expert/orders",
       icon: "file-text",
       description: "وضعیت پیش‌فاکتور، خروج و فاکتور سفارش‌های فروشگاه",
+    },
+    {
+      label: "حواله‌های خروج",
+      href: "/store-expert/exit-slips",
+      icon: "file-text",
+      description: "خروج‌های در انتظار، جزئی و تکمیل‌شده",
     },
     {
       label: "مشتریان فروشگاه",

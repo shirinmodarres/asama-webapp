@@ -71,8 +71,7 @@ export default function WarehouseOutboundPage() {
       .filter(
         (order) =>
           stockObjectId === "all" ||
-          !order.stockObjectId ||
-          order.stockObjectId === stockObjectId,
+          order.warehouseStockObjectIds?.includes(stockObjectId),
       )
       .filter((order) => {
         if (!query) return true;
@@ -128,14 +127,19 @@ export default function WarehouseOutboundPage() {
       header: "تعداد",
       render: (row) =>
         formatNumber(
-          row.items.reduce((sum, item) => sum + item.quantity, 0),
+          row.warehouseFulfillment?.warehouseRemainingQuantity ??
+            row.items.reduce((sum, item) => sum + item.quantity, 0),
         ),
     },
     {
       key: "warehouse",
       header: "انبار اختصاص‌یافته",
       render: (row) =>
-        row.stockTitle || row.warehouseName || "-",
+        row.warehouseFulfillment?.stocks
+          .filter((stock) => stock.responsibleRole === "warehouse" && stock.remainingQuantity > 0)
+          .map((stock) => stock.stockTitle)
+          .filter(Boolean)
+          .join("، ") || row.stockTitle || row.warehouseName || "-",
     },
     {
       key: "warehouseStatus",
@@ -184,19 +188,12 @@ export default function WarehouseOutboundPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => {
-        const warehouseMatches =
-          stockObjectId === "all" ||
-          !row.stockObjectId ||
-          row.stockObjectId === stockObjectId;
-        const canCreateExitSlip =
-          row.orderStatus === "approved" &&
-          ["reviewing", "partialDispatch"].includes(row.warehouseStatus) &&
-          row.fulfillmentStatus !== "onHold" &&
-          warehouseMatches;
+        const canCreateExitSlip = row.warehouseExitAvailable === true;
+        const stockIds = row.warehouseStockObjectIds?.join(",") || "";
 
         return canCreateExitSlip ? (
           <Button asChild size="sm">
-            <Link href={`/warehouse/orders/${row.objectId}/exit-slip`}>
+            <Link href={`/warehouse/orders/${row.objectId}/exit-slip?stockObjectIds=${encodeURIComponent(stockIds)}`}>
               صدور حواله خروج
             </Link>
           </Button>
