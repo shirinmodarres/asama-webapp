@@ -122,6 +122,10 @@ export async function getStoreOrder(orderObjectId: string): Promise<Order> {
   return mapOrderDto(await httpClient.get<unknown>(`/api/store-expert/orders/${orderObjectId}`));
 }
 
+export async function retryStoreQuotation(orderObjectId: string): Promise<StoreOrderSubmission> {
+  return httpClient.post(`/api/store-expert/orders/${orderObjectId}/retry-quotation`);
+}
+
 export async function getModCenterInvoice(invoiceObjectId: string): Promise<InternalInvoice> {
   return mapInternalInvoiceDto(
     await httpClient.get<unknown>(`/api/store-expert/mod-center-invoices/${invoiceObjectId}`),

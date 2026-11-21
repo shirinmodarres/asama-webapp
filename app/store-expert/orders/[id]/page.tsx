@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Download, ScanLine } from "lucide-react";
+import { ArrowRight, Download, RotateCw, ScanLine } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Card } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
-import { getStoreOrder } from "@/lib/services/store-expert-order.service";
+import { getStoreOrder, retryStoreQuotation } from "@/lib/services/store-expert-order.service";
 import { formatFaCurrency, formatFaDigits } from "@/lib/utils/number-format";
 import { QuotationState } from "../page";
 
@@ -62,6 +62,8 @@ export default function StoreExpertOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
+  const [retryReady, setRetryReady] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -81,6 +83,26 @@ export default function StoreExpertOrderDetailPage() {
       mounted = false;
     };
   }, [params.id]);
+
+  useEffect(() => {
+    if (!order || order.orderStatus !== "store_quotation_pending") return;
+    const timer = window.setTimeout(() => setRetryReady(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [order]);
+
+  async function handleRetryQuotation() {
+    if (!order || retrying) return;
+    setRetrying(true);
+    setError("");
+    try {
+      await retryStoreQuotation(order.objectId);
+      setOrder(await getStoreOrder(order.objectId));
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : "تلاش مجدد ثبت پیش‌فاکتور انجام نشد");
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   const columns = useMemo<DataTableColumn<OrderItem>[]>(
     () => [
@@ -268,6 +290,17 @@ export default function StoreExpertOrderDetailPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                {order.orderStatus === "store_quotation_pending" && retryReady ? (
+                  <button
+                    type="button"
+                    onClick={handleRetryQuotation}
+                    disabled={retrying}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <RotateCw className={`size-4 ${retrying ? "animate-spin" : ""}`} />
+                    {retrying ? "در حال تلاش..." : "تلاش مجدد ثبت پیش‌فاکتور"}
+                  </button>
+                ) : null}
                 {canCreateRetailExitSlip ? (
                   <Link
                     href={`/store-expert/orders/${order.objectId}/exit-slip`}
