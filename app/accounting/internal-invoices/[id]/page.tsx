@@ -5,7 +5,10 @@ import { Download, Printer } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
@@ -116,7 +119,11 @@ export default function InternalInvoiceDetailPage() {
       header: "کد کالا",
       render: (row) => formatFaDigits(row.productCode) || "-",
     },
-    { key: "name", header: "نام کالا", render: (row) => row.productName || "-" },
+    {
+      key: "name",
+      header: "نام کالا",
+      render: (row) => row.productName || "-",
+    },
     {
       key: "quantity",
       header: "تعداد",
@@ -187,7 +194,9 @@ export default function InternalInvoiceDetailPage() {
                   </Button>
                 ) : null}
                 <Button asChild variant="outline">
-                  <Link href={`/accounting/internal-invoices/${params.id}/print`}>
+                  <Link
+                    href={`/accounting/internal-invoices/${params.id}/print`}
+                  >
                     <Printer className="size-4" />
                     چاپ فاکتور
                   </Link>
@@ -208,34 +217,49 @@ export default function InternalInvoiceDetailPage() {
 
           <Card className="p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Info label="شماره سفارش" value={formatFaDigits(invoice.orderNumber) || "-"} />
-              <Info label="شماره حواله خروج" value={formatFaDigits(invoice.exitSlipNumber) || "-"} />
+              <Info
+                label="شماره سفارش"
+                value={formatFaDigits(invoice.orderNumber) || "-"}
+              />
+              <Info
+                label="شماره حواله خروج"
+                value={formatFaDigits(invoice.exitSlipNumber) || "-"}
+              />
               <Info label="مشتری" value={invoice.customerName || "-"} />
               <Info
                 label="کد مشتری"
-                value={formatFaDigits(
-                  invoice.sepidarCustomerCode || invoice.customerCode,
-                ) || "-"}
+                value={
+                  formatFaDigits(
+                    invoice.sepidarCustomerCode || invoice.customerCode,
+                  ) || "-"
+                }
               />
               <Info
                 label="موبایل مشتری"
-                value={formatFaDigits(
-                  invoice.customerMobile || invoice.customerPhone,
-                ) || "-"}
+                value={
+                  formatFaDigits(
+                    invoice.customerMobile || invoice.customerPhone,
+                  ) || "-"
+                }
               />
-              <Info
-                label="آدرس مشتری"
-                value={invoice.customerAddress || "-"}
-              />
+              <Info label="آدرس مشتری" value={invoice.customerAddress || "-"} />
               <Info label="انبار خروج" value={invoice.stockTitle || "-"} />
               {invoice.saleTypeTitle ? (
                 <Info label="روش پرداخت" value={invoice.saleTypeTitle || ""} />
               ) : null}
               {invoice.storePaymentMethod ? (
-                <Info label="پرداخت فروشگاه" value={invoice.storePaymentMethod === "credit" ? "اعتباری" : "نقدی"} />
+                <Info
+                  label="پرداخت فروشگاه"
+                  value={
+                    invoice.storePaymentMethod === "credit" ? "اعتباری" : "نقدی"
+                  }
+                />
               ) : null}
               {invoice.storePaymentTerms ? (
-                <Info label="توضیحات شرایط پرداخت" value={invoice.storePaymentTerms} />
+                <Info
+                  label="توضیحات شرایط پرداخت"
+                  value={invoice.storePaymentTerms}
+                />
               ) : null}
               {invoice.priceListTitle ? (
                 <Info label="لیست قیمت" value={invoice.priceListTitle || ""} />
@@ -279,10 +303,22 @@ export default function InternalInvoiceDetailPage() {
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Info label="نام" value={invoice.recipientFirstName || "-"} />
-                <Info label="نام خانوادگی" value={invoice.recipientLastName || "-"} />
-                <Info label="کد ملی" value={formatFaDigits(invoice.recipientNationalId) || "-"} />
-                <Info label="موبایل" value={formatFaDigits(invoice.recipientMobile) || "-"} />
-                <Info label="شماره سفارش" value={formatFaDigits(invoice.najaOrderNumber) || "-"} />
+                <Info
+                  label="نام خانوادگی"
+                  value={invoice.recipientLastName || "-"}
+                />
+                <Info
+                  label="کد ملی"
+                  value={formatFaDigits(invoice.recipientNationalId) || "-"}
+                />
+                <Info
+                  label="موبایل"
+                  value={formatFaDigits(invoice.recipientMobile) || "-"}
+                />
+                <Info
+                  label="شماره سفارش"
+                  value={formatFaDigits(invoice.najaOrderNumber) || "-"}
+                />
               </div>
             </Card>
           ) : null}
@@ -290,7 +326,9 @@ export default function InternalInvoiceDetailPage() {
           <DataTable
             columns={columns}
             rows={invoice.items}
-            rowKey={(row) => row.objectId || row.productObjectId || row.productCode}
+            rowKey={(row) =>
+              row.objectId || row.productObjectId || row.productCode
+            }
           />
 
           <Card className="p-5">
@@ -311,7 +349,7 @@ export default function InternalInvoiceDetailPage() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                  <DialogTitle>ثبت فاکتور در حسابداری</DialogTitle>
+                <DialogTitle>ثبت فاکتور در حسابداری</DialogTitle>
                 <DialogDescription>
                   شماره ثبت دستی و توضیح حسابدار را وارد کنید.
                 </DialogDescription>
@@ -319,7 +357,7 @@ export default function InternalInvoiceDetailPage() {
               {dialogError ? (
                 <div
                   role="alert"
-                  className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
+                  className="rounded-md border border-[#F5B8B8] bg-[#FFF1F1] px-3 py-2 text-sm font-medium text-[#C53030]"
                 >
                   {dialogError}
                 </div>
@@ -405,9 +443,9 @@ function Total({
 function hasRecipientInfo(invoice: InternalInvoice): boolean {
   return Boolean(
     invoice.recipientFirstName ||
-      invoice.recipientLastName ||
-      invoice.recipientNationalId ||
-      invoice.recipientMobile ||
-      invoice.najaOrderNumber,
+    invoice.recipientLastName ||
+    invoice.recipientNationalId ||
+    invoice.recipientMobile ||
+    invoice.najaOrderNumber,
   );
 }
