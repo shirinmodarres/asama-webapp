@@ -51,6 +51,7 @@ export default function InternalInvoiceDetailPage() {
   const [manualInvoiceNumber, setManualInvoiceNumber] = useState("");
   const [accountantNote, setAccountantNote] = useState("");
   const [fieldError, setFieldError] = useState("");
+  const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -85,6 +86,7 @@ export default function InternalInvoiceDetailPage() {
 
     setIsSubmitting(true);
     setError("");
+    setDialogError("");
     try {
       const updated = await markInternalInvoiceEntered(params.id, {
         manualInvoiceNumber,
@@ -94,7 +96,10 @@ export default function InternalInvoiceDetailPage() {
       setMessage("فاکتور داخلی به عنوان ثبت‌شده در حسابداری علامت‌گذاری شد.");
       setIsDialogOpen(false);
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      const nextError = getErrorMessage(submitError);
+      setDialogError(nextError);
+      setError("");
+      setIsDialogOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -311,6 +316,14 @@ export default function InternalInvoiceDetailPage() {
                   شماره ثبت دستی و توضیح حسابدار را وارد کنید.
                 </DialogDescription>
               </DialogHeader>
+              {dialogError ? (
+                <div
+                  role="alert"
+                  className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
+                >
+                  {dialogError}
+                </div>
+              ) : null}
               <div className="grid gap-4">
                 <label className="grid gap-2 text-sm font-medium text-[#334155]">
                   <span>شماره فاکتور حسابداری</span>
