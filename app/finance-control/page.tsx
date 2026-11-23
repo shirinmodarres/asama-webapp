@@ -12,7 +12,8 @@ export default function DashboardPage() {
         { key: "invoicesPending", title: "فاکتورهای آماده ثبت", hint: "فاکتورهای داخلی آماده حسابداری" }
       ]}
       actions={[
-        { href: "/finance-control/orders", title: "بررسی سفارش‌ها", description: "صف کنترل مالی", icon: "file-check" }
+        { href: "/finance-control/orders", title: "بررسی سفارش‌ها", description: "صف کنترل مالی", icon: "file-check" },
+        { href: "/finance-control/customer-system-transfers", title: "انتقال در سامانه مشتری", description: "بررسی انتقال‌های در انتظار", icon: "truck" }
       ]}
     />
   );

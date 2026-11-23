@@ -8,7 +8,8 @@ export default function DashboardPage() {
       metrics={[
         { key: "pending", title: "سفارش‌های در انتظار تأیید مالی", hint: "صف کار حسابدار فروش" },
         { key: "correction", title: "سفارش‌های نیازمند اصلاح", hint: "برگشت‌خورده برای اصلاح" },
-        { key: "invoicesPending", title: "فاکتورهای آماده ثبت در حسابداری", hint: "فاکتورهای داخلی آماده ثبت" }
+        { key: "invoicesPending", title: "فاکتورهای آماده ثبت در حسابداری", hint: "فاکتورهای داخلی آماده ثبت" },
+        { key: "invoicesEntered", title: "فاکتورهای ثبت‌شده در حسابداری", hint: "فاکتورهای داخلی ثبت‌شده در سیستم حسابداری" }
       ]}
       actions={[
         { href: "/finance/financial-approvals", title: "بررسی مالی سفارش‌ها", description: "سفارش‌های در انتظار بررسی و اصلاح", icon: "file-check" },

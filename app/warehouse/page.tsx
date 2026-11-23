@@ -7,7 +7,6 @@ export default function DashboardPage() {
       title="داشبورد انبار"
       metrics={[
         { key: "reviewing", title: "سفارش‌های در بررسی انبار", hint: "در انتظار صدور حواله" },
-        { key: "najaPending", title: "سفارش‌های ناجا", hint: "نیازمند شناسه و رهگیری" },
         { key: "dispatched", title: "سفارش‌های دارای خروج صادرشده", hint: "در مسیر تحویل" },
         { key: "delivered", title: "سفارش‌های تحویل‌شده", hint: "تحویل تأییدشده" }
       ]}

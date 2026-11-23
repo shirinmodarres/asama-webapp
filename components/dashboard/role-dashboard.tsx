@@ -47,7 +47,7 @@ export function RoleDashboard({
       {error ? <PageErrorMessage title="دریافت داشبورد انجام نشد" message={error} /> : !counts ? (
         <LoadingState title="در حال دریافت اطلاعات داشبورد" />
       ) : (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className={role === "finance-control" ? "grid gap-4 md:grid-cols-3" : "grid gap-4 md:grid-cols-2 xl:grid-cols-4"}>
           {metrics.filter((metric) => Object.hasOwn(counts, metric.key)).map((metric) => (
             <ManagerSummaryCard key={metric.key} title={metric.title} value={counts[metric.key]} hint={metric.hint} />
           ))}
