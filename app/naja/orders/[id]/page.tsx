@@ -1,6 +1,7 @@
 "use client";
 
 import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
@@ -172,7 +173,9 @@ export default function NajaOrderDetailsPage() {
         }
       />
 
-      <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+      {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">

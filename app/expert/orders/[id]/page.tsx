@@ -1,6 +1,7 @@
 "use client";
 
 import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -415,7 +416,9 @@ export default function ExpertOrderDetailsPage() {
                 </div>
               ) : null}
 
-              <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+              {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
               <CustomerInfoCard order={order} />
 
               <DataTable

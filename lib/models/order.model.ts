@@ -205,6 +205,7 @@ export interface Order {
   sepidarIntegrationStatus: string | null;
   quotationSyncError: string | null;
   sepidarLastError: string | null;
+  approvedBy: string | null;
   exitSlipObjectId: string | null;
   exitSlipNumber: string | null;
   exitSlipIssuedAt: string | null;

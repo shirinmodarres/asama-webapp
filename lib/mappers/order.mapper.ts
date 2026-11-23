@@ -485,6 +485,7 @@ export function mapOrderDto(dto: unknown): Order {
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
     quotationSyncError: toNullableString(record.quotationSyncError),
     sepidarLastError: toNullableString(record.sepidarLastError),
+    approvedBy: toNullableString(record.approvedBy),
     exitSlipObjectId: toNullableString(record.exitSlipObjectId),
     exitSlipNumber: toNullableString(record.exitSlipNumber),
     exitSlipIssuedAt: toNullableString(record.exitSlipIssuedAt),
