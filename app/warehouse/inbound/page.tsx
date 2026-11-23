@@ -1,8 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileSpreadsheet, Plus, PackageSearch, Save, Trash2, Upload } from "lucide-react";
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  FileSpreadsheet,
+  Plus,
+  PackageSearch,
+  Save,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -20,7 +35,10 @@ import type { SepidarStock } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listProducts } from "@/lib/services/product.service";
 import { listStocks } from "@/lib/services/stock.service";
-import { createInboundReceipt, validateInboundReceipt } from "@/lib/services/warehouse.service";
+import {
+  createInboundReceipt,
+  validateInboundReceipt,
+} from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 import {
   extractDuplicateDetails,
@@ -59,7 +77,12 @@ interface MultiImportPreview {
 
 type InboundFieldErrorState = Record<
   string,
-  Partial<Record<"productIdentifier" | "serialNumber" | "trackingCode" | "productObjectId", string>>
+  Partial<
+    Record<
+      "productIdentifier" | "serialNumber" | "trackingCode" | "productObjectId",
+      string
+    >
+  >
 >;
 
 export default function WarehouseInboundPage() {
@@ -77,7 +100,8 @@ export default function WarehouseInboundPage() {
   const [fieldErrors, setFieldErrors] = useState<InboundFieldErrorState>({});
   const [notes, setNotes] = useState("");
   const [supplierName, setSupplierName] = useState("");
-  const [multiImportPreview, setMultiImportPreview] = useState<MultiImportPreview | null>(null);
+  const [multiImportPreview, setMultiImportPreview] =
+    useState<MultiImportPreview | null>(null);
   const [isMultiImporting, setIsMultiImporting] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const multiImportInput = useRef<HTMLInputElement | null>(null);
@@ -95,7 +119,9 @@ export default function WarehouseInboundPage() {
           listStocks(),
         ]);
         if (!isMounted) return;
-        const allowedProducts = productData.filter((product) => product.isSyncedFromSepidar);
+        const allowedProducts = productData.filter(
+          (product) => product.isSyncedFromSepidar,
+        );
         const activeStocks = stockData.filter((stock) => stock.isActive);
         setProducts(allowedProducts);
         setStocks(activeStocks);
@@ -167,9 +193,7 @@ export default function WarehouseInboundPage() {
 
   const productIdentifierOptions = useMemo(
     () =>
-      Array.from(
-        new Set(products.map(getProductIdentifier).filter(Boolean)),
-      ),
+      Array.from(new Set(products.map(getProductIdentifier).filter(Boolean))),
     [products],
   );
 
@@ -199,7 +223,12 @@ export default function WarehouseInboundPage() {
       const next = current.filter((group) => group.rowId !== rowId);
       return next.length
         ? next
-        : [createEmptyGroup(products[0]?.objectId || "", getProductIdentifier(products[0]))];
+        : [
+            createEmptyGroup(
+              products[0]?.objectId || "",
+              getProductIdentifier(products[0]),
+            ),
+          ];
     });
     setGroupErrors((current) => {
       const next = { ...current };
@@ -218,14 +247,21 @@ export default function WarehouseInboundPage() {
           ? {
               ...group,
               productObjectId,
-              units: group.units.map((unit) => ({ ...unit, productIdentifier })),
+              units: group.units.map((unit) => ({
+                ...unit,
+                productIdentifier,
+              })),
             }
           : group,
       ),
     );
   };
 
-  const updateProductIdentifier = (rowId: string, unitId: string, value: string) => {
+  const updateProductIdentifier = (
+    rowId: string,
+    unitId: string,
+    value: string,
+  ) => {
     const normalizedIdentifier = normalizeDigits(value.trim());
     const matchedProduct = products.find(
       (product) =>
@@ -238,7 +274,9 @@ export default function WarehouseInboundPage() {
           return {
             ...group,
             units: group.units.map((unit) =>
-              unit.rowId === unitId ? { ...unit, productIdentifier: value } : unit,
+              unit.rowId === unitId
+                ? { ...unit, productIdentifier: value }
+                : unit,
             ),
           };
         }
@@ -259,7 +297,9 @@ export default function WarehouseInboundPage() {
         const nextUnits = [...group.units];
         if (quantity > nextUnits.length) {
           const productIdentifier = getProductIdentifier(
-            products.find((product) => product.objectId === group.productObjectId),
+            products.find(
+              (product) => product.objectId === group.productObjectId,
+            ),
           );
           while (nextUnits.length < quantity) {
             nextUnits.push(createEmptyUnit(productIdentifier));
@@ -275,7 +315,12 @@ export default function WarehouseInboundPage() {
   const updateUnit = (
     rowId: string,
     unitId: string,
-    patch: Partial<Pick<ReceiptUnitDraft, "productIdentifier" | "serialNumber" | "trackingCode">>,
+    patch: Partial<
+      Pick<
+        ReceiptUnitDraft,
+        "productIdentifier" | "serialNumber" | "trackingCode"
+      >
+    >,
   ) => {
     setGroups((current) =>
       current.map((group) =>
@@ -309,7 +354,9 @@ export default function WarehouseInboundPage() {
           group.rowId === rowId ? { ...group, units: normalized } : group,
         ),
       );
-      setMessage(`${formatNumber(normalized.length)} ردیف برای این کالا از فایل اضافه شد.`);
+      setMessage(
+        `${formatNumber(normalized.length)} ردیف برای این کالا از فایل اضافه شد.`,
+      );
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -329,13 +376,22 @@ export default function WarehouseInboundPage() {
         (row) => !isEmptyImportRow(row),
       );
       const productsByIdentifier = new Map<string, Product[]>();
-      products.filter((product) => product.status === "active").forEach((product) => {
-        const identifier = normalizeDigits(getProductIdentifier(product));
-        if (identifier) productsByIdentifier.set(identifier, [...(productsByIdentifier.get(identifier) || []), product]);
-      });
+      products
+        .filter((product) => product.status === "active")
+        .forEach((product) => {
+          const identifier = normalizeDigits(getProductIdentifier(product));
+          if (identifier)
+            productsByIdentifier.set(identifier, [
+              ...(productsByIdentifier.get(identifier) || []),
+              product,
+            ]);
+        });
       const invalidRows: Array<{ rowNumber: number; reason: string }> = [];
       if (!rows.length) {
-        invalidRows.push({ rowNumber: 0, reason: "فایل هیچ ردیف کالایی ندارد." });
+        invalidRows.push({
+          rowNumber: 0,
+          reason: "فایل هیچ ردیف کالایی ندارد.",
+        });
       }
       const serialRows = new Map<string, number[]>();
       const trackingRows = new Map<string, number[]>();
@@ -346,32 +402,62 @@ export default function WarehouseInboundPage() {
         const matches = productsByIdentifier.get(productIdentifier) || [];
         const product = matches.length === 1 ? matches[0] : undefined;
         if (!productIdentifier) {
-          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول الزامی است." });
+          invalidRows.push({
+            rowNumber: row.excelRowNumber,
+            reason: "شناسه محصول الزامی است.",
+          });
         } else if (matches.length !== 1) {
-          invalidRows.push({ rowNumber: row.excelRowNumber, reason: matches.length ? "شناسه به چند کالا تعلق دارد؛ کالا را دستی انتخاب کنید." : "شناسه محصول معتبر نیست یا کالا فعال نیست." });
+          invalidRows.push({
+            rowNumber: row.excelRowNumber,
+            reason: matches.length
+              ? "شناسه به چند کالا تعلق دارد؛ کالا را دستی انتخاب کنید."
+              : "شناسه محصول معتبر نیست یا کالا فعال نیست.",
+          });
         }
         if (!serialNumber && !trackingCode) {
-          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "حداقل سریال یا کد رهگیری الزامی است." });
+          invalidRows.push({
+            rowNumber: row.excelRowNumber,
+            reason: "حداقل سریال یا کد رهگیری الزامی است.",
+          });
         }
         const serialKey = serialNumber.toLowerCase();
         const trackingKey = trackingCode.toLowerCase();
-        if (serialKey) serialRows.set(serialKey, [...(serialRows.get(serialKey) || []), row.excelRowNumber]);
-        if (trackingKey) trackingRows.set(trackingKey, [...(trackingRows.get(trackingKey) || []), row.excelRowNumber]);
+        if (serialKey)
+          serialRows.set(serialKey, [
+            ...(serialRows.get(serialKey) || []),
+            row.excelRowNumber,
+          ]);
+        if (trackingKey)
+          trackingRows.set(trackingKey, [
+            ...(trackingRows.get(trackingKey) || []),
+            row.excelRowNumber,
+          ]);
         return { row, product, productIdentifier, serialNumber, trackingCode };
       });
       [serialRows, trackingRows].forEach((duplicates, index) => {
         duplicates.forEach((rowNumbers) => {
           if (rowNumbers.length > 1) {
-            rowNumbers.forEach((rowNumber) => invalidRows.push({
-              rowNumber,
-              reason: index === 0 ? "سریال در فایل تکراری است." : "کد رهگیری در فایل تکراری است.",
-            }));
+            rowNumbers.forEach((rowNumber) =>
+              invalidRows.push({
+                rowNumber,
+                reason:
+                  index === 0
+                    ? "سریال در فایل تکراری است."
+                    : "کد رهگیری در فایل تکراری است.",
+              }),
+            );
           }
         });
       });
       const groupsByProduct = new Map<string, ReceiptGroupDraft>();
       resolved.forEach((entry, index) => {
-        if (!entry.product || invalidRows.some((invalid) => invalid.rowNumber === entry.row.excelRowNumber)) return;
+        if (
+          !entry.product ||
+          invalidRows.some(
+            (invalid) => invalid.rowNumber === entry.row.excelRowNumber,
+          )
+        )
+          return;
         const current = groupsByProduct.get(entry.product.objectId) || {
           rowId: `excel-${entry.product.objectId}`,
           productObjectId: entry.product.objectId,
@@ -392,24 +478,35 @@ export default function WarehouseInboundPage() {
             stockObjectId: selectedStockId,
             items: importedGroups.map((group) => ({
               productObjectId: group.productObjectId,
-              units: group.units.map((unit) => ({ ...unit, productObjectId: group.productObjectId })),
+              units: group.units.map((unit) => ({
+                ...unit,
+                productObjectId: group.productObjectId,
+              })),
             })),
           });
           if (!validation.valid) throw new Error("بررسی فایل انجام نشد.");
         } catch (validationError) {
-          const fieldErrors = extractInboundValidationFieldErrors(validationError);
+          const fieldErrors =
+            extractInboundValidationFieldErrors(validationError);
           fieldErrors.forEach((fieldError) => {
-            const sourceRow = importedGroups.flatMap((group) => group.units)
+            const sourceRow = importedGroups
+              .flatMap((group) => group.units)
               [fieldError.rowIndex]?.rowId.match(/^excel-(\d+)-/)?.[1];
             invalidRows.push({
-              rowNumber: sourceRow ? Number(sourceRow) : fieldError.rowIndex + 1,
+              rowNumber: sourceRow
+                ? Number(sourceRow)
+                : fieldError.rowIndex + 1,
               reason: fieldError.message,
             });
           });
           if (!fieldErrors.length) throw validationError;
         }
       }
-      setMultiImportPreview({ groups: importedGroups, totalRows: rows.length, invalidRows });
+      setMultiImportPreview({
+        groups: importedGroups,
+        totalRows: rows.length,
+        invalidRows,
+      });
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
@@ -419,10 +516,13 @@ export default function WarehouseInboundPage() {
 
   const validateGroup = (group: ReceiptGroupDraft) => {
     const errors: string[] = [];
-    const product = products.find((item) => item.objectId === group.productObjectId);
+    const product = products.find(
+      (item) => item.objectId === group.productObjectId,
+    );
     const identifierRequired = isProductIdentifierRequired(product);
     if (!group.productObjectId) errors.push("کالا انتخاب نشده است.");
-    if (group.units.length === 0) errors.push("حداقل یک ردیف برای این کالا ثبت کنید.");
+    if (group.units.length === 0)
+      errors.push("حداقل یک ردیف برای این کالا ثبت کنید.");
 
     group.units.forEach((unit) => {
       const identifier = normalizeDigits(unit.productIdentifier.trim());
@@ -430,12 +530,15 @@ export default function WarehouseInboundPage() {
       if (identifierRequired && !identifier) {
         errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
       }
-      if (!track && !normalizeDigits(unit.serialNumber.trim())) errors.push("سریال یا کد رهگیری برای یکی از ردیف‌ها الزامی است.");
+      if (!track && !normalizeDigits(unit.serialNumber.trim()))
+        errors.push("سریال یا کد رهگیری برای یکی از ردیف‌ها الزامی است.");
     });
     return errors;
   };
 
-  const canSubmit = groups.length > 0 && groups.every((group) => validateGroup(group).length === 0);
+  const canSubmit =
+    groups.length > 0 &&
+    groups.every((group) => validateGroup(group).length === 0);
 
   const submitReceipt = async (receiptGroups: ReceiptGroupDraft[] = groups) => {
     setError("");
@@ -492,7 +595,9 @@ export default function WarehouseInboundPage() {
           createEmptyGroup(
             group.productObjectId,
             getProductIdentifier(
-              products.find((product) => product.objectId === group.productObjectId),
+              products.find(
+                (product) => product.objectId === group.productObjectId,
+              ),
             ),
           ),
         ),
@@ -502,9 +607,14 @@ export default function WarehouseInboundPage() {
     } catch (submitError) {
       const validationErrors = extractInboundValidationFieldErrors(submitError);
       if (validationErrors.length) {
-        const nextFieldErrors = buildInboundFieldErrors(validationErrors, receiptGroups);
+        const nextFieldErrors = buildInboundFieldErrors(
+          validationErrors,
+          receiptGroups,
+        );
         setFieldErrors(nextFieldErrors);
-        setGroupErrors(buildInboundGroupErrors(validationErrors, receiptGroups));
+        setGroupErrors(
+          buildInboundGroupErrors(validationErrors, receiptGroups),
+        );
         setError("");
         focusFirstInboundFieldError(receiptGroups, nextFieldErrors);
         return;
@@ -516,7 +626,12 @@ export default function WarehouseInboundPage() {
   };
 
   const saveDraft = () => {
-    const savedAt = writeInboundReceiptDraft({ groups, selectedStockId, notes, supplierName });
+    const savedAt = writeInboundReceiptDraft({
+      groups,
+      selectedStockId,
+      notes,
+      supplierName,
+    });
     setDraftMessage(`پیش‌نویس ثبت موقت ذخیره شد (${formatDateTime(savedAt)})`);
   };
 
@@ -533,13 +648,18 @@ export default function WarehouseInboundPage() {
         <PageErrorMessage title="دریافت کالاها انجام نشد" message={error} />
       ) : (
         <div className="space-y-5">
-          {message ? <div className="asama-banner px-4 py-3 text-sm">{message}</div> : null}
-          {draftMessage ? <div className="asama-banner px-4 py-3 text-sm">{draftMessage}</div> : null}
+          {message ? (
+            <div className="asama-banner px-4 py-3 text-sm">{message}</div>
+          ) : null}
+          {draftMessage ? (
+            <div className="asama-banner px-4 py-3 text-sm">{draftMessage}</div>
+          ) : null}
           {error ? <InlineErrorMessage message={error} /> : null}
 
           <Card className="p-5">
             <div className="mb-4 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A]">
-              هر رسید می‌تواند چند کالا داشته باشد. برای هر واحد، سریال یا کد رهگیری ثبت کنید.
+              هر رسید می‌تواند چند کالا داشته باشد. برای هر واحد، سریال یا کد
+              رهگیری ثبت کنید.
             </div>
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_180px]">
@@ -557,50 +677,76 @@ export default function WarehouseInboundPage() {
               </label>
               <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm">
                 <p className="text-[#6B7280]">تعداد کالاهای ثبت‌شده</p>
-                <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(groups.length)}</p>
+                <p className="mt-1 text-lg font-semibold text-[#102034]">
+                  {formatNumber(groups.length)}
+                </p>
               </div>
               <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3 text-sm">
                 <p className="text-[#6B7280]">تعداد واحدها</p>
-                <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(totalUnits)}</p>
+                <p className="mt-1 text-lg font-semibold text-[#102034]">
+                  {formatNumber(totalUnits)}
+                </p>
               </div>
             </div>
             <div className="mt-4 space-y-3 rounded-xl border border-[#D7E4EF] bg-[#F8FBFD] p-4">
               <div>
-                <h2 className="font-semibold text-[#102034]">ورود چند کالا از فایل</h2>
-                <p className="mt-1 text-sm leading-6 text-[#64748B]">ابتدا انبار را انتخاب کنید. هر ردیف یک واحد است و ستون‌های A، B و C به‌ترتیب شناسه محصول سپیدار، سریال و کد رهگیری هستند. حداقل سریال یا کد رهگیری را وارد کنید.</p>
+                <h2 className="font-semibold text-[#102034]">
+                  ورود چند کالا از فایل
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[#64748B]">
+                  ابتدا انبار را انتخاب کنید. هر ردیف یک واحد است و ستون‌های A،
+                  B و C به‌ترتیب شناسه محصول سپیدار، سریال و کد رهگیری هستند.
+                  حداقل سریال یا کد رهگیری را وارد کنید.
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-              <input
-                ref={multiImportInput}
-                type="file"
-                accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
-                className="hidden"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) await previewMultiProductImport(file);
-                }}
-              />
-              <Button
-                type="button"
-                onClick={() => multiImportInput.current?.click()}
-                disabled={isMultiImporting || isSubmitting || !selectedStockId}
-              >
-                <FileSpreadsheet className="size-4" />
-                {isMultiImporting ? "در حال بررسی فایل..." : "ایمپورت چند کالا از اکسل"}
-              </Button>
-              <Button type="button" variant="outline" onClick={downloadInboundImportTemplate}>
-                دریافت فایل نمونه
-              </Button>
-              <span className="text-xs text-[#6B7280]">فرمت‌های xlsx، csv و tsv</span>
+                <input
+                  ref={multiImportInput}
+                  type="file"
+                  accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
+                  className="hidden"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) await previewMultiProductImport(file);
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={() => multiImportInput.current?.click()}
+                  disabled={
+                    isMultiImporting || isSubmitting || !selectedStockId
+                  }
+                >
+                  <FileSpreadsheet className="size-4" />
+                  {isMultiImporting
+                    ? "در حال بررسی فایل..."
+                    : "افزودن گروهی کالاها از اکسل"}{" "}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadInboundImportTemplate}
+                >
+                  دریافت فایل نمونه
+                </Button>
+                <span className="text-xs text-[#6B7280]">
+                  فرمت‌های xlsx، csv و tsv
+                </span>
               </div>
-              {!selectedStockId && <p className="text-xs text-[#9A3412]">برای انتخاب فایل، ابتدا انبار مقصد را انتخاب کنید.</p>}
+              {!selectedStockId && (
+                <p className="text-xs text-[#9A3412]">
+                  برای انتخاب فایل، ابتدا انبار مقصد را انتخاب کنید.
+                </p>
+              )}
             </div>
           </Card>
 
           <div className="space-y-4">
             {groups.map((group, groupIndex) => {
-              const product = products.find((item) => item.objectId === group.productObjectId);
+              const product = products.find(
+                (item) => item.objectId === group.productObjectId,
+              );
               const progress = countCompletedUnits(
                 group.units,
                 isProductIdentifierRequired(product),
@@ -636,7 +782,9 @@ export default function WarehouseInboundPage() {
                         <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                         <SearchableSelect
                           value={group.productObjectId || undefined}
-                          onValueChange={(value) => updateGroupProduct(group.rowId, value)}
+                          onValueChange={(value) =>
+                            updateGroupProduct(group.rowId, value)
+                          }
                           options={productOptions}
                           placeholder="انتخاب کالا"
                           searchPlaceholder="جستجو در کالاها"
@@ -646,7 +794,9 @@ export default function WarehouseInboundPage() {
                         />
                       </div>
                       {groupErrors[group.rowId] ? (
-                        <p className="text-xs leading-6 text-[#B45309]">{groupErrors[group.rowId]}</p>
+                        <p className="text-xs leading-6 text-[#B45309]">
+                          {groupErrors[group.rowId]}
+                        </p>
                       ) : null}
                     </label>
                     <label className="grid gap-2 text-sm font-medium text-[#334155]">
@@ -655,7 +805,10 @@ export default function WarehouseInboundPage() {
                         inputMode="numeric"
                         value={group.units.length}
                         onChange={(event) => {
-                          const quantity = Math.max(0, Number(normalizeDigits(event.target.value)) || 0);
+                          const quantity = Math.max(
+                            0,
+                            Number(normalizeDigits(event.target.value)) || 0,
+                          );
                           updateGroupQuantity(group.rowId, quantity);
                         }}
                       />
@@ -673,22 +826,35 @@ export default function WarehouseInboundPage() {
                           onChange={async (event) => {
                             const file = event.target.files?.[0];
                             event.target.value = "";
-                            if (file) await importUnitsForGroup(group.rowId, file);
+                            if (file)
+                              await importUnitsForGroup(group.rowId, file);
                           }}
                         />
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => fileInputs.current[group.rowId]?.click()}
-                          disabled={!group.productObjectId || isImporting === group.rowId}
+                          onClick={() =>
+                            fileInputs.current[group.rowId]?.click()
+                          }
+                          disabled={
+                            !group.productObjectId ||
+                            isImporting === group.rowId
+                          }
                         >
                           <Upload className="size-4" />
-                          {isImporting === group.rowId ? "در حال ایمپورت..." : "ایمپورت فایل"}
+                          {isImporting === group.rowId
+                            ? "در حال ایمپورت..."
+                            : "ایمپورت فایل"}
                         </Button>
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => updateGroupQuantity(group.rowId, group.units.length + 1)}
+                          onClick={() =>
+                            updateGroupQuantity(
+                              group.rowId,
+                              group.units.length + 1,
+                            )
+                          }
                           disabled={!group.productObjectId}
                         >
                           <Plus className="size-4" />
@@ -701,8 +867,16 @@ export default function WarehouseInboundPage() {
                   {product ? (
                     <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                       <InfoItem label="نام کالا" value={product.name} />
-                      <InfoItem label="کد کالا" value={formatFaDigits(product.sku || product.sepidarCode || "-")} />
-                      <InfoItem label="برند" value={product.brandName || product.brand || "-"} />
+                      <InfoItem
+                        label="کد کالا"
+                        value={formatFaDigits(
+                          product.sku || product.sepidarCode || "-",
+                        )}
+                      />
+                      <InfoItem
+                        label="برند"
+                        value={product.brandName || product.brand || "-"}
+                      />
                     </dl>
                   ) : null}
 
@@ -716,17 +890,27 @@ export default function WarehouseInboundPage() {
                       <thead>
                         <tr className="bg-[#F8FBFD] text-[#1F3A5F]">
                           <th className="px-3 py-2 font-semibold">ردیف</th>
-                          <th className="px-3 py-2 font-semibold">شناسه محصول</th>
+                          <th className="px-3 py-2 font-semibold">
+                            شناسه محصول
+                          </th>
                           <th className="px-3 py-2 font-semibold">سریال</th>
                           <th className="px-3 py-2 font-semibold">کد رهگیری</th>
                         </tr>
                       </thead>
                       <tbody>
                         {group.units.map((unit, index) => (
-                          <tr key={unit.rowId} className="border-t border-[#E5E7EB]">
-                            <td className="px-3 py-2">{formatNumber(index + 1)}</td>
+                          <tr
+                            key={unit.rowId}
+                            className="border-t border-[#E5E7EB]"
+                          >
                             <td className="px-3 py-2">
-                              <div data-inbound-field="productIdentifier" data-unit-row-id={unit.rowId}>
+                              {formatNumber(index + 1)}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div
+                                data-inbound-field="productIdentifier"
+                                data-unit-row-id={unit.rowId}
+                              >
                                 <Input
                                   value={unit.productIdentifier}
                                   list={`product-identifiers-${group.rowId}`}
@@ -738,18 +922,28 @@ export default function WarehouseInboundPage() {
                                     )
                                   }
                                   placeholder="شناسه محصول"
-                                  aria-invalid={Boolean(fieldErrors[unit.rowId]?.productIdentifier)}
+                                  aria-invalid={Boolean(
+                                    fieldErrors[unit.rowId]?.productIdentifier,
+                                  )}
                                   ref={(element) => {
                                     if (!element) return;
                                     element.dataset.unitRowId = unit.rowId;
-                                    element.dataset.inboundField = "productIdentifier";
+                                    element.dataset.inboundField =
+                                      "productIdentifier";
                                   }}
                                 />
-                                <FieldMessage message={fieldErrors[unit.rowId]?.productIdentifier} />
+                                <FieldMessage
+                                  message={
+                                    fieldErrors[unit.rowId]?.productIdentifier
+                                  }
+                                />
                               </div>
                             </td>
                             <td className="px-3 py-2">
-                              <div data-inbound-field="serialNumber" data-unit-row-id={unit.rowId}>
+                              <div
+                                data-inbound-field="serialNumber"
+                                data-unit-row-id={unit.rowId}
+                              >
                                 <Input
                                   value={unit.serialNumber}
                                   onChange={(event) =>
@@ -758,14 +952,24 @@ export default function WarehouseInboundPage() {
                                     })
                                   }
                                   placeholder="سریال"
-                                  aria-invalid={Boolean(fieldErrors[unit.rowId]?.serialNumber)}
+                                  aria-invalid={Boolean(
+                                    fieldErrors[unit.rowId]?.serialNumber,
+                                  )}
                                 />
-                                <FieldMessage message={fieldErrors[unit.rowId]?.serialNumber} />
+                                <FieldMessage
+                                  message={
+                                    fieldErrors[unit.rowId]?.serialNumber
+                                  }
+                                />
                               </div>
                             </td>
                             <td className="px-3 py-2">
                               <div className="flex items-start gap-2">
-                                <div className="flex-1" data-inbound-field="trackingCode" data-unit-row-id={unit.rowId}>
+                                <div
+                                  className="flex-1"
+                                  data-inbound-field="trackingCode"
+                                  data-unit-row-id={unit.rowId}
+                                >
                                   <Input
                                     value={unit.trackingCode}
                                     onChange={(event) =>
@@ -774,9 +978,15 @@ export default function WarehouseInboundPage() {
                                       })
                                     }
                                     placeholder="کد رهگیری"
-                                    aria-invalid={Boolean(fieldErrors[unit.rowId]?.trackingCode)}
+                                    aria-invalid={Boolean(
+                                      fieldErrors[unit.rowId]?.trackingCode,
+                                    )}
                                   />
-                                  <FieldMessage message={fieldErrors[unit.rowId]?.trackingCode} />
+                                  <FieldMessage
+                                    message={
+                                      fieldErrors[unit.rowId]?.trackingCode
+                                    }
+                                  />
                                 </div>
                                 <Button
                                   type="button"
@@ -791,7 +1001,8 @@ export default function WarehouseInboundPage() {
                                           : {
                                               ...currentGroup,
                                               units: currentGroup.units.filter(
-                                                (entry) => entry.rowId !== unit.rowId,
+                                                (entry) =>
+                                                  entry.rowId !== unit.rowId,
                                               ),
                                             },
                                       ),
@@ -846,11 +1057,17 @@ export default function WarehouseInboundPage() {
           <Card className="p-5">
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span>نام تامین کننده</span>
-              <Input value={supplierName} onChange={(event) => setSupplierName(event.target.value)} />
+              <Input
+                value={supplierName}
+                onChange={(event) => setSupplierName(event.target.value)}
+              />
             </label>
             <label className="grid gap-2 text-sm font-medium text-[#334155]">
               <span className="mt-4">توضیحات</span>
-              <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
+              <Textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
             </label>
             <p className="mt-3 text-xs text-[#6B7280]">
               آخرین بروزرسانی کالاها: {formatDateTime(new Date().toISOString())}
@@ -875,42 +1092,103 @@ export default function WarehouseInboundPage() {
           </AlertDialogHeader>
           <div className="max-h-[55vh] space-y-3 overflow-y-auto text-sm">
             <div className="grid grid-cols-3 gap-3">
-              <InfoItem label="تعداد ردیف" value={formatNumber(multiImportPreview?.totalRows || 0)} />
-              <InfoItem label="تعداد کالا" value={formatNumber(multiImportPreview?.groups.length || 0)} />
-              <InfoItem label="خطاها" value={formatNumber(multiImportPreview?.invalidRows.length || 0)} />
+              <InfoItem
+                label="تعداد ردیف"
+                value={formatNumber(multiImportPreview?.totalRows || 0)}
+              />
+              <InfoItem
+                label="تعداد کالا"
+                value={formatNumber(multiImportPreview?.groups.length || 0)}
+              />
+              <InfoItem
+                label="خطاها"
+                value={formatNumber(
+                  multiImportPreview?.invalidRows.length || 0,
+                )}
+              />
             </div>
             {multiImportPreview?.groups.map((group) => {
-              const product = products.find((item) => item.objectId === group.productObjectId);
-              return <div key={group.rowId} className="rounded-lg border border-[#E5E7EB] px-3 py-2">
-                <p className="font-medium text-[#102034]">{product?.name || "کالا"}</p>
-                <p className="mt-1 text-xs text-[#6B7280]">شناسه: {formatFaDigits(getProductIdentifier(product) || "-")} | تعداد: {formatNumber(group.units.length)}</p>
-              </div>;
+              const product = products.find(
+                (item) => item.objectId === group.productObjectId,
+              );
+              return (
+                <div
+                  key={group.rowId}
+                  className="rounded-lg border border-[#E5E7EB] px-3 py-2"
+                >
+                  <p className="font-medium text-[#102034]">
+                    {product?.name || "کالا"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#6B7280]">
+                    شناسه:{" "}
+                    {formatFaDigits(getProductIdentifier(product) || "-")} |
+                    تعداد: {formatNumber(group.units.length)}
+                  </p>
+                </div>
+              );
             })}
-            {multiImportPreview?.invalidRows.length ? <div className="rounded-lg border border-[#F5D0C5] bg-[#FFF7F5] p-3 text-[#9A3412]">
-              {multiImportPreview.invalidRows.map((row, index) => <p key={`${row.rowNumber}-${index}`}>ردیف {formatNumber(row.rowNumber)}: {row.reason}</p>)}
-            </div> : null}
+            {multiImportPreview?.invalidRows.length ? (
+              <div className="rounded-lg border border-[#F5D0C5] bg-[#FFF7F5] p-3 text-[#9A3412]">
+                {multiImportPreview.invalidRows.map((row, index) => (
+                  <p key={`${row.rowNumber}-${index}`}>
+                    ردیف {formatNumber(row.rowNumber)}: {row.reason}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>انصراف</AlertDialogCancel>
-            {multiImportPreview?.invalidRows.length ? <Button type="button" variant="outline" onClick={() => downloadMultiImportReport(multiImportPreview.invalidRows)}>دانلود گزارش خطا</Button> : <Button type="button" disabled={isSubmitting} onClick={() => {
-              if (!multiImportPreview) return;
-              setGroups((current) => {
-                const merged = current.filter((group) =>
-                  group.units.some((unit) => unit.serialNumber.trim() || unit.trackingCode.trim()),
-                );
-                for (const imported of multiImportPreview.groups) {
-                  const index = merged.findIndex((group) => group.productObjectId === imported.productObjectId);
-                  if (index < 0) {
-                    merged.push(imported);
-                  } else {
-                    merged[index] = { ...merged[index], units: [...merged[index].units, ...imported.units] };
-                  }
+            <AlertDialogCancel disabled={isSubmitting}>
+              انصراف
+            </AlertDialogCancel>
+            {multiImportPreview?.invalidRows.length ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  downloadMultiImportReport(multiImportPreview.invalidRows)
                 }
-                return merged;
-              });
-              setMultiImportPreview(null);
-              setMessage("ردیف‌های فایل به فرم اضافه شدند. برای ثبت رسید، دکمه ثبت ورود را بزنید.");
-            }}>افزودن به فرم</Button>}
+              >
+                دانلود گزارش خطا
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  if (!multiImportPreview) return;
+                  setGroups((current) => {
+                    const merged = current.filter((group) =>
+                      group.units.some(
+                        (unit) =>
+                          unit.serialNumber.trim() || unit.trackingCode.trim(),
+                      ),
+                    );
+                    for (const imported of multiImportPreview.groups) {
+                      const index = merged.findIndex(
+                        (group) =>
+                          group.productObjectId === imported.productObjectId,
+                      );
+                      if (index < 0) {
+                        merged.push(imported);
+                      } else {
+                        merged[index] = {
+                          ...merged[index],
+                          units: [...merged[index].units, ...imported.units],
+                        };
+                      }
+                    }
+                    return merged;
+                  });
+                  setMultiImportPreview(null);
+                  setMessage(
+                    "ردیف‌های فایل به فرم اضافه شدند. برای ثبت رسید، دکمه ثبت ورود را بزنید.",
+                  );
+                }}
+              >
+                افزودن به فرم
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -941,7 +1219,8 @@ function readInboundReceiptDraft(
     const draft = JSON.parse(raw) as Partial<InboundReceiptDraftState>;
     const productIds = new Set(products.map((product) => product.objectId));
     const stockIds = new Set(stocks.map((stock) => stock.objectId));
-    if (!draft.selectedStockId || !stockIds.has(draft.selectedStockId)) return null;
+    if (!draft.selectedStockId || !stockIds.has(draft.selectedStockId))
+      return null;
     const groups = (Array.isArray(draft.groups) ? draft.groups : [])
       .filter((group) => productIds.has(String(group?.productObjectId || "")))
       .map((group) => ({
@@ -959,7 +1238,8 @@ function readInboundReceiptDraft(
       groups,
       selectedStockId: draft.selectedStockId,
       notes: typeof draft.notes === "string" ? draft.notes : "",
-      supplierName: typeof draft.supplierName === "string" ? draft.supplierName : "",
+      supplierName:
+        typeof draft.supplierName === "string" ? draft.supplierName : "",
       savedAt: draft.savedAt || new Date().toISOString(),
     };
   } catch {
@@ -1002,15 +1282,18 @@ function countCompletedUnits(
 ): number {
   return units.filter((unit) =>
     Boolean(
-      (!productIdentifierRequired || normalizeDigits(unit.productIdentifier.trim())) &&
-        (normalizeDigits(unit.serialNumber.trim()) ||
-          normalizeDigits(unit.trackingCode.trim())),
+      (!productIdentifierRequired ||
+        normalizeDigits(unit.productIdentifier.trim())) &&
+      (normalizeDigits(unit.serialNumber.trim()) ||
+        normalizeDigits(unit.trackingCode.trim())),
     ),
   ).length;
 }
 
 function downloadInboundImportTemplate() {
-  const blob = new Blob(["\uFEFFشناسه محصول,سریال محصول,کد رهگیری\r\n"], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob(["\uFEFFشناسه محصول,سریال محصول,کد رهگیری\r\n"], {
+    type: "text/csv;charset=utf-8",
+  });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -1019,9 +1302,18 @@ function downloadInboundImportTemplate() {
   URL.revokeObjectURL(url);
 }
 
-function downloadMultiImportReport(rows: Array<{ rowNumber: number; reason: string }>) {
-  const content = ["ردیف,خطا", ...rows.map((row) => `${row.rowNumber},\"${row.reason.replace(/\"/g, '\"\"')}\"`)].join("\n");
-  const url = URL.createObjectURL(new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" }));
+function downloadMultiImportReport(
+  rows: Array<{ rowNumber: number; reason: string }>,
+) {
+  const content = [
+    "ردیف,خطا",
+    ...rows.map(
+      (row) => `${row.rowNumber},\"${row.reason.replace(/\"/g, '\"\"')}\"`,
+    ),
+  ].join("\n");
+  const url = URL.createObjectURL(
+    new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" }),
+  );
   const link = document.createElement("a");
   link.href = url;
   link.download = "inbound-import-errors.csv";
@@ -1040,27 +1332,36 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 
 function formatInboundSubmitError(error: unknown): string {
   const baseMessage = getErrorMessage(error);
-  const details = error && typeof error === "object"
-    ? extractDuplicateDetails((error as { details?: unknown }).details)
-    : [];
+  const details =
+    error && typeof error === "object"
+      ? extractDuplicateDetails((error as { details?: unknown }).details)
+      : [];
   if (!details.length) return baseMessage;
   return `${baseMessage}\n${details
     .map((duplicate) => {
-      const fieldLabel = duplicate.field === "serialNumber" ? "سریال" : "کد رهگیری";
+      const fieldLabel =
+        duplicate.field === "serialNumber" ? "سریال" : "کد رهگیری";
       const productName = duplicate.existingProductName || "کالا";
-      const stockTitle = duplicate.existingStockTitle ? ` در ${duplicate.existingStockTitle}` : "";
-      const receiptCode = duplicate.existingReceiptCode ? formatFaDigits(duplicate.existingReceiptCode) : "-";
-      const value = duplicate.value ? ` (${formatFaDigits(duplicate.value)})` : "";
-      const rowLabel =
-        Number.isInteger(duplicate.inputRowIndex)
-          ? `، ردیف ${formatFaDigits(String(duplicate.inputRowIndex + 1))}`
-          : "";
+      const stockTitle = duplicate.existingStockTitle
+        ? ` در ${duplicate.existingStockTitle}`
+        : "";
+      const receiptCode = duplicate.existingReceiptCode
+        ? formatFaDigits(duplicate.existingReceiptCode)
+        : "-";
+      const value = duplicate.value
+        ? ` (${formatFaDigits(duplicate.value)})`
+        : "";
+      const rowLabel = Number.isInteger(duplicate.inputRowIndex)
+        ? `، ردیف ${formatFaDigits(String(duplicate.inputRowIndex + 1))}`
+        : "";
       return `${fieldLabel}${value} قبلاً برای ${productName}${stockTitle} در رسید ${receiptCode}${rowLabel} ثبت شده است.`;
     })
     .join("\n")}`;
 }
 
-function extractInboundValidationFieldErrors(error: unknown): ValidationFieldError[] {
+function extractInboundValidationFieldErrors(
+  error: unknown,
+): ValidationFieldError[] {
   if (!error || typeof error !== "object") return [];
   const details = (error as { details?: unknown }).details;
   return extractValidationFieldErrors(details);
@@ -1115,7 +1416,11 @@ function buildInboundGroupErrors(
 function normalizeInboundFieldName(
   field: string,
 ): "productIdentifier" | "serialNumber" | "trackingCode" {
-  if (field === "serialNumber" || field === "trackingCode" || field === "productIdentifier") {
+  if (
+    field === "serialNumber" ||
+    field === "trackingCode" ||
+    field === "productIdentifier"
+  ) {
     return field;
   }
   return "productIdentifier";
