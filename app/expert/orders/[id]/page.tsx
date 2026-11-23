@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -414,6 +415,7 @@ export default function ExpertOrderDetailsPage() {
                 </div>
               ) : null}
 
+              <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
               <CustomerInfoCard order={order} />
 
               <DataTable

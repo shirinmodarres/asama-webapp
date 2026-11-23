@@ -1,3 +1,4 @@
+import type { OrderFulfillment } from "@/lib/models/order-fulfillment.model";
 import { httpClient } from "@/lib/api/http-client";
 import { ApiError } from "@/lib/api/api-error";
 import { getShipmentStopReasonLabel } from "@/lib/domain/order-action-reasons";
@@ -34,6 +35,13 @@ export async function listOrders(filters?: OrderFilters): Promise<Order[]> {
 export async function getOrder(objectId: string): Promise<Order> {
   const data = await httpClient.get<unknown>(`/api/orders/${objectId}`);
   return mapOrderDto(data);
+}
+
+export function getOrderFulfillment(objectId: string, signal?: AbortSignal) {
+  return httpClient.get<OrderFulfillment>(
+    `/api/orders/${encodeURIComponent(objectId)}/fulfillment`,
+    { signal },
+  );
 }
 
 export async function getOrderEditData(objectId: string): Promise<OrderEditData> {

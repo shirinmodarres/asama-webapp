@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
 import Link from "next/link";
 import { ArrowRight, Download, RotateCw, ScanLine } from "lucide-react";
 import { useParams } from "next/navigation";
@@ -191,6 +192,7 @@ export default function StoreExpertOrderDetailPage() {
         <LoadingState title="در حال دریافت سفارش" />
       ) : (
         <div className="space-y-4">
+          <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
           <div className="grid gap-4 lg:grid-cols-3">
             <Card className="p-5">
               <h2 className="font-semibold">وضعیت سفارش</h2>

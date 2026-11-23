@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
@@ -78,6 +79,7 @@ export default function WarehouseOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code || order.id)}`}
             description="جزئیات سفارش برای عملیات انبار"
           />
+          <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
           <CustomerInfoCard order={order} />
           <OrderNoteCard notes={order.notes} />
           <DataTable columns={columns} rows={order.items} rowKey={(row) => row.objectId || row.productId} />

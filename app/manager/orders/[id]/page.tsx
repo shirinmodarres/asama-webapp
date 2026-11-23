@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -697,6 +698,7 @@ export default function ManagerOrderReviewPage() {
         </div>
       ) : null}
 
+      <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
