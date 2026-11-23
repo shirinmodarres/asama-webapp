@@ -27,7 +27,7 @@ import {
   listSepidarPricingLists,
 } from "@/lib/services/pricing.service";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
-import { formatFaDigits } from "@/lib/utils/number-format";
+import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
 
 export default function ReferencePriceListsPage() {
   const [references, setReferences] = useState<PricingReference[]>([]);
@@ -105,7 +105,9 @@ export default function ReferencePriceListsPage() {
     const errors: Record<string, string> = {};
     if (!brandName.trim()) errors.brandName = "برند را وارد کنید.";
     if (!sourceSaleTypeObjectId) errors.sourceSaleTypeObjectId = "لیست قیمت سپیدار را انتخاب کنید.";
-    if (!internalCode.trim()) errors.internalCode = "کد لیست قیمت را وارد کنید.";
+    const normalizedInternalCode = normalizeDigits(internalCode.trim());
+    if (!normalizedInternalCode) errors.internalCode = "کد لیست قیمت را وارد کنید.";
+    else if (!/^\d{10}$/.test(normalizedInternalCode)) errors.internalCode = "کد لیست قیمت باید دقیقاً ۱۰ رقم باشد.";
     if (!displayName.trim()) errors.displayName = "عنوان نمایشی را وارد کنید.";
     setFieldErrors(errors);
     if (Object.keys(errors).length) return;
@@ -116,7 +118,7 @@ export default function ReferencePriceListsPage() {
       await createPricingReference({
         brandName,
         sourceSaleTypeObjectId,
-        internalCode,
+        internalCode: normalizedInternalCode,
         displayName,
         notes,
       });
@@ -273,7 +275,15 @@ export default function ReferencePriceListsPage() {
           </label>
           <label className="grid gap-2 text-sm font-medium text-[#334155]">
             <span>کد لیست قیمت</span>
-            <Input value={internalCode} onChange={(event) => setInternalCode(event.target.value)} />
+            <Input
+              value={internalCode}
+              onChange={(event) => {
+                setInternalCode(event.target.value);
+                setFieldErrors((current) => ({ ...current, internalCode: "" }));
+              }}
+              inputMode="numeric"
+              maxLength={10}
+            />
             <FieldError message={fieldErrors.internalCode} />
           </label>
           <label className="grid gap-2 text-sm font-medium text-[#334155]">

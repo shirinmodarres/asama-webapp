@@ -23,6 +23,7 @@ import type {
   NajaRialReportRow,
 } from "@/lib/models/naja.model";
 import { getNajaRialReport } from "@/lib/services/naja.service";
+import { downloadExcelFile } from "@/lib/utils/excel-export";
 import {
   formatFaCurrency,
   formatFaDigits,
@@ -407,10 +408,9 @@ function exportReportCsv(rows: NajaRialReportRow[]) {
     "stockTitle",
     "saleTypeTitle",
   ];
-  const csvRows = [
-    headers.join(","),
-    ...rows.map((row) =>
-      [
+  downloadExcelFile(`naja-rial-report-${new Date().toISOString().slice(0, 10)}.xls`, [{
+    name: "گزارش ناجا",
+    rows: [headers, ...rows.map((row) => [
         row.orderCode,
         row.createdAt,
         row.najaPurchaseDate,
@@ -427,25 +427,6 @@ function exportReportCsv(rows: NajaRialReportRow[]) {
         row.orderStatusLabel || row.orderStatus,
         row.stockTitle,
         row.saleTypeTitle,
-      ]
-        .map(csvCell)
-        .join(","),
-    ),
-  ];
-  const blob = new Blob([`\uFEFF${csvRows.join("\n")}`], {
-    type: "text/csv;charset=utf-8;",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `naja-rial-report-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
-
-function csvCell(value: unknown): string {
-  const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
+    ])],
+  }]);
 }
