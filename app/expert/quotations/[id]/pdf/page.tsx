@@ -237,15 +237,30 @@ export default function SalesQuotationPdfPage() {
 
                           <Total
                             label={`تخفیف (${formatNumber(quotation.discountPercentage)}٪)`}
-                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).discountAmount}
+                            value={
+                              calculateSalesRequestFinancials(
+                                quotation.subtotal,
+                                quotation.discountPercentage,
+                              ).discountAmount
+                            }
                           />
                           <Total
-                            label="مالیات (۱۰٪)"
-                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).taxAmount}
+                            label="مالیات بر ارزش افزوده (۱۰٪)"
+                            value={
+                              calculateSalesRequestFinancials(
+                                quotation.subtotal,
+                                quotation.discountPercentage,
+                              ).taxAmount
+                            }
                           />
                           <Total
                             label="مبلغ با مالیات"
-                            value={calculateSalesRequestFinancials(quotation.subtotal, quotation.discountPercentage).total}
+                            value={
+                              calculateSalesRequestFinancials(
+                                quotation.subtotal,
+                                quotation.discountPercentage,
+                              ).total
+                            }
                             emphasis
                           />
                         </section>

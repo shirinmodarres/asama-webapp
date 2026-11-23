@@ -94,8 +94,7 @@ export function QuotationForm({
     getQuotationSalesTypeOptionKey(initialQuotation) || "",
   );
   const [selectedValidUntil, setSelectedValidUntil] = useState(
-    initialQuotation?.validUntil?.slice(0, 10) ||
-      tomorrowTehranIso(),
+    initialQuotation?.validUntil?.slice(0, 10) || tomorrowTehranIso(),
   );
   const [notes, setNotes] = useState(initialQuotation?.notes || "");
   const [selectedStockObjectId, setSelectedStockObjectId] = useState(
@@ -158,7 +157,9 @@ export function QuotationForm({
         if (initialQuotation) {
           const nextSelected = getQuotationSalesTypeOptionKey(initialQuotation);
           if (nextSelected) {
-            setSelectedSalesTypeId((current: string) => current || nextSelected);
+            setSelectedSalesTypeId(
+              (current: string) => current || nextSelected,
+            );
           }
         }
       } catch {
@@ -465,7 +466,10 @@ export function QuotationForm({
   );
 
   const subtotal = resolvedRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const financials = calculateSalesRequestFinancials(subtotal, discountPercentage);
+  const financials = calculateSalesRequestFinancials(
+    subtotal,
+    discountPercentage,
+  );
   const itemCount = resolvedRows.length;
   const totalQuantity = resolvedRows.reduce(
     (sum, row) => sum + row.quantity,
@@ -976,7 +980,10 @@ export function QuotationForm({
               value={formatCurrency(financials.discountAmount)}
             />
 
-            <SummaryRow label="مالیات (۱۰٪)" value={formatCurrency(financials.taxAmount)} />
+            <SummaryRow
+              label="مالیات بر ارزش افزوده (۱۰٪)"
+              value={formatCurrency(financials.taxAmount)}
+            />
           </dl>
 
           <div className="mt-5 flex items-center justify-between gap-4 rounded-lg bg-[var(--muted)] px-4 py-4">

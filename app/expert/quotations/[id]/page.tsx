@@ -277,7 +277,7 @@ export default function ExpertQuotationDetailPage() {
                     )}
                   />
                   <InfoRow
-                    label="مالیات (۱۰٪)"
+                    label="مالیات بر ارزش افزوده (۱۰٪)"
                     value={formatCurrency(
                       calculateSalesRequestFinancials(
                         quotation.subtotal,
