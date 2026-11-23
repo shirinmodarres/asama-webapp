@@ -328,11 +328,11 @@ export default function WarehouseInboundPage() {
       const rows = (await parseInboundImportFile(file)).filter(
         (row) => !isEmptyImportRow(row),
       );
-      const productsByIdentifier = new Map(
-        products
-          .map((product) => [normalizeDigits(getProductIdentifier(product)), product] as const)
-          .filter(([identifier]) => Boolean(identifier)),
-      );
+      const productsByIdentifier = new Map<string, Product[]>();
+      products.filter((product) => product.status === "active").forEach((product) => {
+        const identifier = normalizeDigits(getProductIdentifier(product));
+        if (identifier) productsByIdentifier.set(identifier, [...(productsByIdentifier.get(identifier) || []), product]);
+      });
       const invalidRows: Array<{ rowNumber: number; reason: string }> = [];
       if (!rows.length) {
         invalidRows.push({ rowNumber: 0, reason: "فایل هیچ ردیف کالایی ندارد." });
@@ -343,14 +343,20 @@ export default function WarehouseInboundPage() {
         const productIdentifier = normalizeDigits(row.productIdentifier.trim());
         const serialNumber = normalizeDigits(row.serialNumber.trim());
         const trackingCode = normalizeDigits(row.trackingCode.trim());
-        const product = productsByIdentifier.get(productIdentifier);
-        if (!productIdentifier || !serialNumber || !trackingCode) {
-          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول، سریال و کد رهگیری الزامی هستند." });
-        } else if (!product) {
-          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول معتبر نیست یا کالا فعال نیست." });
+        const matches = productsByIdentifier.get(productIdentifier) || [];
+        const product = matches.length === 1 ? matches[0] : undefined;
+        if (!productIdentifier) {
+          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "شناسه محصول الزامی است." });
+        } else if (matches.length !== 1) {
+          invalidRows.push({ rowNumber: row.excelRowNumber, reason: matches.length ? "شناسه به چند کالا تعلق دارد؛ کالا را دستی انتخاب کنید." : "شناسه محصول معتبر نیست یا کالا فعال نیست." });
         }
-        if (serialNumber) serialRows.set(serialNumber, [...(serialRows.get(serialNumber) || []), row.excelRowNumber]);
-        if (trackingCode) trackingRows.set(trackingCode, [...(trackingRows.get(trackingCode) || []), row.excelRowNumber]);
+        if (!serialNumber && !trackingCode) {
+          invalidRows.push({ rowNumber: row.excelRowNumber, reason: "حداقل سریال یا کد رهگیری الزامی است." });
+        }
+        const serialKey = serialNumber.toLowerCase();
+        const trackingKey = trackingCode.toLowerCase();
+        if (serialKey) serialRows.set(serialKey, [...(serialRows.get(serialKey) || []), row.excelRowNumber]);
+        if (trackingKey) trackingRows.set(trackingKey, [...(trackingRows.get(trackingKey) || []), row.excelRowNumber]);
         return { row, product, productIdentifier, serialNumber, trackingCode };
       });
       [serialRows, trackingRows].forEach((duplicates, index) => {
@@ -382,19 +388,21 @@ export default function WarehouseInboundPage() {
       const importedGroups = [...groupsByProduct.values()];
       if (!invalidRows.length && importedGroups.length) {
         try {
-          await validateInboundReceipt({
+          const validation = await validateInboundReceipt({
             stockObjectId: selectedStockId,
             items: importedGroups.map((group) => ({
               productObjectId: group.productObjectId,
               units: group.units.map((unit) => ({ ...unit, productObjectId: group.productObjectId })),
             })),
           });
+          if (!validation.valid) throw new Error("بررسی فایل انجام نشد.");
         } catch (validationError) {
           const fieldErrors = extractInboundValidationFieldErrors(validationError);
           fieldErrors.forEach((fieldError) => {
-            const sourceRow = resolved[fieldError.rowIndex]?.row.excelRowNumber;
+            const sourceRow = importedGroups.flatMap((group) => group.units)
+              [fieldError.rowIndex]?.rowId.match(/^excel-(\d+)-/)?.[1];
             invalidRows.push({
-              rowNumber: sourceRow || fieldError.rowIndex + 1,
+              rowNumber: sourceRow ? Number(sourceRow) : fieldError.rowIndex + 1,
               reason: fieldError.message,
             });
           });
@@ -422,7 +430,7 @@ export default function WarehouseInboundPage() {
       if (identifierRequired && !identifier) {
         errors.push("شناسه کالا برای یکی از ردیف‌ها خالی است.");
       }
-      if (!track) errors.push("کد رهگیری برای یکی از ردیف‌ها خالی است.");
+      if (!track && !normalizeDigits(unit.serialNumber.trim())) errors.push("سریال یا کد رهگیری برای یکی از ردیف‌ها الزامی است.");
     });
     return errors;
   };
@@ -531,7 +539,7 @@ export default function WarehouseInboundPage() {
 
           <Card className="p-5">
             <div className="mb-4 rounded-xl border border-[#DDEAE0] bg-[#F3FAF4] p-3 text-sm font-medium text-[#2F6B3A]">
-              هر رسید می‌تواند چند کالا داشته باشد. برای هر کالا سریال و کد رهگیری جداگانه ثبت می‌شود.
+              هر رسید می‌تواند چند کالا داشته باشد. برای هر واحد، سریال یا کد رهگیری ثبت کنید.
             </div>
 
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)_180px]">
@@ -556,7 +564,12 @@ export default function WarehouseInboundPage() {
                 <p className="mt-1 text-lg font-semibold text-[#102034]">{formatNumber(totalUnits)}</p>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-[#E5E7EB] pt-4">
+            <div className="mt-4 space-y-3 rounded-xl border border-[#D7E4EF] bg-[#F8FBFD] p-4">
+              <div>
+                <h2 className="font-semibold text-[#102034]">ورود چند کالا از فایل</h2>
+                <p className="mt-1 text-sm leading-6 text-[#64748B]">ابتدا انبار را انتخاب کنید. هر ردیف یک واحد است و ستون‌های A، B و C به‌ترتیب شناسه محصول سپیدار، سریال و کد رهگیری هستند. حداقل سریال یا کد رهگیری را وارد کنید.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
               <input
                 ref={multiImportInput}
                 type="file"
@@ -570,16 +583,18 @@ export default function WarehouseInboundPage() {
               />
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => multiImportInput.current?.click()}
                 disabled={isMultiImporting || isSubmitting || !selectedStockId}
               >
                 <FileSpreadsheet className="size-4" />
                 {isMultiImporting ? "در حال بررسی فایل..." : "ایمپورت چند کالا از اکسل"}
               </Button>
-              <p className="text-xs text-[#6B7280]">
-                ستون‌ها: شناسه محصول، سریال محصول، کد رهگیری
-              </p>
+              <Button type="button" variant="outline" onClick={downloadInboundImportTemplate}>
+                دریافت فایل نمونه
+              </Button>
+              <span className="text-xs text-[#6B7280]">فرمت‌های xlsx، csv و tsv</span>
+              </div>
+              {!selectedStockId && <p className="text-xs text-[#9A3412]">برای انتخاب فایل، ابتدا انبار مقصد را انتخاب کنید.</p>}
             </div>
           </Card>
 
@@ -855,7 +870,7 @@ export default function WarehouseInboundPage() {
             <AlertDialogDescription>
               {multiImportPreview?.invalidRows.length
                 ? "فایل دارای خطاست و هیچ کالایی ثبت نخواهد شد."
-                : "پس از تایید، همه ردیف‌ها با یک رسید ورود ثبت می‌شوند."}
+                : "ردیف‌ها پس از تأیید به فرم اضافه می‌شوند. ثبت رسید با دکمه ثبت ورود انجام می‌شود."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="max-h-[55vh] space-y-3 overflow-y-auto text-sm">
@@ -879,10 +894,23 @@ export default function WarehouseInboundPage() {
             <AlertDialogCancel disabled={isSubmitting}>انصراف</AlertDialogCancel>
             {multiImportPreview?.invalidRows.length ? <Button type="button" variant="outline" onClick={() => downloadMultiImportReport(multiImportPreview.invalidRows)}>دانلود گزارش خطا</Button> : <Button type="button" disabled={isSubmitting} onClick={() => {
               if (!multiImportPreview) return;
-              setGroups(multiImportPreview.groups);
+              setGroups((current) => {
+                const merged = current.filter((group) =>
+                  group.units.some((unit) => unit.serialNumber.trim() || unit.trackingCode.trim()),
+                );
+                for (const imported of multiImportPreview.groups) {
+                  const index = merged.findIndex((group) => group.productObjectId === imported.productObjectId);
+                  if (index < 0) {
+                    merged.push(imported);
+                  } else {
+                    merged[index] = { ...merged[index], units: [...merged[index].units, ...imported.units] };
+                  }
+                }
+                return merged;
+              });
               setMultiImportPreview(null);
-              void submitReceipt(multiImportPreview.groups);
-            }}>تایید و ثبت ورود</Button>}
+              setMessage("ردیف‌های فایل به فرم اضافه شدند. برای ثبت رسید، دکمه ثبت ورود را بزنید.");
+            }}>افزودن به فرم</Button>}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -975,10 +1003,20 @@ function countCompletedUnits(
   return units.filter((unit) =>
     Boolean(
       (!productIdentifierRequired || normalizeDigits(unit.productIdentifier.trim())) &&
-        normalizeDigits(unit.serialNumber.trim()) &&
-        normalizeDigits(unit.trackingCode.trim()),
+        (normalizeDigits(unit.serialNumber.trim()) ||
+          normalizeDigits(unit.trackingCode.trim())),
     ),
   ).length;
+}
+
+function downloadInboundImportTemplate() {
+  const blob = new Blob(["\uFEFFشناسه محصول,سریال محصول,کد رهگیری\r\n"], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "inbound-template.csv";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function downloadMultiImportReport(rows: Array<{ rowNumber: number; reason: string }>) {
