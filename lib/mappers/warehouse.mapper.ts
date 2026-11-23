@@ -438,12 +438,12 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     deliveryProvince: toNullableString(
       source.deliveryProvince ?? deliveryAddress.province,
     ),
-    deliveryCity: toNullableString(source.deliveryCity ?? deliveryAddress.city),
+    deliveryCity: toNullableString(source.deliveryCity ?? deliveryAddress.cityTitle ?? deliveryAddress.city),
     deliveryCounty: toNullableString(
       source.deliveryCounty ?? deliveryAddress.county,
     ),
     deliveryPostalCode: toNullableString(
-      source.deliveryPostalCode ?? deliveryAddress.postalCode,
+      source.deliveryPostalCode ?? deliveryAddress.zipCode ?? deliveryAddress.ZipCode ?? deliveryAddress.postalCode,
     ),
     deliveryAddress: fullAddress,
     notes: toNullableString(source.notes),

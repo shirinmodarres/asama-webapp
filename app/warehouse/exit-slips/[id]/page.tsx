@@ -87,8 +87,35 @@ export default function ExitSlipDetailsPage() {
 
   const copyDeliveryLink = async () => {
     if (!deliveryLink) return;
-    await navigator.clipboard.writeText(deliveryLink);
-    setCopyMessage("لینک تأیید دریافت کپی شد.");
+    setCopyMessage("");
+    try {
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(deliveryLink);
+          copied = true;
+        } catch {
+          // Older browsers and non-secure origins may reject clipboard access.
+        }
+      }
+      if (!copied) {
+        const input = document.createElement("textarea");
+        input.value = deliveryLink;
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        try {
+          input.focus();
+          input.select();
+          if (!document.execCommand("copy")) throw new Error("Copy failed");
+        } finally {
+          input.remove();
+        }
+      }
+      setCopyMessage("لینک تأیید دریافت کپی شد.");
+    } catch {
+      setCopyMessage("کپی لینک انجام نشد. لینک نمایش‌داده‌شده را انتخاب و کپی کنید.");
+    }
   };
 
   return (
@@ -151,7 +178,7 @@ export default function ExitSlipDetailsPage() {
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#FBFCFD] p-3">
                   <dt className="text-xs text-[#6B7280]">لینک تأیید دریافت</dt>
                   <dd className="mt-2 flex items-center justify-between gap-3 text-sm font-medium text-[#1F3A5F]">
-                    <span className="max-w-[220px] truncate text-left" dir="ltr">
+                    <span className="max-w-[220px] select-all break-all text-left" dir="ltr">
                       {deliveryLink || "-"}
                     </span>
                     <Button
@@ -203,6 +230,16 @@ export default function ExitSlipDetailsPage() {
                     ? formatFaDigits(resolvedCustomer.phone)
                     : "-"
                 }
+              />
+              <InfoItem
+                label="شهر"
+                value={slip.deliveryCity || slip.order?.deliveryCity || "-"}
+              />
+              <InfoItem
+                label="کد پستی"
+                value={slip.deliveryPostalCode || slip.order?.deliveryPostalCode
+                  ? formatFaDigits(slip.deliveryPostalCode || slip.order?.deliveryPostalCode)
+                  : "-"}
               />
               <InfoItem
                 label="آدرس"
