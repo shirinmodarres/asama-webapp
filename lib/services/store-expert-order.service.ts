@@ -66,7 +66,12 @@ export type StoreOrderSubmission = {
   canReconcile: boolean;
   dryRun?: boolean;
   sepidarPayloadPreview?: Record<string, unknown> | null;
+  order?: { inventoryReservationStatus?: string | null } | null;
 };
+
+export function getStoreOrderOperation(operationKey: string): Promise<StoreOrderSubmission> {
+  return httpClient.get(`/api/store-expert/orders/operations/${encodeURIComponent(operationKey)}`);
+}
 
 export type StoreOrderListResult = {
   items: Order[];

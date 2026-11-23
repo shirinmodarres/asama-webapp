@@ -13,12 +13,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
+import { storeOrderRetryAction } from "@/lib/store-expert/order-retry";
 import { listStoreExpertCustomers } from "@/lib/services/store-expert-customer.service";
 import {
   customerOptions,
   createStoreOrder,
   getStoreOrderOptions,
+  getStoreOrderOperation,
   type StoreOrderSubmission,
   type StoreOrderOptions,
   type StoreProductOption,
@@ -70,6 +72,7 @@ export function StoreOrderForm() {
   const [submitted, setSubmitted] = useState<StoreOrderSubmission | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [submissionFailed, setSubmissionFailed] = useState(false);
   const operationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -177,6 +180,7 @@ export function StoreOrderForm() {
     window.sessionStorage.removeItem("asama:store-expert:order-operation");
     operationKeyRef.current = null;
     setSubmitted(null);
+    setSubmissionFailed(false);
   };
   const updateRow = (id: string, patch: Partial<DraftRow>) => {
     resetOperation();
@@ -233,11 +237,37 @@ export function StoreOrderForm() {
     operationKeyRef.current = next;
     return next;
   };
-  const submit = async () => {
-    if (!canSubmit) return;
+  const submit = async (retry = false) => {
+    if (!canSubmit && !(retry && ["failed", "invoice_pending"].includes(submitted?.status || ""))) return;
     setSubmitting(true);
     setError("");
     try {
+      if (retry) {
+        let previous: StoreOrderSubmission | null;
+        try {
+          previous = await getStoreOrderOperation(operationKey());
+        } catch (reason) {
+          if (!(reason instanceof ApiError && reason.code === "STORE_ORDER_OPERATION_NOT_FOUND")) throw reason;
+          previous = null;
+        }
+        if (previous) {
+          const action = storeOrderRetryAction(previous);
+          if (action === "blocked") {
+            throw new Error("آزادسازی رزرو سفارش قبلی هنوز تأیید نشده است. وضعیت سفارش را بررسی کنید.");
+          }
+          if (action === "inspect") {
+            setSubmitted(previous);
+            setSubmissionFailed(false);
+            if (previous.status === "completed" && previous.orderObjectId) setSuccessModalOpen(true);
+            return;
+          }
+          if (action === "new") {
+            window.sessionStorage.removeItem("asama:store-expert:order-operation");
+            operationKeyRef.current = null;
+          }
+        }
+      }
+      setSubmitted(null);
       const result = await createStoreOrder({
         operationKey: operationKey(),
         customerObjectId: selectedCustomerId,
@@ -252,6 +282,7 @@ export function StoreOrderForm() {
         })),
       });
       setSubmitted(result);
+      setSubmissionFailed(result.status === "failed");
       setSuccessModalOpen(result.status === "completed" && Boolean(result.orderObjectId));
       if (result.status === "dry_run") {
         console.info("[MAD CENTER][DRY RUN] quotation", result.sepidarPayloadPreview || {});
@@ -261,6 +292,7 @@ export function StoreOrderForm() {
       if (result.status === "completed")
         window.sessionStorage.removeItem("asama:store-expert:order-operation");
     } catch (reason) {
+      setSubmissionFailed(true);
       setError(getErrorMessage(reason));
     } finally {
       setSubmitting(false);
@@ -612,6 +644,10 @@ export function StoreOrderForm() {
                 ایجاد نشد. پیش‌نمایش امن payload با برچسب {" "}
                 <code>[MAD CENTER][DRY RUN]</code> در Console مرورگر ثبت شده است.
               </p>
+            ) : submitted.status === "failed" ? (
+              <p>{submitted.errorMessage || "ثبت سفارش ناموفق بود."}</p>
+            ) : submitted.status === "invoice_pending" ? (
+              <p>پیش‌فاکتور ثبت شده است و ثبت فاکتور داخلی نیاز به تلاش مجدد دارد.</p>
             ) : (
               <p>
                 درخواست ثبت شده و منتظر بررسی نتیجه پیش‌فاکتور سپیدار است. برای
@@ -622,10 +658,10 @@ export function StoreOrderForm() {
         ) : null}
         <div className="mt-4 flex justify-end">
           <Button
-            disabled={!canSubmit || submitting}
-            onClick={() => void submit()}
+            disabled={(!canSubmit && !(submissionFailed && submitted?.status === "failed") && submitted?.status !== "invoice_pending") || submitting}
+            onClick={() => void submit(submissionFailed || submitted?.status === "invoice_pending")}
           >
-            {submitting ? "در حال ثبت..." : "ثبت نهایی سفارش"}
+            {submitting ? "در حال بررسی و ثبت..." : submissionFailed || submitted?.status === "invoice_pending" ? "تلاش مجدد ثبت سفارش" : "ثبت نهایی سفارش"}
           </Button>
         </div>
       </Card>
