@@ -66,6 +66,7 @@ export default function StoreExpertOrderDetailPage() {
   const [error, setError] = useState("");
   const [retryReady, setRetryReady] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -95,12 +96,12 @@ export default function StoreExpertOrderDetailPage() {
   async function handleRetryQuotation() {
     if (!order || retrying) return;
     setRetrying(true);
-    setError("");
+    setRetryError("");
     try {
       await retryStoreQuotation(order.objectId);
       setOrder(await getStoreOrder(order.objectId));
     } catch (retryError) {
-      setError(retryError instanceof Error ? retryError.message : "تلاش مجدد ثبت پیش‌فاکتور انجام نشد");
+      setRetryError(retryError instanceof Error ? retryError.message : "تلاش مجدد ثبت پیش‌فاکتور انجام نشد");
     } finally {
       setRetrying(false);
     }
@@ -193,6 +194,7 @@ export default function StoreExpertOrderDetailPage() {
         <LoadingState title="در حال دریافت سفارش" />
       ) : (
         <div className="space-y-4">
+          {retryError ? <PageErrorMessage title="تلاش مجدد انجام نشد" message={retryError} /> : null}
           {showOrderFulfillment(order) ? (
             <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
           ) : null}
@@ -295,7 +297,7 @@ export default function StoreExpertOrderDetailPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {order.orderStatus === "store_quotation_pending" && retryReady ? (
+                {(order.orderStatus === "store_quotation_failed" || (order.orderStatus === "store_quotation_pending" && retryReady)) ? (
                   <button
                     type="button"
                     onClick={handleRetryQuotation}
