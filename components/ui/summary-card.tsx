@@ -1,5 +1,4 @@
 import { ArrowUpRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
 interface SummaryCardProps {
@@ -26,9 +25,6 @@ export function SummaryCard({ label, value, hint }: SummaryCardProps) {
       </div>
       <div className="mt-4 flex items-start justify-between gap-3">
         <p className="max-w-[18rem] text-xs leading-6 text-[#6B7280]">{hint}</p>
-        <Badge variant="brand" dot className="shrink-0">
-          امروز
-        </Badge>
       </div>
     </Card>
   );

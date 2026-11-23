@@ -107,14 +107,23 @@ export type StoreExpertDashboardStats = {
   completedExitCount: number;
 };
 
+function readDashboardCount(value: unknown): number {
+  if ((typeof value !== "number" && typeof value !== "string") || String(value).trim() === "") {
+    throw new Error("آمار داشبورد فروشگاه ناقص است.");
+  }
+  const count = Number(value);
+  if (!Number.isFinite(count) || count < 0) throw new Error("آمار داشبورد فروشگاه نامعتبر است.");
+  return count;
+}
+
 export async function getStoreExpertDashboard(): Promise<StoreExpertDashboardStats> {
   const data = await httpClient.get<unknown>("/api/store-expert/dashboard");
   const record = toRecord(data);
   return {
-    orderCount: Number(record.orderCount) || 0,
-    pendingExitCount: Number(record.pendingExitCount) || 0,
-    partialExitCount: Number(record.partialExitCount) || 0,
-    completedExitCount: Number(record.completedExitCount) || 0,
+    orderCount: readDashboardCount(record.orderCount),
+    pendingExitCount: readDashboardCount(record.pendingExitCount),
+    partialExitCount: readDashboardCount(record.partialExitCount),
+    completedExitCount: readDashboardCount(record.completedExitCount),
   };
 }
 
