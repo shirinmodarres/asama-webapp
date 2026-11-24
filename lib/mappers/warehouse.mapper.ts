@@ -369,6 +369,7 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     : groupUnitsByProduct(units);
 
   return {
+    issuanceWarnings: toArray(record.warnings).filter((value): value is string => typeof value === "string"),
     objectId: toStringValue(source.objectId),
     id: toStringValue(source.id) || toStringValue(source.objectId),
     slipCode: normalizeDigits(

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type {
@@ -76,6 +76,8 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
   });
   const [scannedUnits, setScannedUnits] = useState<WarehouseItemUnit[]>([]);
   const [createdSlip, setCreatedSlip] = useState<ExitSlip | null>(null);
+  const [uncertainSlipId, setUncertainSlipId] = useState<string | null>(null);
+  const [uncertainOutcome, setUncertainOutcome] = useState(false);
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
@@ -525,13 +527,19 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
       });
       window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
       setCreatedSlip(slip);
-      setMessage(
-        isFullyScanned
-          ? "حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد."
-          : "حواله خروج جزئی صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.",
-      );
+      setMessage(isFullyScanned ? "حواله خروج صادر شد." : "حواله خروج جزئی صادر شد.");
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      if (submitError instanceof ApiError && submitError.code === "EXIT_SLIP_ISSUANCE_INCOMPLETE") {
+        const details = submitError.details as { exitSlipObjectId?: unknown } | undefined;
+        setUncertainSlipId(typeof details?.exitSlipObjectId === "string" ? details.exitSlipObjectId : null);
+        setUncertainOutcome(true);
+        setError(submitError.message);
+      } else if (submitError instanceof ApiError && (submitError.status === undefined || submitError.status >= 500)) {
+        setUncertainOutcome(true);
+        setError("نتیجه ثبت مشخص نیست. قبل از تلاش مجدد، حواله‌های سفارش را بررسی کنید.");
+      } else {
+        setError(getErrorMessage(submitError));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -825,7 +833,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canIssueSlip || isSubmitting || Boolean(createdSlip)}
+                disabled={!canIssueSlip || isSubmitting || Boolean(createdSlip) || uncertainOutcome}
               >
                 {isSubmitting ? "در حال ثبت..." : "ثبت حواله خروج"}
               </Button>
@@ -842,6 +850,16 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
             ) : null}
           </Card>
 
+          {uncertainOutcome ? (
+            <Card className="border-amber-200 bg-amber-50 p-5 text-sm">
+              <p>قبل از ثبت دوباره، وضعیت حواله و خروج را بررسی کنید.</p>
+              <Link className="mt-2 inline-block underline" href={uncertainSlipId
+                ? `/${dashboardRole}/exit-slips/${uncertainSlipId}`
+                : `/${dashboardRole}/exit-slips`}>
+                {uncertainSlipId ? "مشاهده حواله ثبت‌شده" : "مشاهده حواله‌ها"}
+              </Link>
+            </Card>
+          ) : null}
           {createdSlip ? (
             <Card className="border-[#B9DFC0] bg-[#F3FAF4] p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -850,6 +868,9 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
                     <CheckCircle2 className="size-5" />
                     حواله خروج صادر شد{createdSlip.internalInvoiceObjectId ? " و فاکتور داخلی برای حسابداری ایجاد شد." : "."}
                   </div>
+                  {createdSlip.issuanceWarnings?.map((warning) => (
+                    <p key={warning} className="mt-2 text-sm text-amber-800">{warning}</p>
+                  ))}
                   <div className="mt-3 grid gap-2 text-sm text-[#334155]">
                     <span>
                       شماره حواله:{" "}
@@ -865,7 +886,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline">
                     <Link
-                      href={`/warehouse/exit-slips/${createdSlip.objectId || createdSlip.id}`}
+                      href={`/${dashboardRole}/exit-slips/${createdSlip.objectId || createdSlip.id}`}
                     >
                       مشاهده حواله
                     </Link>

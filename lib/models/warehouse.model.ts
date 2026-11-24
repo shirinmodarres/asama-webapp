@@ -235,6 +235,7 @@ export interface ExitSlipItemGroup {
 }
 
 export interface ExitSlip {
+  issuanceWarnings?: string[];
   objectId: string;
   id: string;
   slipCode: string;
