@@ -165,12 +165,12 @@ export async function saveStorePriceListAssignment(brandName: string, priceListI
   return httpClient.put(`/api/store-expert/price-list-assignments/${encodeURIComponent(brandName)}`, { priceListId });
 }
 
-export async function listStoreIssuedExitSlips(page = 1, pageSize = 25): Promise<{
+export async function listStoreIssuedExitSlips(page = 1, pageSize = 25, orderType: "store" | "naja" = "store"): Promise<{
   items: ExitSlip[];
   pagination: { page: number; pageSize: number; total: number; totalPages: number };
 }> {
   const data = await httpClient.get<{ items?: unknown[]; pagination?: { page?: number; pageSize?: number; total?: number; totalPages?: number } }>(
-    `/api/store-expert/issued-exit-slips?page=${page}&pageSize=${pageSize}`,
+    `/api/store-expert/issued-exit-slips?page=${page}&pageSize=${pageSize}&orderType=${orderType}`,
   );
   return {
     items: (data.items || []).map(mapExitSlipDto),

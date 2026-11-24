@@ -54,7 +54,7 @@ export default function StoreExitSlipsPage() {
     { key: "warehouse", header: "انبار", render: (slip) => slip.stockTitle || "-" },
     { key: "issuedAt", header: "تاریخ صدور", render: (slip) => formatDateTime(slip.issuedAt || slip.createdAt) },
     { key: "label", header: "نوع", render: () => <Badge variant="neutral">مادسنتر</Badge> },
-    { key: "actions", header: "عملیات", sticky: "left", render: (slip) => <Link href={`/warehouse/exit-slips/${slip.objectId || slip.id}/pdf`} target="_blank" className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-muted">مشاهده / دانلود</Link> },
+    { key: "actions", header: "عملیات", sticky: "left", render: (slip) => <Link href={`/finance-control/exit-slips/${slip.objectId || slip.id}`} className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground)] hover:bg-muted">مشاهده جزئیات</Link> },
   ];
 
   return <DashboardLayout role="finance-control" title="حواله‌های مادسنتر">

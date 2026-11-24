@@ -561,3 +561,8 @@ async function hydrateExitSlipOrder(slip: ExitSlip): Promise<ExitSlip> {
     return slip;
   }
 }
+
+export async function listIssuedExitSlips(page = 1, pageSize = 25): Promise<{ items: ExitSlip[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } }> {
+  const data = await httpClient.get<{ items: unknown[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } }>(`/api/exit-slips/issued?page=${page}&pageSize=${pageSize}`);
+  return { items: data.items.map(mapExitSlipDto), pagination: data.pagination };
+}

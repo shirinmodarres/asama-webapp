@@ -206,11 +206,13 @@ export default function ManagerOrderReviewPage() {
     effectiveFinancialApprovalStatus === "approved";
   const canManageFinancialDecision =
     isFinancialReviewer &&
+    !(isNajaOrder && currentRole === "systems_expert") &&
     order.orderStatus === "pending_financial_approval" &&
     effectiveFinancialApprovalStatus === "pending" &&
     order.financialApprovalStage === financialReviewerStage;
   const canManageSystemsTransferDecision =
     currentRole === "systems_expert" &&
+    !isNajaOrder &&
     order.orderStatus === "approved" &&
     order.warehouseStatus === "awaitingSystemsTransfer" &&
     effectiveFinancialApprovalStatus === "approved" &&

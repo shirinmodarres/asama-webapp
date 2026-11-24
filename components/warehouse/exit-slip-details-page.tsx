@@ -23,7 +23,7 @@ import {
 } from "@/lib/utils/exit-slip-customer";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
-export function ExitSlipDetailsPage({ role }: { role: "warehouse" | "store-expert" }) {
+export function ExitSlipDetailsPage({ role }: { role: "warehouse" | "store-expert" | "finance-control" }) {
   const params = useParams<{ id: string }>();
   const [slip, setSlip] = useState<ExitSlip | null>(null);
   const [isLoading, setIsLoading] = useState(true);

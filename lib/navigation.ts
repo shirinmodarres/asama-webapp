@@ -250,6 +250,22 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       visibleToRoles: ["systems_expert"],
     },
     {
+      label: "حواله‌های خروج",
+      href: "/finance-control/exit-slips",
+      icon: "file-check",
+      description: "مشاهده جزئیات حواله‌های خروج صادرشده",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
+    {
+      label: "حواله‌های ناجا",
+      href: "/finance-control/naja-exit-slips",
+      icon: "file-check",
+      description: "مشاهده حواله‌های خروج صادرشده ناجا",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
+    {
       label: "حواله‌های مادسنتر",
       href: "/finance-control/store-exit-slips",
       icon: "file-check",
