@@ -607,6 +607,23 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
           title="سفارش یافت نشد"
           description="شناسه سفارش معتبر نیست."
         />
+      ) : dashboardRole === "store-expert" && order.retailFulfillmentStatus === "completed" && !createdSlip ? (
+        <div className="space-y-4">
+          <SectionHeader title={`حواله‌های خروج سفارش ${formatFaDigits(order.code || order.id)}`} />
+          <Card className="space-y-3 p-5">
+            <p>خروج کالاهای نمایشگاه تک‌فروشی تکمیل شده است.</p>
+            {(order.retailExitSlips || []).map((slip) => (
+              <Button asChild variant="outline" key={slip.objectId}>
+                <Link href={`/store-expert/exit-slips/${slip.objectId}`}>
+                  مشاهده حواله {formatFaDigits(slip.slipCode)}
+                </Link>
+              </Button>
+            ))}
+            {!order.retailExitSlips?.length && (
+              <Button asChild variant="outline"><Link href="/store-expert/exit-slips">مشاهده حواله‌های خروج</Link></Button>
+            )}
+          </Card>
+        </div>
       ) : (
         <div className="space-y-5">
           <SectionHeader
@@ -710,6 +727,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
             />
           </section>
 
+          {!(dashboardRole === "store-expert" && createdSlip) ? <>
           <Card className="p-5">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
               <div>
@@ -850,6 +868,8 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
             ) : null}
           </Card>
 
+          </> : null}
+
           {uncertainOutcome ? (
             <Card className="border-amber-200 bg-amber-50 p-5 text-sm">
               <p>قبل از ثبت دوباره، وضعیت حواله و خروج را بررسی کنید.</p>
@@ -891,6 +911,7 @@ export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardR
                       مشاهده حواله
                     </Link>
                   </Button>
+                  {dashboardRole === "store-expert" ? <Button asChild variant="outline"><Link href={`/store-expert/orders/${order.objectId}`}>بازگشت به سفارش</Link></Button> : null}
                   {createdSlip.internalInvoiceObjectId ? (
                     <Button asChild>
                       <Link

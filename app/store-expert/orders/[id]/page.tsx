@@ -166,6 +166,7 @@ export default function StoreExpertOrderDetailPage() {
   const canCreateRetailExitSlip = Boolean(
     order &&
     order.retailExitAvailable === true &&
+    order.retailFulfillmentStatus !== "completed" &&
     order.quotationSyncStatus === "success" && Boolean(order.sepidarQuotationId),
   );
 
@@ -317,6 +318,15 @@ export default function StoreExpertOrderDetailPage() {
                     ثبت خروج کالا
                   </Link>
                 ) : null}
+                {order.retailExitSlips?.map((slip) => (
+                  <Link
+                    key={slip.objectId}
+                    href={`/store-expert/exit-slips/${slip.objectId}`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)]"
+                  >
+                    مشاهده حواله {formatFaDigits(slip.slipCode)}
+                  </Link>
+                ))}
                 {order.modCenterInvoiceObjectId ? (
                   <Link
                     href={`/store-expert/mod-center-invoices/${order.modCenterInvoiceObjectId}/print`}

@@ -94,6 +94,7 @@ export interface Order {
   retailOrderItemObjectIds?: string[];
   retailPendingOrderItemObjectIds?: string[];
   retailExitAvailable?: boolean;
+  retailExitSlips?: Array<{ objectId: string; slipCode: string }>;
   retailFulfillmentStatus?: "pending" | "partial" | "completed" | "not_applicable";
   retailAllocatedQuantity?: number;
   retailDispatchedQuantity?: number;

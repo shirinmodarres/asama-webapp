@@ -47,7 +47,7 @@ export default function StoreExpertExitSlipsPage() {
             <h2 className="text-base font-semibold">سفارش‌های دارای سهم نمایشگاه</h2>
           {orders.map((order) => {
             const status = order.retailFulfillmentStatus || "pending";
-            const canExit = order.retailExitAvailable === true && order.quotationSyncStatus === "success" && Boolean(order.sepidarQuotationId);
+            const canExit = order.retailExitAvailable === true && order.retailFulfillmentStatus !== "completed" && order.quotationSyncStatus === "success" && Boolean(order.sepidarQuotationId);
             return (
               <Card key={order.objectId} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-2">
@@ -58,7 +58,11 @@ export default function StoreExpertExitSlipsPage() {
                     <StatusBadge type="warehouse" status={status === "completed" ? "completed" : status === "partial" ? "partialDispatch" : "reserved"} />
                   </div>
                 </div>
-                {canExit ? <Button asChild><Link href={`/store-expert/orders/${order.objectId}/exit-slip`}><ScanLine className="size-4" />ثبت خروج کالا</Link></Button> : <span className="text-sm text-muted-foreground">خروج تکمیل شده یا در انتظار ثبت پیش‌فاکتور</span>}
+                <div className="flex flex-wrap gap-2">
+                  {canExit ? <Button asChild><Link href={`/store-expert/orders/${order.objectId}/exit-slip`}><ScanLine className="size-4" />ثبت خروج کالا</Link></Button> : null}
+                  {(order.retailExitSlips || []).map((slip) => <Button asChild variant="outline" key={slip.objectId}><Link href={`/store-expert/exit-slips/${slip.objectId}`}>مشاهده حواله {formatFaDigits(slip.slipCode)}</Link></Button>)}
+                  {!canExit && !order.retailExitSlips?.length ? <span className="text-sm text-muted-foreground">خروج تکمیل شده یا در انتظار ثبت پیش‌فاکتور</span> : null}
+                </div>
               </Card>
             );
           })}

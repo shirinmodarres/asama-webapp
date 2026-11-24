@@ -247,6 +247,10 @@ export function mapOrderDto(dto: unknown): Order {
     retailPendingOrderItemObjectIds: toArray(record.retailPendingOrderItemObjectIds)
       .map(toStringValue)
       .filter(Boolean),
+    retailExitSlips: toArray(record.retailExitSlips).map((value) => {
+      const slip = toRecord(value);
+      return { objectId: toStringValue(slip.objectId), slipCode: toStringValue(slip.slipCode) };
+    }).filter((slip) => Boolean(slip.objectId)),
     retailExitAvailable:
       typeof record.retailExitAvailable === "boolean"
         ? record.retailExitAvailable
