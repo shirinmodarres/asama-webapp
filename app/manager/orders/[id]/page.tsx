@@ -286,11 +286,9 @@ export default function ManagerOrderReviewPage() {
       ? "/finance/financial-approvals"
       : "/finance-control/orders";
   const financialApprovalNextStepLabel =
-    order.financialApprovalStage === "sales_accountant"
-      ? "خزانه‌دار"
-      : order.financialApprovalStage === "treasurer"
-        ? "کارشناس سامانه‌ها"
-        : "مدیر فروش";
+    ["sales_accountant", "treasurer"].includes(order.financialApprovalStage ?? "") && !isNajaOrder
+      ? "کارشناس سامانه‌ها"
+      : "مدیر فروش";
   const financialCorrectionReasons =
     getFinancialCorrectionReasons(workflowStage);
 
@@ -1243,7 +1241,9 @@ export default function ManagerOrderReviewPage() {
         }
         message={
           decision === "approve"
-            ? "با تایید، سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال می‌شود."
+            ? isNajaOrder
+              ? "با تأیید، سفارش ناجا برای انجام خروج به انبار ارسال می‌شود."
+              : "با تایید، سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال می‌شود."
             : decision === "reject"
               ? "با رد سفارش، رزرو احتمالی آن طبق منطق فعلی سفارش آزاد می‌شود."
               : decision === "needs_review"
