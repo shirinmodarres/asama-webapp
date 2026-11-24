@@ -10,10 +10,15 @@ export type OrderStatusCode =
   | "invoiced"
   | "completed"
   | "returned"
-  | "returnedAfterInvoice";
+  | "returnedAfterInvoice"
+  | "store_quotation_pending"
+  | "store_quotation_dry_run"
+  | "store_quotation_pending_verification"
+  | "store_quotation_failed";
 
 export type WarehouseStatusCode =
   | "reserved"
+  | "awaitingSystemsTransfer"
   | "reviewing"
   | "dispatchIssued"
   | "completed"
@@ -21,11 +26,19 @@ export type WarehouseStatusCode =
   | "returnedToInventory"
   | "awaitingNajaDetails"
   | "najaDetailsCompleted"
-  | "returnedFromWarehouse";
+  | "returnedFromWarehouse"
+  | "storeQuotationPending"
+  | "storeQuotationDryRun";
 
 export type ProductStatusCode = "active" | "inactive";
 export type InvoiceStatusCode = "issued" | "needs_follow_up";
 export type FinancialApprovalStatusCode = "pending" | "approved" | "needs_correction";
+export type FinancialApprovalStageCode =
+  | "sales_accountant"
+  | "treasurer"
+  | "systems_expert"
+  | "sales_manager"
+  | "systems_transfer";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   pending_approval: "در انتظار تایید",
@@ -40,10 +53,15 @@ export const ORDER_STATUS_LABELS: Record<OrderStatusCode, string> = {
   completed: "تکمیل شده",
   returned: "برگشتی",
   returnedAfterInvoice: "برگشتی پس از فاکتور",
+  store_quotation_pending: "در انتظار ثبت پیش‌فاکتور سپیدار",
+  store_quotation_dry_run: "پیش‌نمایش پیش‌فاکتور فروشگاه",
+  store_quotation_pending_verification: "در انتظار بررسی نتیجه پیش‌فاکتور سپیدار",
+  store_quotation_failed: "ثبت پیش‌فاکتور سپیدار ناموفق",
 };
 
 export const WAREHOUSE_STATUS_LABELS: Record<WarehouseStatusCode, string> = {
   reserved: "رزرو موجودی",
+  awaitingSystemsTransfer: "در انتظار ثبت انتقال در سامانه مشتری",
   reviewing: "در بررسی انبار",
   dispatchIssued: "حواله خروج صادر شد",
   completed: "تکمیل شده",
@@ -52,6 +70,8 @@ export const WAREHOUSE_STATUS_LABELS: Record<WarehouseStatusCode, string> = {
   awaitingNajaDetails: "در انتظار تکمیل اطلاعات انبار ناجا",
   najaDetailsCompleted: "اطلاعات انبار ناجا تکمیل شد",
   returnedFromWarehouse: "برگشتی از انبار",
+  storeQuotationPending: "در انتظار ثبت پیش‌فاکتور سپیدار",
+  storeQuotationDryRun: "پیش‌نمایش پیش‌فاکتور فروشگاه",
 };
 
 export const PRODUCT_STATUS_LABELS: Record<ProductStatusCode, string> = {
@@ -68,6 +88,14 @@ export const FINANCIAL_APPROVAL_STATUS_LABELS: Record<FinancialApprovalStatusCod
   pending: "در انتظار تأیید مالی",
   approved: "تأیید مالی شد",
   needs_correction: "نیازمند اصلاح مالی",
+};
+
+export const FINANCIAL_APPROVAL_STAGE_LABELS: Record<FinancialApprovalStageCode, string> = {
+  sales_accountant: "حسابدار فروش",
+  treasurer: "حسابدار فروش",
+  systems_expert: "کارشناس سامانه‌ها (بررسی اولیه)",
+  sales_manager: "مدیر فروش",
+  systems_transfer: "کارشناس سامانه‌ها (انتقال بار)",
 };
 
 export function getOrderStatusLabel(status: string | null | undefined): string {
@@ -121,4 +149,11 @@ export function getFinancialApprovalStatusLabel(
     FINANCIAL_APPROVAL_STATUS_LABELS[status as FinancialApprovalStatusCode] ??
     status
   );
+}
+
+export function getFinancialApprovalStageLabel(
+  stage: string | null | undefined,
+): string {
+  if (!stage) return "";
+  return FINANCIAL_APPROVAL_STAGE_LABELS[stage as FinancialApprovalStageCode] ?? stage;
 }

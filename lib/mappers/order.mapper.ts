@@ -222,6 +222,12 @@ export function mapOrderDto(dto: unknown): Order {
     stockObjectId: toNullableString(
       record.stockObjectId ?? toRecord(record.stock).objectId,
     ),
+    stockCode:
+      record.stockCode === undefined || record.stockCode === null
+        ? (toRecord(record.stock).code === undefined || toRecord(record.stock).code === null
+          ? null
+          : toNumberValue(toRecord(record.stock).code))
+        : toNumberValue(record.stockCode),
     sepidarStockId:
       record.sepidarStockId === undefined || record.sepidarStockId === null
         ? null
@@ -232,6 +238,67 @@ export function mapOrderDto(dto: unknown): Order {
     selectedStockTitles: toArray(record.selectedStockTitles)
       .map(toStringValue)
       .filter(Boolean),
+    retailStockObjectIds: toArray(record.retailStockObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    retailOrderItemObjectIds: toArray(record.retailOrderItemObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    retailPendingOrderItemObjectIds: toArray(record.retailPendingOrderItemObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    retailExitSlips: toArray(record.retailExitSlips).map((value) => {
+      const slip = toRecord(value);
+      return { objectId: toStringValue(slip.objectId), slipCode: toStringValue(slip.slipCode) };
+    }).filter((slip) => Boolean(slip.objectId)),
+    retailExitAvailable:
+      typeof record.retailExitAvailable === "boolean"
+        ? record.retailExitAvailable
+        : undefined,
+    retailFulfillmentStatus: toNullableString(record.retailFulfillmentStatus) as
+      | "pending"
+      | "partial"
+      | "completed"
+      | "not_applicable"
+      | undefined,
+    retailAllocatedQuantity: toNumberValue(record.retailAllocatedQuantity),
+    retailDispatchedQuantity: toNumberValue(record.retailDispatchedQuantity),
+    retailRemainingQuantity: toNumberValue(record.retailRemainingQuantity),
+    warehouseExitAvailable:
+      typeof record.warehouseExitAvailable === "boolean"
+        ? record.warehouseExitAvailable
+        : undefined,
+    warehouseStockObjectIds: toArray(record.warehouseStockObjectIds)
+      .map(toStringValue)
+      .filter(Boolean),
+    warehouseFulfillment: isObjectRecord(record.warehouseFulfillment)
+      ? {
+          stocks: toArray(toRecord(record.warehouseFulfillment).stocks)
+            .map((stock) => {
+              const stockRecord = toRecord(stock);
+              return {
+                stockObjectId: toStringValue(stockRecord.stockObjectId),
+                sepidarStockId:
+                  stockRecord.sepidarStockId === undefined || stockRecord.sepidarStockId === null
+                    ? null
+                    : toNumberValue(stockRecord.sepidarStockId),
+                stockTitle: toNullableString(stockRecord.stockTitle),
+                responsibleRole: (stockRecord.responsibleRole === "store_sales_expert"
+                  ? "store_sales_expert"
+                  : "warehouse") as "warehouse" | "store_sales_expert",
+                allocatedQuantity: toNumberValue(stockRecord.allocatedQuantity),
+                dispatchedQuantity: toNumberValue(stockRecord.dispatchedQuantity),
+                remainingQuantity: toNumberValue(stockRecord.remainingQuantity),
+              };
+            })
+            .filter((stock) => Boolean(stock.stockObjectId)),
+          warehouseStockObjectIds: toArray(toRecord(record.warehouseFulfillment).warehouseStockObjectIds)
+            .map(toStringValue)
+            .filter(Boolean),
+          warehouseRemainingQuantity: toNumberValue(toRecord(record.warehouseFulfillment).warehouseRemainingQuantity),
+          retailRemainingQuantity: toNumberValue(toRecord(record.warehouseFulfillment).retailRemainingQuantity),
+        }
+      : undefined,
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: normalizeNullableDigits(record.recipientNationalId),
@@ -360,12 +427,31 @@ export function mapOrderDto(dto: unknown): Order {
       | "needs_correction"
       | null,
     financialApprovalStatusLabel: toNullableString(record.financialApprovalStatusLabel),
+    financialApprovalStage: toNullableString(record.financialApprovalStage) as
+      | "sales_accountant"
+      | "treasurer"
+      | "systems_expert"
+      | "sales_manager"
+      | "systems_transfer"
+      | null,
+    financialApprovalStageLabel: toNullableString(record.financialApprovalStageLabel),
     financialApprovedAt: toNullableString(record.financialApprovedAt),
     financialApprovedBy: toNullableString(record.financialApprovedBy),
+    financialCorrectionReasonCode: toNullableString(record.financialCorrectionReasonCode),
+    financialCorrectionReasonLabel: toNullableString(record.financialCorrectionReasonLabel),
     financialCorrectionReason: toNullableString(record.financialCorrectionReason),
     financialReturnedAt: toNullableString(record.financialReturnedAt),
     financialReturnedBy: toNullableString(record.financialReturnedBy),
     sourceLabel: toNullableString(record.sourceLabel),
+    discountPercentage: toNumberValue(record.discountPercentage),
+    salesRequestSubtotal: toNumberValue(record.salesRequestSubtotal),
+    salesRequestDiscountTotal: toNumberValue(
+      record.salesRequestDiscountTotal ?? record.salesRequestDeductionTotal,
+    ),
+    salesRequestTaxAmount: toNumberValue(record.salesRequestTaxAmount),
+    salesRequestTotalWithTax: toNumberValue(
+      record.salesRequestTotalWithTax ?? record.salesRequestFinalTotal,
+    ),
     notes: toNullableString(record.notes),
     editedByUserId: toNullableString(record.editedByUserId),
     editedByName: toNullableString(record.editedByName),
@@ -400,9 +486,22 @@ export function mapOrderDto(dto: unknown): Order {
       record.sepidarIntegrationStatus,
       record.sepidarQuotationId,
     ),
+    quotationSyncStatus: toNullableString(record.quotationSyncStatus ?? record.quotationStatus),
     sepidarIntegrationStatus: toNullableString(record.sepidarIntegrationStatus),
     quotationSyncError: toNullableString(record.quotationSyncError),
     sepidarLastError: toNullableString(record.sepidarLastError),
+    approvedBy: toNullableString(record.approvedBy),
+    exitSlipObjectId: toNullableString(record.exitSlipObjectId),
+    exitSlipNumber: toNullableString(record.exitSlipNumber),
+    exitSlipIssuedAt: toNullableString(record.exitSlipIssuedAt),
+    internalInvoiceObjectId: toNullableString(record.internalInvoiceObjectId),
+    internalInvoiceNumber: toNullableString(record.internalInvoiceNumber),
+    modCenterInvoiceObjectId: toNullableString(record.modCenterInvoiceObjectId),
+    modCenterInvoiceNumber: toNullableString(record.modCenterInvoiceNumber),
+    accountingStatus: toNullableString(record.accountingStatus),
+    inventoryReservationStatus: toNullableString(record.inventoryReservationStatus),
+    storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
+    storePaymentTerms: toNullableString(record.storePaymentTerms),
     canEdit: toBooleanValue(record.canEdit),
     canCancel: toBooleanValue(record.canCancel),
     editBlockedReason: toNullableString(record.editBlockedReason),
@@ -450,10 +549,28 @@ function mapOrderItemDto(dto: unknown): OrderItem {
     pricingSource: toNullableString(record.pricingSource),
     productIdentifier: normalizeNullableDigits(record.productIdentifier),
     trackingCode: normalizeNullableDigits(record.trackingCode),
+    stockObjectId: toNullableString(record.stockObjectId),
+    sepidarStockId:
+      record.sepidarStockId === undefined || record.sepidarStockId === null
+        ? null
+        : toNumberValue(record.sepidarStockId),
+    stockAllocations: toArray(record.stockAllocations).map((allocation) => {
+      const value = toRecord(allocation);
+      return {
+        stockObjectId: toNullableString(value.stockObjectId),
+        sepidarStockId:
+          value.sepidarStockId === undefined || value.sepidarStockId === null
+            ? null
+            : toNumberValue(value.sepidarStockId),
+        stockTitle: toNullableString(value.stockTitle),
+        quantity: toNumberValue(value.quantity),
+      };
+    }),
   };
 }
 
 function mapOrderType(value: unknown): OrderType {
+  if (value === "store") return "store";
   return value === "naja" ? "naja" : "normal";
 }
 
@@ -472,7 +589,7 @@ function mapQuotationStatus(
 ): QuotationStatus {
   const explicit = toStringValue(value);
   if (explicit === "created") return "success";
-  if (explicit === "success" || explicit === "failed" || explicit === "pending") {
+  if (explicit === "success" || explicit === "failed" || explicit === "pending" || explicit === "pending_verification" || explicit === "dry_run") {
     return explicit;
   }
 

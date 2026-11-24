@@ -1,5 +1,7 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
@@ -10,6 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
+import { OrderNoteCard } from "@/components/orders/order-note-card";
 import { getErrorMessage } from "@/lib/api/api-error";
 import { formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
@@ -77,7 +80,11 @@ export default function WarehouseOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code || order.id)}`}
             description="جزئیات سفارش برای عملیات انبار"
           />
+          {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
           <CustomerInfoCard order={order} />
+          <OrderNoteCard notes={order.notes} />
           <DataTable columns={columns} rows={order.items} rowKey={(row) => row.objectId || row.productId} />
         </>
       )}

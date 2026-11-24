@@ -22,6 +22,8 @@ import {
 } from "@/lib/services/pricing.service";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import type { RoleKey } from "@/lib/types";
+import { downloadExcelFile } from "@/lib/utils/excel-export";
 
 export default function GeneratedPriceListDetailPage({
   params,
@@ -29,6 +31,24 @@ export default function GeneratedPriceListDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  return (
+    <GeneratedPriceListDetailView
+      id={id}
+      role="support"
+      backHref="/support/pricing/generated-price-lists"
+    />
+  );
+}
+
+export function GeneratedPriceListDetailView({
+  id,
+  role,
+  backHref,
+}: {
+  id: string;
+  role: RoleKey;
+  backHref: string;
+}) {
   const [priceList, setPriceList] = useState<PriceList | null>(null);
   const [items, setItems] = useState<PriceListItem[]>([]);
   const [pagination, setPagination] = useState<PriceListItemsPagination>({
@@ -42,6 +62,7 @@ export default function GeneratedPriceListDetailPage({
   });
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -80,7 +101,21 @@ export default function GeneratedPriceListDetailPage({
     { key: "final", header: "قیمت نهایی", render: (row) => row.finalPrice === null ? "-" : formatCurrency(row.finalPrice) },
   ];
 
-  const exportCurrentList = () => {
+  const exportCurrentList = async () => {
+    if (!priceList || !items.length || isExporting) return;
+    setIsExporting(true);
+    try {
+      const allItems: PriceListItem[] = [];
+      const pageSize = 100;
+      let skip = 0;
+      let hasNext = true;
+      while (hasNext) {
+        const result = await listGeneratedPriceListItems(id, { limit: pageSize, skip });
+        allItems.push(...result.items);
+        hasNext = result.pagination.hasNext;
+        skip += pageSize;
+        if (!result.items.length) break;
+      }
     if (!priceList || !items.length) return;
     const headers = [
       "کد کالا",
@@ -92,7 +127,7 @@ export default function GeneratedPriceListDetailPage({
       "کد داخلی",
       "کد مرجع",
     ];
-    const rows = items.map((item) => [
+    const rows = allItems.map((item) => [
       item.productCode || "",
       item.productName || "",
       item.brandName || priceList.brandName || "",
@@ -102,33 +137,29 @@ export default function GeneratedPriceListDetailPage({
       priceList.internalCode || "",
       priceList.referenceInternalCode || "",
     ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map(csvCell).join(","))
-      .join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${priceList.internalCode || priceList.objectId || "price-list"}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    downloadExcelFile(`${priceList.internalCode || priceList.objectId || "price-list"}.xls`, [
+      { name: "لیست قیمت", rows: [headers, ...rows] },
+    ]);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
-    <DashboardLayout role="support" title="جزئیات لیست قیمت">
+    <DashboardLayout role={role} title="جزئیات لیست قیمت">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline">
-          <Link href="/support/pricing/generated-price-lists">بازگشت</Link>
+          <Link href={backHref}>بازگشت</Link>
         </Button>
         <Button
           type="button"
           onClick={exportCurrentList}
-          disabled={!priceList || !items.length}
+          disabled={!priceList || !items.length || isExporting}
         >
           <Download className="size-4" />
-          خروجی اکسل
+          {isExporting ? "در حال آماده‌سازی..." : "خروجی اکسل"}
         </Button>
       </div>
       {error ? <InlineErrorMessage message={error} /> : null}
@@ -187,11 +218,6 @@ export default function GeneratedPriceListDetailPage({
       )}
     </DashboardLayout>
   );
-}
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function getPriceListStatusLabel(priceList: PriceList): string {

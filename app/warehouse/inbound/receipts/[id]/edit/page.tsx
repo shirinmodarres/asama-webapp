@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
+import { isProductIdentifierRequired } from "@/lib/domain/product-identifier";
 import type { Product } from "@/lib/models/product.model";
 import type { WarehouseInboundReceipt } from "@/lib/models/warehouse.model";
 import { listProducts } from "@/lib/services/product.service";
@@ -315,14 +316,15 @@ export default function WarehouseInboundReceiptEditPage() {
       quantity: normalizeDigits(newQuantity.trim()),
     };
     const quantity = toNumber(unit.quantity);
+    const identifierRequired = isProductIdentifierRequired(selectedProduct);
     if (
-      !unit.productIdentifier ||
+      (identifierRequired && !unit.productIdentifier) ||
       !unit.serialNumber ||
       !unit.trackingCode ||
       quantity <= 0
     ) {
       setFieldErrors({
-        newProductIdentifier: unit.productIdentifier
+        newProductIdentifier: !identifierRequired || unit.productIdentifier
           ? ""
           : "این فیلد الزامی است.",
         newSerialNumber: unit.serialNumber ? "" : "این فیلد الزامی است.",
@@ -375,12 +377,18 @@ export default function WarehouseInboundReceiptEditPage() {
     if (
       normalizedUnits.length === 0 ||
       normalizedUnits.some(
-        (unit) =>
-        !unit.productObjectId ||
-        !unit.productIdentifier ||
-        !unit.serialNumber ||
-        !unit.trackingCode ||
-        unit.quantity <= 0,
+        (unit) => {
+          const product = products.find(
+            (item) => item.objectId === unit.productObjectId,
+          );
+          return (
+            !unit.productObjectId ||
+            (isProductIdentifierRequired(product) && !unit.productIdentifier) ||
+            !unit.serialNumber ||
+            !unit.trackingCode ||
+            unit.quantity <= 0
+          );
+        },
       )
     ) {
       setError(

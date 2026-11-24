@@ -1,216 +1,218 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, UserMinus, X } from "lucide-react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { Check, Pencil, Search, UserMinus, X } from "lucide-react";
+import { CustomerList } from "@/components/customer/customer-list";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import type { DataTableColumn } from "@/components/shared/data-table";
-import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { LoadingState } from "@/components/shared/loading-state";
+import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   SearchableMultiSelect,
   SearchableSelect,
 } from "@/components/ui/searchable-select";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
-import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { AuthUser } from "@/lib/models/auth.model";
-import type {
-  ExpertCustomerAssignment,
-} from "@/lib/models/customer-assignment.model";
-import type { PriceList } from "@/lib/models/pricing.model";
+import type { ExpertCustomerAssignment } from "@/lib/models/customer-assignment.model";
 import type { Customer } from "@/lib/models/customer.model";
-import type { SepidarStock } from "@/lib/models/stock.model";
+import type { PriceList } from "@/lib/models/pricing.model";
+import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import {
   createExpertCustomerAssignment,
   deactivateExpertCustomerAssignment,
-  listExpertCustomerAssignments,
+  listExpertCustomerAssignmentsPage,
   listSupportExperts,
   updateExpertCustomerAssignment,
 } from "@/lib/services/customer-assignment.service";
-import { listCustomers } from "@/lib/services/customer.service";
+import { listSupportCustomersPage } from "@/lib/services/customer.service";
 import { listGeneratedPriceLists } from "@/lib/services/pricing.service";
-import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
-import { listSepidarStocks } from "@/lib/services/stock.service";
+
+const PAGE_SIZE = 20;
+type MasterSelection = "all" | "unassigned" | string;
+type DetailRow = {
+  customer: Customer;
+  assignment: ExpertCustomerAssignment | null;
+};
 
 export default function SupportCustomerAssignmentsPage() {
   const [experts, setExperts] = useState<AuthUser[]>([]);
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
-  const [stocks, setStocks] = useState<SepidarStock[]>([]);
-  const [assignments, setAssignments] = useState<ExpertCustomerAssignment[]>(
-    [],
-  );
+  const [unassignedCount, setUnassignedCount] = useState(0);
+
   const [selectedExpertId, setSelectedExpertId] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [selectedCustomerOption, setSelectedCustomerOption] = useState<
-    { value: string; label: string } | null
-  >(null);
-  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>([]);
-  const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deactivatingId, setDeactivatingId] = useState("");
+  const [selectedCustomerOption, setSelectedCustomerOption] = useState<{
+    value: string;
+    label: string;
+  } | null>(null);
+  const [selectedPriceListIds, setSelectedPriceListIds] = useState<string[]>(
+    [],
+  );
   const [editingAssignmentId, setEditingAssignmentId] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const loadData = async () => {
-    const [expertData, priceListData, stockData, assignmentData] =
+  const [selectedMaster, setSelectedMaster] =
+    useState<MasterSelection>("unassigned");
+  const [rows, setRows] = useState<DetailRow[]>([]);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim());
+  const [grouping, setGrouping] = useState("");
+  const [channel, setChannel] = useState("");
+  const [subChannel, setSubChannel] = useState("");
+  const deferredGrouping = useDeferredValue(grouping.trim());
+  const deferredChannel = useDeferredValue(channel.trim());
+  const deferredSubChannel = useDeferredValue(subChannel.trim());
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
+  const [targetExpertId, setTargetExpertId] = useState("");
+
+  const [isLoadingBase, setIsLoadingBase] = useState(true);
+  const [isLoadingRows, setIsLoadingRows] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deactivatingId, setDeactivatingId] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const loadBaseData = useCallback(async () => {
+    const [expertData, priceListData, unassigned] =
       await Promise.all([
         listSupportExperts(),
         listGeneratedPriceLists({ activeOnly: true }),
-        listSepidarStocks(),
-        listExpertCustomerAssignments(),
+        listSupportCustomersPage({
+          status: "active",
+          assignmentStatus: "unassigned",
+          limit: 1,
+          offset: 0,
+        }),
       ]);
-    setExperts(expertData);
+    setExperts(expertData.filter((expert) => expert.status === "active"));
     setPriceLists(priceListData);
-    setStocks(stockData);
-    setAssignments(assignmentData);
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-    async function load() {
-      setIsLoading(true);
-      setError("");
-      try {
-        const [expertData, priceListData, stockData, assignmentData] =
-          await Promise.all([
-            listSupportExperts(),
-            listGeneratedPriceLists({ activeOnly: true }),
-            listSepidarStocks(),
-            listExpertCustomerAssignments(),
-          ]);
-        if (!isMounted) return;
-        setExperts(expertData);
-        setPriceLists(priceListData);
-        setStocks(stockData);
-        setAssignments(assignmentData);
-      } catch (loadError) {
-        if (isMounted) setError(getErrorMessage(loadError));
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-    load();
-    return () => {
-      isMounted = false;
-    };
+    setUnassignedCount(unassigned.total);
   }, []);
 
-  const submitAssignment = async () => {
-    const nextErrors: Record<string, string> = {};
-    if (!selectedExpertId) {
-      nextErrors.selectedExpertId = "لطفاً کارشناس را انتخاب کنید.";
-    }
-    if (!selectedCustomerId) {
-      nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
-    }
-    if (selectedPriceListIds.length === 0) {
-      nextErrors.selectedPriceListIds = "لطفاً حداقل یک لیست قیمت را انتخاب کنید.";
-    }
-    if (selectedStockIds.length === 0) {
-      nextErrors.selectedStockIds = "لطفاً حداقل یک انبار مجاز انتخاب کنید.";
-    }
-    setFieldErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
-
-    const actorName =
-      getStoredCurrentUser()?.fullName ||
-      getStoredCurrentUser()?.username ||
-      "پشتیبان";
-
-    const payload = {
-      expertUserId: selectedExpertId,
-      customerObjectId: selectedCustomerId,
-      priceListIds: selectedPriceListIds,
-      allowedStockObjectIds: selectedStockIds,
-    };
-
-    setIsSubmitting(true);
+  useEffect(() => {
+    let mounted = true;
+    // Loading state belongs to this remote synchronization cycle.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoadingBase(true);
     setError("");
-    setMessage("");
-    try {
-      if (editingAssignmentId) {
-        await updateExpertCustomerAssignment(editingAssignmentId, {
-          ...payload,
-          updatedByName: actorName,
-        });
-      } else {
-        await createExpertCustomerAssignment({
-          ...payload,
-          assignedByName: actorName,
-        });
-      }
-      await loadData();
-      if (editingAssignmentId) {
-        setEditingAssignmentId("");
-        setSelectedExpertId("");
-        setSelectedPriceListIds([]);
-        setSelectedStockIds([]);
-      }
-      setSelectedCustomerId("");
-      setMessage(
-        editingAssignmentId
-          ? "اختصاص مشتری با موفقیت به‌روزرسانی شد."
-          : "مشتری با موفقیت اختصاص داده شد. می‌توانید مشتری بعدی را انتخاب کنید.",
-      );
-    } catch (submitError) {
-      if (
-        submitError instanceof ApiError &&
-        submitError.code === "CUSTOMER_ALREADY_ASSIGNED"
-      ) {
-        setFieldErrors((current) => ({
-          ...current,
-          selectedCustomerId:
-            "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
-        }));
-      } else {
-        setError(getErrorMessage(submitError));
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    loadBaseData()
+      .catch((loadError) => mounted && setError(getErrorMessage(loadError)))
+      .finally(() => mounted && setIsLoadingBase(false));
+    return () => {
+      mounted = false;
+    };
+  }, [loadBaseData]);
+
+  useEffect(() => {
+    let mounted = true;
+    // Every filter/page change starts a new server-side page request.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoadingRows(true);
+    setError("");
+    const offset = (page - 1) * PAGE_SIZE;
+    const request =
+      selectedMaster === "unassigned"
+        ? listSupportCustomersPage({
+            status: "active",
+            assignmentStatus: "unassigned",
+            search: deferredSearch || undefined,
+            grouping: deferredGrouping || undefined,
+            channel: deferredChannel || undefined,
+            subChannel: deferredSubChannel || undefined,
+            limit: PAGE_SIZE,
+            offset,
+          }).then((result) => ({
+            rows: result.items.map((customer) => ({
+              customer,
+              assignment: null,
+            })),
+            total: result.total,
+          }))
+        : listExpertCustomerAssignmentsPage({
+            expertUserId: selectedMaster === "all" ? undefined : selectedMaster,
+            search: deferredSearch || undefined,
+            grouping: deferredGrouping || undefined,
+            channel: deferredChannel || undefined,
+            subChannel: deferredSubChannel || undefined,
+            limit: PAGE_SIZE,
+            offset,
+          }).then((result) => ({
+            rows: result.items
+              .filter((assignment) => assignment.customer)
+              .map((assignment) => ({
+                customer: assignment.customer as Customer,
+                assignment,
+              })),
+            total: result.total,
+          }));
+
+    request
+      .then((result) => {
+        if (!mounted) return;
+        setRows(result.rows);
+        setTotal(result.total);
+      })
+      .catch((loadError) => mounted && setError(getErrorMessage(loadError)))
+      .finally(() => mounted && setIsLoadingRows(false));
+    return () => {
+      mounted = false;
+    };
+  }, [deferredChannel, deferredGrouping, deferredSearch, deferredSubChannel, page, refreshKey, selectedMaster]);
 
   const expertOptions = useMemo(
     () =>
-      experts
-        .filter((expert) => expert.status === "active")
-        .map((expert) => ({
-          value: expert.objectId,
-          label: `${expert.fullName || expert.name || expert.username || expert.mobile || "-"} - ${expert.roleLabel}`,
-        })),
+      experts.map((expert) => ({
+        value: expert.objectId,
+        label: `${expert.fullName || expert.name || expert.username || expert.mobile || "-"} - ${expert.roleLabel}`,
+      })),
     [experts],
   );
   const priceListOptions = useMemo(
     () =>
-      priceLists.map((priceList) => ({
-        value: priceList.objectId,
-        label: priceList.name || priceList.title || "-",
+      priceLists.map((item) => ({
+        value: item.objectId,
+        label: item.name || item.title || "-",
       })),
     [priceLists],
   );
-  const stockOptions = useMemo(
-    () =>
-      stocks
-        .filter((stock) => stock.isActive)
-        .map((stock) => ({
-          value: stock.objectId,
-          label: `${formatFaDigits(stock.code || "-")} - ${stock.title}`,
-        })),
-    [stocks],
+  const masterOptions = useMemo(
+    () => [
+      {
+        value: "all",
+        label: `همه اختصاص‌ها (${formatFaDigits(experts.reduce((sum, expert) => sum + (expert.assignedCustomerCount || 0), 0))})`,
+      },
+      {
+        value: "unassigned",
+        label: `بدون کارشناس (${formatFaDigits(unassignedCount)})`,
+      },
+      ...experts.map((expert) => ({
+        value: expert.objectId,
+        label: `${expert.fullName || expert.username || "کارشناس"} (${formatFaDigits(expert.assignedCustomerCount || 0)})`,
+      })),
+    ],
+    [experts, unassignedCount],
   );
 
   const loadCustomerOptions = useCallback(async (query: string) => {
-    const customers = await listCustomers({
+    const { items: customers } = await listSupportCustomersPage({
       search: query || undefined,
       status: "active",
       limit: 25,
@@ -230,22 +232,89 @@ export default function SupportCustomerAssignmentsPage() {
     }));
   }, []);
 
-  const deactivateAssignment = async (assignmentId: string) => {
-    setDeactivatingId(assignmentId);
+  const resetForm = () => {
+    setEditingAssignmentId("");
+    setSelectedExpertId("");
+    setSelectedCustomerId("");
+    setSelectedCustomerOption(null);
+    setSelectedPriceListIds([]);
+    setFieldErrors({});
+  };
+
+  const refreshData = async () => {
+    await loadBaseData();
+    setRefreshKey((value) => value + 1);
+  };
+
+  const submitAssignment = async () => {
+    const nextErrors: Record<string, string> = {};
+    if (!selectedExpertId)
+      nextErrors.selectedExpertId = "لطفاً کارشناس را انتخاب کنید.";
+    if (!selectedCustomerId)
+      nextErrors.selectedCustomerId = "لطفاً مشتری را انتخاب کنید.";
+    if (!selectedPriceListIds.length)
+      nextErrors.selectedPriceListIds = "حداقل یک لیست قیمت انتخاب کنید.";
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+
+    const actorName =
+      getStoredCurrentUser()?.fullName ||
+      getStoredCurrentUser()?.username ||
+      "پشتیبان";
+    const payload = {
+      expertUserId: selectedExpertId,
+      customerObjectId: selectedCustomerId,
+      priceListIds: selectedPriceListIds,
+    };
+    setIsSubmitting(true);
     setError("");
     setMessage("");
     try {
-      await deactivateExpertCustomerAssignment(assignmentId);
-      await loadData();
-      setMessage("اختصاص مشتری غیرفعال شد.");
-    } catch (deactivateError) {
-      setError(getErrorMessage(deactivateError));
+      if (editingAssignmentId) {
+        await updateExpertCustomerAssignment(editingAssignmentId, {
+          ...payload,
+          updatedByName: actorName,
+        });
+      } else {
+        await createExpertCustomerAssignment({
+          ...payload,
+          assignedByName: actorName,
+        });
+      }
+      const wasEditing = Boolean(editingAssignmentId);
+      resetForm();
+      await refreshData();
+      setMessage(
+        wasEditing
+          ? "اختصاص مشتری به‌روزرسانی شد."
+          : "مشتری با موفقیت اختصاص داده شد.",
+      );
+    } catch (submitError) {
+      if (
+        submitError instanceof ApiError &&
+        submitError.code === "CUSTOMER_ALREADY_ASSIGNED"
+      ) {
+        setFieldErrors((current) => ({
+          ...current,
+          selectedCustomerId:
+            "این مشتری قبلاً به یک کارشناس اختصاص داده شده است.",
+        }));
+      } else {
+        setError(getErrorMessage(submitError));
+      }
     } finally {
-      setDeactivatingId("");
+      setIsSubmitting(false);
     }
   };
 
-  const startEditAssignment = (assignment: ExpertCustomerAssignment) => {
+  const selectMaster = (value: MasterSelection) => {
+    setSelectedMaster(value);
+    setTargetExpertId(value !== "all" && value !== "unassigned" ? value : "");
+    setSelectedCustomerIds([]);
+    setPage(1);
+  };
+
+  const startEdit = (assignment: ExpertCustomerAssignment) => {
     setEditingAssignmentId(assignment.objectId);
     setSelectedExpertId(assignment.expertObjectId);
     setSelectedCustomerId(assignment.customerObjectId);
@@ -264,163 +333,131 @@ export default function SupportCustomerAssignmentsPage() {
           ? [assignment.priceListId]
           : [],
     );
-    setSelectedStockIds(assignment.allowedStockObjectIds);
     setFieldErrors({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const deactivateAssignment = async (assignment: ExpertCustomerAssignment) => {
+    setDeactivatingId(assignment.objectId);
     setError("");
-    setMessage("");
+    try {
+      await deactivateExpertCustomerAssignment(assignment.objectId);
+      await refreshData();
+      setSelectedCustomerIds((current) =>
+        current.filter((id) => id !== assignment.customerObjectId),
+      );
+      setMessage("اختصاص مشتری غیرفعال شد.");
+    } catch (deactivateError) {
+      setError(getErrorMessage(deactivateError));
+    } finally {
+      setDeactivatingId("");
+    }
   };
 
-  const cancelEditAssignment = () => {
-    setEditingAssignmentId("");
-    setSelectedExpertId("");
-    setSelectedCustomerId("");
-    setSelectedCustomerOption(null);
-    setSelectedPriceListIds([]);
-    setSelectedStockIds([]);
-    setFieldErrors({});
+  const submitBulkAssignment = async () => {
+    if (
+      !selectedCustomerIds.length ||
+      !targetExpertId ||
+      !selectedPriceListIds.length
+    ) {
+      setError(
+        "مشتری‌ها، کارشناس مقصد و لیست قیمت را کامل انتخاب کنید.",
+      );
+      return;
+    }
+    const actorName =
+      getStoredCurrentUser()?.fullName ||
+      getStoredCurrentUser()?.username ||
+      "پشتیبان";
+    setIsSubmitting(true);
+    setError("");
+    let completed = 0;
+    try {
+      for (const customerId of selectedCustomerIds) {
+        const row = rows.find((item) => item.customer.objectId === customerId);
+        if (row?.assignment) {
+          await updateExpertCustomerAssignment(row.assignment.objectId, {
+            expertUserId: targetExpertId,
+            customerObjectId: customerId,
+            priceListIds: selectedPriceListIds,
+            updatedByName: actorName,
+          });
+        } else {
+          await createExpertCustomerAssignment({
+            expertUserId: targetExpertId,
+            customerObjectId: customerId,
+            priceListIds: selectedPriceListIds,
+            assignedByName: actorName,
+          });
+        }
+        completed += 1;
+      }
+      setSelectedCustomerIds([]);
+      await refreshData();
+      setMessage(
+        `${formatFaDigits(completed)} مشتری با موفقیت اختصاص یا منتقل شد.`,
+      );
+    } catch (submitError) {
+      setError(
+        completed
+          ? `${formatFaDigits(completed)} مورد انجام شد؛ ادامه عملیات متوقف شد. ${getErrorMessage(submitError)}`
+          : getErrorMessage(submitError),
+      );
+      await refreshData().catch(() => undefined);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const allPageSelected =
+    rows.length > 0 &&
+    rows.every((row) => selectedCustomerIds.includes(row.customer.objectId));
   const isSubmitDisabled =
     isSubmitting ||
-    expertOptions.length === 0 ||
-    priceListOptions.length === 0 ||
-    stockOptions.length === 0 ||
     !selectedExpertId ||
     !selectedCustomerId ||
-    selectedPriceListIds.length === 0 ||
-    selectedStockIds.length === 0;
-
-  const columns: DataTableColumn<ExpertCustomerAssignment>[] = [
-    {
-      key: "expert",
-      header: "کارشناس",
-      render: (row) => row.expertName || "-",
-    },
-    {
-      key: "customer",
-      header: "مشتری",
-      render: (row) => row.customerName || "-",
-    },
-    {
-      key: "customer-code",
-      header: "کد مشتری",
-      render: (row) =>
-        row.sepidarCustomerCode ? formatFaDigits(row.sepidarCustomerCode) : "-",
-    },
-    {
-      key: "price-list",
-      header: "لیست قیمت",
-      className: "max-w-[480px]",
-      cellClassName: "max-w-[480px] whitespace-normal leading-7",
-      render: (row) => {
-        if (row.priceLists.length) {
-          return row.priceLists
-            .map((priceList) =>
-              priceList.name || priceList.displayName || priceList.title || "-",
-            )
-            .join("،\n");
-        }
-        if (row.priceListTitle) return row.priceListTitle;
-        return "-";
-      },
-    },
-    {
-      key: "allowed-stocks",
-      header: "انبارهای مجاز",
-      className: "min-w-[280px]",
-      cellClassName: "max-w-[420px] whitespace-normal leading-7",
-      render: (row) =>
-        row.allowedStocks.length
-          ? row.allowedStocks
-              .map((stock) =>
-                [stock.code ? formatFaDigits(stock.code) : null, stock.title]
-                  .filter(Boolean)
-                  .join(" - "),
-              )
-              .join("، ")
-          : "-",
-    },
-    {
-      key: "date",
-      header: "زمان اختصاص",
-      render: (row) => (row.assignedAt ? formatDateTime(row.assignedAt) : "-"),
-    },
-    {
-      key: "status",
-      header: "وضعیت",
-      render: (row) => (
-        <Badge variant={row.status === "active" ? "success" : "neutral"}>
-          {row.statusLabel}
-        </Badge>
-      ),
-    },
-    {
-      key: "actions",
-      header: "عملیات",
-      render: (row) =>
-        row.status === "active" ? (
-          <div className="flex  gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => startEditAssignment(row)}
-              disabled={deactivatingId === row.objectId || isSubmitting}
-            >
-              <Pencil className="size-4" />
-              {/* ویرایش */}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => deactivateAssignment(row.objectId)}
-              disabled={deactivatingId === row.objectId}
-            >
-              <UserMinus className="size-4" />
-              {/* {deactivatingId === row.objectId ? "در حال انجام..." : "غیرفعال کردن"} */}
-            </Button>
-          </div>
-        ) : (
-          "-"
-        ),
-    },
-  ];
-
+    !selectedPriceListIds.length;
   return (
     <DashboardLayout role="support" title="اختصاص مشتری به کارشناس">
       <SectionHeader
         title="اختصاص مشتری به کارشناس"
-        description="مشتریان سپیدار را به کارشناسان فروش اختصاص دهید و نوع فروش هر مشتری را مشخص کنید."
+        description="اختصاص تکی را سریع ثبت کنید و فهرست مشتری‌های هر کارشناس را جداگانه ببینید."
       />
-
       {message ? (
         <div className="asama-banner px-4 py-3 text-sm">{message}</div>
       ) : null}
       {error ? <InlineErrorMessage message={error} /> : null}
-      {isLoading ? (
-        <LoadingState title="در حال دریافت مشتریان و کارشناسان" />
+
+      {isLoadingBase ? (
+        <LoadingState title="در حال دریافت اطلاعات پایه" />
       ) : (
-        <>
-          <Card className="p-5">
-            {editingAssignmentId ? (
-              <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#D7DEE6] bg-[#F8FAFC] p-3 text-sm text-[#334155] sm:flex-row sm:items-center sm:justify-between">
-                <span>در حال ویرایش اختصاص مشتری هستید.</span>
+        <div className="space-y-4">
+          <Card className="p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--foreground)]">
+                  {editingAssignmentId ? "ویرایش اختصاص" : "اختصاص سریع مشتری"}
+                </h2>
+                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                  مشتری، کارشناس و لیست قیمت را مشخص کنید. انبارهای مجاز از گروه مشتری تعیین می‌شوند.
+                </p>
+              </div>
+              {editingAssignmentId ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={cancelEditAssignment}
+                  onClick={resetForm}
                   disabled={isSubmitting}
                 >
                   <X className="size-4" />
                   لغو ویرایش
                 </Button>
-              </div>
-            ) : null}
-            <div className="grid min-w-0 gap-4 md:grid-cols-3">
-              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>کارشناس</span>
+              ) : null}
+            </div>
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 2xl:grid-cols-3">
+              <Field label="کارشناس" error={fieldErrors.selectedExpertId}>
                 <SearchableSelect
                   value={selectedExpertId || undefined}
                   onValueChange={(value) => {
@@ -432,15 +469,15 @@ export default function SupportCustomerAssignmentsPage() {
                   }}
                   options={expertOptions}
                   placeholder="انتخاب کارشناس"
-                  searchPlaceholder="جستجو در کارشناسان"
+                  searchPlaceholder="جستجوی کارشناس"
                   emptyMessage="کارشناسی پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedExpertId)}
-                  className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedExpertId} />
-              </label>
-              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>مشتری سپیدار</span>
+              </Field>
+              <Field
+                label="مشتری سپیدار"
+                error={fieldErrors.selectedCustomerId}
+              >
                 <SearchableSelect
                   value={selectedCustomerId || undefined}
                   onValueChange={(value) => {
@@ -453,17 +490,19 @@ export default function SupportCustomerAssignmentsPage() {
                   onOptionChange={setSelectedCustomerOption}
                   selectedOption={selectedCustomerOption}
                   loadOptions={loadCustomerOptions}
-                  options={selectedCustomerOption ? [selectedCustomerOption] : []}
+                  options={
+                    selectedCustomerOption ? [selectedCustomerOption] : []
+                  }
                   placeholder="انتخاب مشتری"
-                  searchPlaceholder="جستجو در مشتریان"
+                  searchPlaceholder="نام یا کد مشتری"
                   emptyMessage="مشتری‌ای پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedCustomerId)}
-                  className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedCustomerId} />
-              </label>
-              <label className="grid min-w-0 gap-2 text-sm font-medium text-[#334155]">
-                <span>لیست‌های قیمت</span>
+              </Field>
+              <Field
+                label="لیست‌های قیمت"
+                error={fieldErrors.selectedPriceListIds}
+              >
                 <SearchableMultiSelect
                   values={selectedPriceListIds}
                   onValuesChange={(values) => {
@@ -474,74 +513,296 @@ export default function SupportCustomerAssignmentsPage() {
                     }));
                   }}
                   options={priceListOptions}
-                  placeholder="انتخاب لیست‌های قیمت"
-                  searchPlaceholder="جستجو در لیست‌های قیمت"
-                  emptyMessage={
-                    priceLists.length === 0
-                      ? "لیست قیمت فعالی پیدا نشد. ابتدا از بخش قیمت‌گذاری لیست تولید کنید."
-                      : "لیست قیمتی با این جستجو پیدا نشد."
-                  }
+                  placeholder="انتخاب لیست قیمت"
+                  searchPlaceholder="جستجوی لیست قیمت"
+                  emptyMessage="لیست فعالی پیدا نشد"
                   invalid={Boolean(fieldErrors.selectedPriceListIds)}
-                  className="min-w-0"
                 />
-                <FieldError message={fieldErrors.selectedPriceListIds} />
-              </label>
-              <div className="grid min-w-0 gap-2 text-sm font-medium text-[#334155] md:col-span-3">
-                <span>انبارهای مجاز</span>
-                <SearchableMultiSelect
-                  values={selectedStockIds}
-                  options={stockOptions}
-                  placeholder="انتخاب انبارهای مجاز"
-                  searchPlaceholder="جستجو در انبارها"
-                  emptyMessage="انباری از سپیدار دریافت نشده است."
-                  invalid={Boolean(fieldErrors.selectedStockIds)}
-                  onValuesChange={(values) => {
-                    setSelectedStockIds(values);
-                    setFieldErrors((current) => ({
-                      ...current,
-                      selectedStockIds: "",
-                    }));
-                  }}
-                />
-                <FieldError message={fieldErrors.selectedStockIds} />
-              </div>
+              </Field>
             </div>
-            <Button
-              type="button"
-              className="mt-5"
-              onClick={submitAssignment}
-              disabled={isSubmitDisabled}
-            >
-              {isSubmitting
-                ? "در حال ثبت..."
-                : editingAssignmentId
-                  ? "به‌روزرسانی اختصاص"
-                  : "اختصاص و ادامه"}
-            </Button>
+            <div className="mt-4 flex justify-end">
+              <Button
+                type="button"
+                onClick={submitAssignment}
+                disabled={isSubmitDisabled}
+              >
+                <Check className="size-4" />
+                {isSubmitting
+                  ? "در حال ثبت..."
+                  : editingAssignmentId
+                    ? "ثبت تغییرات"
+                    : "اختصاص مشتری"}
+              </Button>
+            </div>
           </Card>
 
-          {assignments.length ? (
-            <DataTable
-              columns={columns}
-              rows={assignments}
-              rowKey={(row) =>
-                row.objectId || `${row.expertObjectId}-${row.customerObjectId}`
-              }
-            />
-          ) : (
-            <EmptyState
-              title="اختصاصی ثبت نشده است"
-              description="برای شروع ثبت سفارش، یک مشتری را به کارشناس اختصاص دهید."
-            />
-          )}
-        </>
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <div className="lg:hidden">
+              <Field label="نمایش بر اساس کارشناس">
+                <SearchableSelect
+                  value={selectedMaster}
+                  onValueChange={selectMaster}
+                  options={masterOptions}
+                  placeholder="انتخاب کارشناس"
+                  searchPlaceholder="جستجوی کارشناس"
+                  emptyMessage="کارشناسی پیدا نشد"
+                />
+              </Field>
+            </div>
+            <Card className="hidden max-h-[calc(100vh-2rem)] overflow-y-auto p-2 lg:sticky lg:top-4 lg:block">
+              <p className="px-3 pb-2 pt-1 text-xs font-semibold text-[var(--muted-foreground)]">
+                نمایش بر اساس کارشناس
+              </p>
+              <MasterButton
+                active={selectedMaster === "all"}
+                label="همه اختصاص‌ها"
+                count={experts.reduce(
+                  (sum, expert) => sum + (expert.assignedCustomerCount || 0),
+                  0,
+                )}
+                onClick={() => selectMaster("all")}
+              />
+              <MasterButton
+                active={selectedMaster === "unassigned"}
+                label="بدون کارشناس"
+                count={unassignedCount}
+                onClick={() => selectMaster("unassigned")}
+              />
+              <div className="my-2 border-t border-[var(--border)]" />
+              {experts.map((expert) => (
+                <MasterButton
+                  key={expert.objectId}
+                  active={selectedMaster === expert.objectId}
+                  label={expert.fullName || expert.username || "کارشناس"}
+                  subtitle={expert.roleLabel}
+                  count={expert.assignedCustomerCount || 0}
+                  onClick={() => selectMaster(expert.objectId)}
+                />
+              ))}
+            </Card>
+
+            <div className="min-w-0 space-y-3">
+              <Card className="p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold text-[var(--foreground)]">
+                      فهرست مشتری‌ها
+                    </h2>
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                      {formatFaDigits(total)} مشتری در این بخش
+                    </p>
+                  </div>
+                  <Field label="جستجو در مشتری‌ها">
+                    <span className="relative block w-full sm:w-80">
+                      <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                      <Input
+                        value={search}
+                        onChange={(event) => {
+                          setSearch(event.target.value);
+                          setPage(1);
+                          setSelectedCustomerIds([]);
+                        }}
+                        className="pr-10"
+                        placeholder="نام یا کد مشتری"
+                      />
+                    </span>
+                  </Field>
+                </div>
+                <div className="mt-3 grid gap-3 border-t border-[var(--border)] pt-3 md:grid-cols-3">
+                  <Field label="گروه مشتری"><Input value={grouping} onChange={(event) => { setGrouping(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="عنوان یا کد گروه" /></Field>
+                  <Field label="کانال"><Input value={channel} onChange={(event) => { setChannel(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="مثلاً بازار" /></Field>
+                  <Field label="زیرکانال"><Input value={subChannel} onChange={(event) => { setSubChannel(event.target.value); setPage(1); setSelectedCustomerIds([]); }} placeholder="مثلاً خرده فروش" /></Field>
+                </div>
+                {rows.length ? (
+                  <div className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-3 text-xs text-[var(--muted-foreground)]">
+                    <label className="flex items-center gap-2 font-medium text-[var(--foreground)]">
+                      <input
+                        aria-label="انتخاب همه مشتری‌های صفحه"
+                        type="checkbox"
+                        checked={allPageSelected}
+                        onChange={() =>
+                          setSelectedCustomerIds((current) =>
+                            allPageSelected
+                              ? current.filter(
+                                  (id) =>
+                                    !rows.some(
+                                      (row) => row.customer.objectId === id,
+                                    ),
+                                )
+                              : Array.from(
+                                  new Set([
+                                    ...current,
+                                    ...rows.map((row) => row.customer.objectId),
+                                  ]),
+                                ),
+                          )
+                        }
+                        className="size-4 accent-[var(--primary)]"
+                      />
+                      انتخاب همه این صفحه
+                    </label>
+                    {selectedCustomerIds.length ? (
+                      <span>
+                        {formatFaDigits(selectedCustomerIds.length)} مورد انتخاب
+                        شده
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </Card>
+
+              {isLoadingRows ? (
+                <LoadingState title="در حال دریافت این صفحه" />
+              ) : rows.length ? (
+                <CustomerList
+                  customers={rows.map((row) => row.customer)}
+                  detailsHref={(customer) => `/support/customer-assignments/${customer.objectId}`}
+                  assignedExpertName={(customer) => rows.find((row) => row.customer.objectId === customer.objectId)?.assignment?.expertName || customer.assignedExpertName}
+                  renderSelection={(customer) => <input aria-label={`انتخاب ${customer.fullName}`} type="checkbox" checked={selectedCustomerIds.includes(customer.objectId)} onChange={() => setSelectedCustomerIds((current) => current.includes(customer.objectId) ? current.filter((id) => id !== customer.objectId) : [...current, customer.objectId])} className="size-4 accent-[var(--primary)]" />}
+                  renderActions={(customer) => {
+                    const assignment = rows.find((row) => row.customer.objectId === customer.objectId)?.assignment;
+                    return assignment ? <><Button type="button" size="icon" variant="outline" title="ویرایش اختصاص" onClick={() => startEdit(assignment)} disabled={isSubmitting}><Pencil className="size-4" /></Button><Button type="button" size="icon" variant="ghost" title="حذف اختصاص" onClick={() => deactivateAssignment(assignment)} disabled={deactivatingId === assignment.objectId}><UserMinus className="size-4" /></Button></> : null;
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  title="مشتری‌ای پیدا نشد"
+                  description="کارشناس یا عبارت جستجو را تغییر دهید."
+                />
+              )}
+
+              {selectedCustomerIds.length ? (
+                <Card className="p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">
+                        اختصاص گروهی
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                        {formatFaDigits(selectedCustomerIds.length)} مشتری
+                        انتخاب شده است.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedCustomerIds([])}
+                    >
+                      <X className="size-4" />
+                      پاک کردن
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(180px,0.8fr)_minmax(220px,1fr)_auto] xl:items-end">
+                    <Field label="کارشناس مقصد">
+                      <SearchableSelect
+                        value={targetExpertId || undefined}
+                        onValueChange={setTargetExpertId}
+                        options={expertOptions}
+                        placeholder="انتخاب کارشناس"
+                        searchPlaceholder="جستجو"
+                        emptyMessage="کارشناسی پیدا نشد"
+                      />
+                    </Field>
+                    <Field label="لیست‌های قیمت">
+                      <SearchableMultiSelect
+                        values={selectedPriceListIds}
+                        onValuesChange={setSelectedPriceListIds}
+                        options={priceListOptions}
+                        placeholder="انتخاب لیست قیمت"
+                        searchPlaceholder="جستجو"
+                        emptyMessage="لیستی پیدا نشد"
+                      />
+                    </Field>
+                    <Button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={submitBulkAssignment}
+                    >
+                      <Check className="size-4" />
+                      {isSubmitting ? "در حال ثبت..." : "ثبت گروهی"}
+                    </Button>
+                  </div>
+                </Card>
+              ) : null}
+
+              <PaginationBar
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={total}
+                onPageChange={(nextPage) => {
+                  setPage(nextPage);
+                  setSelectedCustomerIds([]);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );
 }
 
-function formatCustomerOptionLabel(customer: Customer): string {
-  const name = customer.fullName || "مشتری";
-  const code = customer.sepidarCustomerCode || customer.id;
-  return code ? `${formatFaDigits(code)} - ${name}` : name;
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--foreground)]">
+      <span>{label}</span>
+      {children}
+      <FieldError message={error} />
+    </label>
+  );
+}
+
+function MasterButton({
+  active,
+  label,
+  subtitle,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  subtitle?: string;
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? "true" : undefined}
+      className={`mb-1 flex w-full items-center gap-2 rounded-[var(--radius)] border px-3 py-2 text-right transition-colors ${active ? "border-[var(--input)] bg-[var(--accent)] text-[var(--accent-foreground)]" : "border-transparent bg-transparent text-[var(--foreground)] hover:bg-[var(--muted)]"}`}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{label}</span>
+        {subtitle ? (
+          <span className="mt-0.5 block truncate text-xs font-normal text-[var(--muted-foreground)]">
+            {subtitle}
+          </span>
+        ) : null}
+      </span>
+      <Badge variant={active ? "brand" : "neutral"}>
+        {formatFaDigits(count)}
+      </Badge>
+    </button>
+  );
+}
+
+function formatCustomerOptionLabel(customer: Customer) {
+  return [
+    customer.fullName || "مشتری",
+    customer.sepidarCustomerCode
+      ? `کد ${formatFaDigits(customer.sepidarCustomerCode)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" - ");
 }

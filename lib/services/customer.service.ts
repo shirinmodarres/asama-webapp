@@ -32,8 +32,35 @@ export async function listCustomers(
   return mapCustomerListDto(items);
 }
 
+export async function listCustomersPage(filters: CustomerFilters): Promise<{ items: Customer[]; total: number }> {
+  const data = await httpClient.get<unknown>(buildCustomersPath(filters));
+  const record = isRecord(data) ? data : null;
+  const items = Array.isArray(data) ? data : Array.isArray(record?.items) ? record.items : [];
+  return {
+    items: mapCustomerListDto(items),
+    total: Number(record?.total ?? items.length),
+  };
+}
+
+export async function listSupportCustomersPage(filters: CustomerFilters): Promise<{ items: Customer[]; total: number }> {
+  const data = await httpClient.get<unknown>(buildCustomersPath(filters, "/api/support/customers"));
+  const record = isRecord(data) ? data : null;
+  const items = Array.isArray(data) ? data : Array.isArray(record?.items) ? record.items : [];
+  return { items: mapCustomerListDto(items), total: Number(record?.total ?? items.length) };
+}
+
 export async function getCustomer(objectId: string): Promise<Customer> {
   const data = await httpClient.get<unknown>(`/api/customers/${objectId}`);
+  return mapCustomerDto(data);
+}
+
+export async function getSupportCustomer(objectId: string): Promise<Customer> {
+  const data = await httpClient.get<unknown>(`/api/support/customers/${objectId}`);
+  return mapCustomerDto(data);
+}
+
+export async function refreshSupportCustomer(objectId: string): Promise<Customer> {
+  const data = await httpClient.post<unknown>(`/api/support/customers/${objectId}/refresh`);
   return mapCustomerDto(data);
 }
 
@@ -103,17 +130,21 @@ export async function deleteCustomerAddress(
   return mapCustomerAddressDto(data);
 }
 
-function buildCustomersPath(filters?: CustomerFilters): string {
-  if (!filters) return "/api/customers";
+function buildCustomersPath(filters?: CustomerFilters, basePath = "/api/customers"): string {
+  if (!filters) return basePath;
 
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
   if (filters.status) params.set("status", filters.status);
   if (typeof filters.limit === "number") params.set("limit", String(filters.limit));
   if (typeof filters.offset === "number") params.set("offset", String(filters.offset));
+  if (filters.assignmentStatus) params.set("assignmentStatus", filters.assignmentStatus);
+  if (filters.grouping) params.set("grouping", filters.grouping);
+  if (filters.channel) params.set("channel", filters.channel);
+  if (filters.subChannel) params.set("subChannel", filters.subChannel);
 
   const query = params.toString();
-  return query ? `/api/customers?${query}` : "/api/customers";
+  return query ? `${basePath}?${query}` : basePath;
 }
 
 function normalizeCustomerPayload(

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Package, TrendingUp, Wallet } from "lucide-react";
+import { ClipboardList, Package, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { DateRangeFilter, type DateRangeValue } from "@/components/shared/date-range-filter";
@@ -35,8 +35,14 @@ export default function ManagerPage() {
 
     async function loadOrders() {
       try {
-        const data = await listOrders();
-        if (isMounted) setOrders(data);
+        const [recentOrders, najaOrders] = await Promise.all([
+          listOrders(),
+          listOrders({ orderType: "naja" }),
+        ]);
+        const mergedOrders = new Map(
+          [...recentOrders, ...najaOrders].map((order) => [order.objectId, order]),
+        );
+        if (isMounted) setOrders([...mergedOrders.values()]);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
       }
@@ -70,6 +76,12 @@ export default function ManagerPage() {
   const approvedOrders = filteredOrders.filter(
     (order) => order.orderStatus === "approved",
   );
+  const confirmedSalesOrders = useMemo(
+    () => filteredOrders.filter((order) =>
+      ["approved", "invoiced", "completed"].includes(order.orderStatus),
+    ),
+    [filteredOrders],
+  );
   const invoicedOrders = filteredOrders.filter(
     (order) => order.orderStatus === "invoiced",
   );
@@ -77,29 +89,25 @@ export default function ManagerPage() {
     ["reserved", "reviewing"].includes(order.warehouseStatus),
   ).length;
 
-  const totalSalesAmount = approvedOrders.reduce(
+  const totalSalesAmount = confirmedSalesOrders.reduce(
     (sum, order) => sum + getSalesTotalAmount(order.items),
     0,
   );
-  const totalSalesQuantity = approvedOrders.reduce(
+  const totalSalesQuantity = confirmedSalesOrders.reduce(
     (sum, order) => sum + getSalesTotalQuantity(order.items),
     0,
   );
-  const averageOrderAmount = approvedOrders.length
-    ? totalSalesAmount / approvedOrders.length
-    : 0;
-
   const expertRows = useMemo(
-    () => groupByExpert(approvedOrders).slice(0, TOP_EXPERT_ROWS),
-    [approvedOrders],
+    () => groupByExpert(confirmedSalesOrders).slice(0, TOP_EXPERT_ROWS),
+    [confirmedSalesOrders],
   );
   const channelRows = useMemo(
-    () => groupByChannel(approvedOrders),
-    [approvedOrders],
+    () => groupByChannel(confirmedSalesOrders),
+    [confirmedSalesOrders],
   );
   const brandRows = useMemo(
-    () => groupByBrand(approvedOrders).slice(0, TOP_BRAND_ROWS),
-    [approvedOrders],
+    () => groupByBrand(confirmedSalesOrders).slice(0, TOP_BRAND_ROWS),
+    [confirmedSalesOrders],
   );
 
   return (
@@ -163,8 +171,8 @@ export default function ManagerPage() {
             footer="ریال"
           />
           <ManagerMetricCard
-            title="تعداد سفارش‌های تأیید شده"
-            value={formatNumber(approvedOrders.length)}
+            title="تعداد سفارش‌های فروش"
+            value={formatNumber(confirmedSalesOrders.length)}
             icon={<ClipboardList className="size-6" />}
             iconTone="blue"
             footer="سفارش"

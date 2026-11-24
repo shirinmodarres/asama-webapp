@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Ban, CheckCircle2, Eye, Pencil, Search, XCircle } from "lucide-react";
+import { Ban, CheckCircle2, Eye, FileText, Pencil, Search, XCircle } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { TransferCancelDialog } from "@/components/stock-transfer/transfer-cancel-dialog";
 import { TransferStatusBadge } from "@/components/stock-transfer/transfer-status-badge";
@@ -18,7 +18,7 @@ import { getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { StockTransferListResult, StockTransferRequest } from "@/lib/models/stock.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
-import { approveStockTransfer, cancelManagerStockTransfer, cancelStockTransfer, listManagerStockTransfersPage, listSupportStockTransfersPage, rejectStockTransfer } from "@/lib/services/stock.service";
+import { approveStockTransfer, cancelManagerStockTransfer, cancelStockTransfer, listManagerStockTransfersPage, listSupportStockTransfersPage, listSystemsStockTransfersPage, rejectStockTransfer } from "@/lib/services/stock.service";
 
 const PAGE_SIZE = 15;
 const statusOptions = [
@@ -31,7 +31,7 @@ const statusOptions = [
   { value: "approved", label: "تکمیل شده" },
 ];
 
-export function StockTransferList({ role, refreshKey = 0 }: { role: "support" | "manager"; refreshKey?: number }) {
+export function StockTransferList({ role, refreshKey = 0 }: { role: "support" | "manager" | "systems_expert"; refreshKey?: number }) {
   const [result, setResult] = useState<StockTransferListResult>({ items: [], pagination: { page: 1, pageSize: PAGE_SIZE, total: 0, totalPages: 1 } });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -49,7 +49,13 @@ export function StockTransferList({ role, refreshKey = 0 }: { role: "support" | 
     setLoading(true); setError("");
     try {
       const filters = { page, pageSize: PAGE_SIZE, search: debouncedSearch || undefined, status: status === "all" ? undefined : status };
-      setResult(role === "manager" ? await listManagerStockTransfersPage(filters) : await listSupportStockTransfersPage(filters));
+      setResult(
+        role === "manager"
+          ? await listManagerStockTransfersPage(filters)
+          : role === "systems_expert"
+            ? await listSystemsStockTransfersPage(filters)
+            : await listSupportStockTransfersPage(filters),
+      );
     } catch (reason) { setError(getErrorMessage(reason)); } finally { setLoading(false); }
   }, [debouncedSearch, page, role, status]);
   useEffect(() => {
@@ -91,14 +97,18 @@ export function StockTransferList({ role, refreshKey = 0 }: { role: "support" | 
       <div className="grid gap-3 md:hidden">{result.items.map((transfer) => <Card key={transfer.objectId} className="space-y-4 p-4"><div className="flex items-start justify-between gap-3"><div><div className="text-xs text-[#64748B]">شناسه انتقال</div><div className="mt-1 font-mono text-sm font-bold text-[#1F3A5F]">{transfer.objectId}</div></div><TransferStatusBadge status={transfer.status} /></div><Route transfer={transfer} /><div className="grid grid-cols-2 gap-3 rounded-xl bg-[#F8FAFC] p-3 text-sm"><Info label="کالا" value={<Product transfer={transfer} />} /><Info label="تعداد کل" value={formatNumber(transfer.quantity)} /><Info label="ثبت‌کننده" value={transfer.requestedByName || "-"} /><Info label="تاریخ" value={transfer.requestedAt ? formatDateTime(transfer.requestedAt) : "-"} /></div><Actions role={role} transfer={transfer} busy={Boolean(submittingId)} onAction={act} onCancel={setCancelTarget} /></Card>)}</div>
       <PaginationBar currentPage={result.pagination.page} totalPages={result.pagination.totalPages} totalItems={result.pagination.total} onPageChange={setPage} />
     </> : !error ? <EmptyState title="انتقالی پیدا نشد" description="با تغییر جستجو یا وضعیت، نتیجه دیگری را بررسی کنید." /> : null}
-    <TransferCancelDialog transfer={cancelTarget} mode={role} open={Boolean(cancelTarget)} submitting={submittingId === cancelTarget?.objectId} onOpenChange={(open) => { if (!open) setCancelTarget(null); }} onConfirm={confirmCancel} />
+    {role !== "systems_expert" ? <TransferCancelDialog transfer={cancelTarget} mode={role} open={Boolean(cancelTarget)} submitting={submittingId === cancelTarget?.objectId} onOpenChange={(open) => { if (!open) setCancelTarget(null); }} onConfirm={confirmCancel} /> : null}
   </section>;
 }
 
 function Route({ transfer }: { transfer: StockTransferRequest }) { return <div className="min-w-44"><div className="font-semibold text-[#102034]">{transfer.sourceStockTitle || "-"}</div><div className="mt-1 text-xs text-[#64748B]">به {transfer.destinationStockTitle || "-"}</div></div>; }
 function Product({ transfer }: { transfer: StockTransferRequest }) { const count = transfer.items.length || (transfer.productObjectId ? 1 : 0); return <div className="max-w-64 whitespace-normal"><div className="line-clamp-2 font-medium">{count === 1 ? transfer.items[0]?.productName || transfer.productName || "-" : `${formatNumber(count)} نوع کالا`}</div><div className="mt-1 text-xs text-[#64748B]">{formatNumber(count)} آیتم</div></div>; }
 function Info({ label, value }: { label: string; value: React.ReactNode }) { return <div><div className="text-xs text-[#64748B]">{label}</div><div className="mt-1 font-medium text-[#102034]">{value}</div></div>; }
-function Actions({ role, transfer, busy, onAction, onCancel }: { role: "support" | "manager"; transfer: StockTransferRequest; busy: boolean; onAction: (transfer: StockTransferRequest, action: "approve" | "reject") => void; onCancel: (transfer: StockTransferRequest) => void }) {
+function Actions({ role, transfer, busy, onAction, onCancel }: { role: "support" | "manager" | "systems_expert"; transfer: StockTransferRequest; busy: boolean; onAction: (transfer: StockTransferRequest, action: "approve" | "reject") => void; onCancel: (transfer: StockTransferRequest) => void }) {
+  if (role === "systems_expert") {
+    const canOpenSlip = ["completed", "approved"].includes(transfer.status) && Boolean(transfer.transferSlipId);
+    return <div className="flex flex-wrap gap-2">{canOpenSlip ? <Button asChild variant="outline" size="sm"><Link href={`/warehouse/stock-transfers/${transfer.objectId}/pdf`}><FileText />دریافت حواله انتقال</Link></Button> : <span className="text-xs text-muted-foreground">در انتظار تکمیل انبار</span>}</div>;
+  }
   const base = role === "manager" ? "/manager/stock-transfers" : "/support/stock-transfers";
   const supportPending = ["pending", "pending_manager_approval"].includes(transfer.status);
   return <div className="flex flex-wrap gap-2"><Button asChild variant="ghost" size="sm"><Link href={`${base}/${transfer.objectId}`}><Eye />جزئیات</Link></Button>{role === "support" && supportPending ? <><Button asChild variant="outline" size="sm"><Link href={`${base}/${transfer.objectId}/edit`}><Pencil />ویرایش</Link></Button><Button variant="destructive" size="sm" disabled={busy} onClick={() => onCancel(transfer)}><Ban />لغو</Button></> : null}{role === "manager" && transfer.status === "pending_manager_approval" ? <><Button size="sm" disabled={busy} onClick={() => onAction(transfer, "approve")}><CheckCircle2 />تأیید</Button><Button variant="outline" size="sm" disabled={busy} onClick={() => onAction(transfer, "reject")}><XCircle />رد</Button></> : null}{role === "manager" && transfer.status === "approved_waiting_warehouse_scan" ? <Button variant="destructive" size="sm" disabled={busy} onClick={() => onCancel(transfer)}><Ban />لغو</Button> : null}</div>;

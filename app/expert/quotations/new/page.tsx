@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { QuotationForm } from "@/components/quotations/quotation-form";
 import type { CreateSalesQuotationPayload } from "@/lib/models/sales-quotation.model";
 import { getStoredCurrentUser, me } from "@/lib/services/auth.service";
-import { createSalesQuotation } from "@/lib/services/sales-quotation.service";
+import { createSalesQuotation, finalizeSalesQuotation } from "@/lib/services/sales-quotation.service";
 
 export default function NewExpertQuotationPage() {
   const router = useRouter();
@@ -21,21 +21,24 @@ export default function NewExpertQuotationPage() {
         : (await me().catch(() => null))?.user ?? storedUser;
       const expertObjectId = currentUser?.objectId || (currentUser as { id?: string } | null)?.id || undefined;
       if (!expertObjectId) {
-        throw new Error("شناسه کارشناس برای ثبت پیش‌فاکتور پیدا نشد.");
+        throw new Error("شناسه کارشناس برای ثبت درخواست فروش پیدا نشد.");
       }
       const quotation = await createSalesQuotation({
         ...payload,
         status: payload.status || "draft",
         expertObjectId,
       });
-      router.push(`/expert/quotations/${quotation.objectId}`);
+      const result = payload.status === "finalized"
+        ? await finalizeSalesQuotation(quotation.objectId)
+        : quotation;
+      router.push(`/expert/quotations/${result.objectId}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <DashboardLayout role="expert" title="پیش فاکتور جدید">
+    <DashboardLayout role="expert" title="درخواست فروش جدید">
       <QuotationForm
         mode="create"
         submitLabel="ذخیره پیش نویس"

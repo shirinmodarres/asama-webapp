@@ -12,6 +12,7 @@ const badgeVariants = cva(
         success: "border-[#CFE3D3] bg-[#F3FAF4] text-[#3E6A46]",
         warning: "border-[#F1D7AA] bg-[#FFF8EB] text-[#9A6C18]",
         destructive: "border-[#EBCACA] bg-[#FFF4F4] text-[#9C3B3B]",
+        correction: "border-[#E8C5A5] bg-[#FFF3E8] text-[#96521F]",
       },
     },
     defaultVariants: {
@@ -21,7 +22,8 @@ const badgeVariants = cva(
 );
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
   dot?: boolean;
 }
@@ -35,7 +37,9 @@ export function Badge({
 }: BadgeProps) {
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props}>
-      {dot ? <span className="size-1.5 rounded-full bg-current opacity-80" /> : null}
+      {dot ? (
+        <span className="size-1.5 rounded-full bg-current opacity-80" />
+      ) : null}
       {children}
     </div>
   );

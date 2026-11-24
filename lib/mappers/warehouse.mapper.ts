@@ -15,6 +15,7 @@ import type {
   WarehouseInboundReceiptItemGroup,
   ProductWarehouseInventory,
   WarehouseInboundReceipt,
+  WarehouseInboundReceiptPage,
   WarehouseItemUnit,
   WarehouseUnitStatus,
 } from "@/lib/models/warehouse.model";
@@ -326,7 +327,9 @@ export function mapWarehouseInboundReceiptListDto(
   return toArray(dto).map(mapWarehouseInboundReceiptDto);
 }
 
-export function mapWarehouseInboundReceiptPageDto(dto: unknown): import("@/lib/models/warehouse.model").WarehouseInboundReceiptPage {
+export function mapWarehouseInboundReceiptPageDto(
+  dto: unknown,
+): WarehouseInboundReceiptPage {
   const record = toRecord(dto);
   const pagination = toRecord(record.pagination);
   return {
@@ -366,6 +369,7 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     : groupUnitsByProduct(units);
 
   return {
+    issuanceWarnings: toArray(record.warnings).filter((value): value is string => typeof value === "string"),
     objectId: toStringValue(source.objectId),
     id: toStringValue(source.id) || toStringValue(source.objectId),
     slipCode: normalizeDigits(
@@ -374,7 +378,9 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     orderId: toStringValue(source.orderId),
     orderCode: normalizeDigits(toStringValue(source.orderCode)),
     orderType: toNullableString(source.orderType ?? orderRecord.orderType),
+    stockTitle: toNullableString(source.stockTitle),
     issuedByName: toStringValue(source.issuedByName),
+    issuedAt: toNullableString(source.issuedAt),
     exitDate: toStringValue(source.exitDate),
     deliveryToken: toNullableString(source.deliveryToken),
     deliveryLink: toNullableString(source.deliveryLink),
@@ -434,9 +440,12 @@ export function mapExitSlipDto(dto: unknown): ExitSlip {
     deliveryProvince: toNullableString(
       source.deliveryProvince ?? deliveryAddress.province,
     ),
-    deliveryCity: toNullableString(source.deliveryCity ?? deliveryAddress.city),
+    deliveryCity: toNullableString(source.deliveryCity ?? deliveryAddress.cityTitle ?? deliveryAddress.city),
     deliveryCounty: toNullableString(
       source.deliveryCounty ?? deliveryAddress.county,
+    ),
+    deliveryPostalCode: toNullableString(
+      source.deliveryPostalCode ?? deliveryAddress.zipCode ?? deliveryAddress.ZipCode ?? deliveryAddress.postalCode,
     ),
     deliveryAddress: fullAddress,
     notes: toNullableString(source.notes),
@@ -562,6 +571,7 @@ export function mapExitSlipPdfDataDto(dto: unknown): ExitSlipPdfData {
       city: toNullableString(deliveryAddress.city),
       county: toNullableString(deliveryAddress.county),
       fullAddress: toNullableString(deliveryAddress.fullAddress),
+      postalCode: toNullableString(deliveryAddress.postalCode),
       formatted: toNullableString(deliveryAddress.formatted),
     },
     items: items.length ? items : groupUnitsByProduct(units),

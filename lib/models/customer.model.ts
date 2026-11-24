@@ -26,6 +26,7 @@ export interface CustomerAddress {
   postalCode: string | null;
   zipCode?: string | null;
   cityRef?: number | null;
+  cityTitle?: string | null;
   pathRef?: number | null;
   plaque: string | null;
   unit: string | null;
@@ -41,6 +42,24 @@ export interface Customer {
   id: string;
   sepidarCustomerId: string | null;
   sepidarCustomerCode: string | null;
+  sepidarGuid?: string | null;
+  sepidarDetails?: {
+    title: string | null;
+    code: string | null;
+    customerType: number | null;
+    name: string | null;
+    lastName: string | null;
+    birthDate: string | null;
+    nationalId: string | null;
+    economicCode: string | null;
+    registrationCode: string | null;
+    version: number | null;
+    groupingRef: number | null;
+    discountRate: number | null;
+    accountingRemainder: number | null;
+    creditRemainder: number | null;
+    remainderWithoutCheque: number | null;
+  };
   saleType: {
     objectId: string | null;
     sepidarSaleTypeId: number | null;
@@ -62,6 +81,10 @@ export interface Customer {
   mobile: string | null;
   nationalId: string | null;
   assignedExpertName: string | null;
+  grouping?: CustomerGrouping | null;
+  channel?: string | null;
+  subChannel?: string | null;
+  lastSepidarSyncAt?: string | null;
   status: CustomerStatus;
   statusLabel: string;
   defaultAddress: CustomerAddress | null;
@@ -72,11 +95,25 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface CustomerGrouping {
+  objectId: string;
+  sepidarGroupingId: number | null;
+  code: string | null;
+  title: string | null;
+  channel: string | null;
+  subChannel: string | null;
+  lastSepidarSyncAt: string | null;
+}
+
 export interface CustomerFilters {
   search?: string;
   status?: CustomerStatus;
   limit?: number;
   offset?: number;
+  assignmentStatus?: "unassigned";
+  grouping?: string;
+  channel?: string;
+  subChannel?: string;
 }
 
 export interface CustomerPayload {

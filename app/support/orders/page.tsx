@@ -10,6 +10,7 @@ import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { PaginationBar } from "@/components/shared/pagination-bar";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -133,6 +134,11 @@ export default function SupportOrdersPage() {
       render: (row) => (
         <StatusBadge type="warehouse" status={row.warehouseStatus} />
       ),
+    },
+    {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (row) => <OrderFinancialAmounts order={row} />,
     },
     {
       key: "actions",

@@ -16,12 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { formatNumber } from "@/lib/expert/utils";
+import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import type { SepidarStock } from "@/lib/models/stock.model";
 import { listStocks } from "@/lib/services/stock.service";
 import { listWarehouseOrders } from "@/lib/services/warehouse.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import { getOrderDisplayDiscountAmount } from "@/lib/utils/order-financial-display";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 const PAGE_SIZE = 15;
 
@@ -69,8 +71,7 @@ export default function WarehouseOutboundPage() {
       .filter(
         (order) =>
           stockObjectId === "all" ||
-          !order.stockObjectId ||
-          order.stockObjectId === stockObjectId,
+          order.warehouseStockObjectIds?.includes(stockObjectId),
       )
       .filter((order) => {
         if (!query) return true;
@@ -120,30 +121,50 @@ export default function WarehouseOutboundPage() {
       header: "مشتری",
       render: (row) => row.customerName || "-",
     },
-    {
-      key: "receiverFullName",
-      header: "گیرنده بار",
-      render: (row) => row.receiverFullName || row.customerName || "-",
-    },
 
     {
       key: "quantity",
       header: "تعداد",
       render: (row) =>
         formatNumber(
-          row.items.reduce((sum, item) => sum + item.quantity, 0),
+          row.warehouseFulfillment?.warehouseRemainingQuantity ??
+            row.items.reduce((sum, item) => sum + item.quantity, 0),
         ),
     },
     {
       key: "warehouse",
       header: "انبار اختصاص‌یافته",
       render: (row) =>
-        row.stockTitle || row.warehouseName || "-",
+        row.warehouseFulfillment?.stocks
+          .filter((stock) => stock.responsibleRole === "warehouse" && stock.remainingQuantity > 0)
+          .map((stock) => stock.stockTitle)
+          .filter(Boolean)
+          .join("، ") || row.stockTitle || row.warehouseName || "-",
     },
     {
       key: "warehouseStatus",
       header: "وضعیت انبار",
       render: (row) => row.warehouseStatusLabel || row.warehouseStatus,
+    },
+    {
+      key: "finalAmount",
+      header: "مبلغ نهایی",
+      render: (row) => {
+        const subtotal = row.items.reduce(
+          (sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0),
+          0,
+        );
+        const discount = getOrderDisplayDiscountAmount({
+          totalAmount: subtotal,
+          storedDiscountAmount: row.salesRequestDiscountTotal,
+          notes: row.notes,
+        });
+        const finalAmount = calculateSalesRequestFinancials(
+          subtotal,
+          subtotal > 0 ? (discount / subtotal) * 100 : 0,
+        ).total;
+        return formatCurrency(finalAmount);
+      },
     },
     {
       key: "fulfillmentStatus",
@@ -167,19 +188,12 @@ export default function WarehouseOutboundPage() {
       key: "actions",
       header: "عملیات",
       render: (row) => {
-        const warehouseMatches =
-          stockObjectId === "all" ||
-          !row.stockObjectId ||
-          row.stockObjectId === stockObjectId;
-        const canCreateExitSlip =
-          row.orderStatus === "approved" &&
-          ["reviewing", "partialDispatch"].includes(row.warehouseStatus) &&
-          row.fulfillmentStatus !== "onHold" &&
-          warehouseMatches;
+        const canCreateExitSlip = row.warehouseExitAvailable === true;
+        const stockIds = row.warehouseStockObjectIds?.join(",") || "";
 
         return canCreateExitSlip ? (
           <Button asChild size="sm">
-            <Link href={`/warehouse/orders/${row.objectId}/exit-slip`}>
+            <Link href={`/warehouse/orders/${row.objectId}/exit-slip?stockObjectIds=${encodeURIComponent(stockIds)}`}>
               صدور حواله خروج
             </Link>
           </Button>

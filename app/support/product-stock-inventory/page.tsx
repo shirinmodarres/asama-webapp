@@ -23,6 +23,7 @@ import {
   listProductStockInventory,
 } from "@/lib/services/stock.service";
 import { formatFaDigits, toNumber } from "@/lib/utils/number-format";
+import type { RoleKey } from "@/lib/types";
 
 interface DraftState {
   salesQuantity: string;
@@ -33,7 +34,7 @@ function getBrandLabel(row: ProductStockInventory) {
   return row.brandName || row.brandTitle || "-";
 }
 
-export default function SupportProductStockInventoryPage() {
+export function ProductStockInventoryPage({ role }: { role: RoleKey }) {
   const [rows, setRows] = useState<ProductStockInventory[]>([]);
   const [drafts, setDrafts] = useState<Record<string, DraftState>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -381,7 +382,7 @@ export default function SupportProductStockInventoryPage() {
   ];
 
   return (
-    <DashboardLayout role="support" title="موجودی فروش">
+    <DashboardLayout role={role} title="موجودی فروش">
       <SectionHeader
         title="موجودی فروش بر اساس انبار"
         description="موجودی فروش هر کالا را برای هر انبار سپیدار مدیریت کنید."
@@ -545,4 +546,8 @@ export default function SupportProductStockInventoryPage() {
       )}
     </DashboardLayout>
   );
+}
+
+export default function SupportProductStockInventoryPage() {
+  return <ProductStockInventoryPage role="support" />;
 }

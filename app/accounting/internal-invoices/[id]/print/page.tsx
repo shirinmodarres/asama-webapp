@@ -56,7 +56,9 @@ export default function InternalInvoicePrintPage() {
       dir="rtl"
       className="min-h-screen bg-[#E5E7EB] p-4 text-[#102034] print:bg-white print:p-0"
     >
-      <style jsx global>{PDF_PAGE_STYLES}</style>
+      <style jsx global>
+        {PDF_PAGE_STYLES}
+      </style>
 
       <div className="no-print mx-auto mb-4 flex max-w-[210mm] justify-end">
         <Button type="button" onClick={() => window.print()}>
@@ -110,6 +112,8 @@ function InvoiceDocument({
   rows: InternalInvoice["items"];
   showTotals: boolean;
 }) {
+  const isStoreInvoice = invoice.orderType === "store";
+  const totalRows = getInternalInvoiceTotalRows(invoice);
   return (
     <div className="space-y-5 text-[#102034]">
       {/* <header className="relative min-h-33 pb-4 pt-14">
@@ -151,10 +155,12 @@ function InvoiceDocument({
           <h2 className="text-base font-bold">اطلاعات سفارش</h2>
         </div>
         <div className="grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-          <InlineInfo
-            label="شماره حواله خروج"
-            value={formatFaDigits(invoice.exitSlipNumber) || "-"}
-          />
+          {!isStoreInvoice ? (
+            <InlineInfo
+              label="شماره حواله خروج"
+              value={formatFaDigits(invoice.exitSlipNumber) || "-"}
+            />
+          ) : null}
           <InlineInfo label="مشتری" value={invoice.customerName || "-"} />
 
           <InlineInfo
@@ -164,7 +170,9 @@ function InvoiceDocument({
               "-"
             }
           />
-          <InlineInfo label="انبار خروج" value={invoice.stockTitle || "-"} />
+          {!isStoreInvoice ? (
+            <InlineInfo label="انبار خروج" value={invoice.stockTitle || "-"} />
+          ) : null}
           <div className="sm:col-span-2">
             <InlineInfo
               label="آدرس مشتری"
@@ -215,7 +223,7 @@ function InvoiceDocument({
                 "تعداد",
                 "قیمت واحد",
                 "مبلغ کل",
-                "سریال / رهگیری / شناسه",
+                ...(!isStoreInvoice ? ["سریال / رهگیری / شناسه"] : []),
               ].map((header) => (
                 <th
                   key={header}
@@ -238,7 +246,7 @@ function InvoiceDocument({
                 <Cell>{formatFaNumber(item.quantity)}</Cell>
                 <Cell>{formatFaCurrency(item.unitPrice)}</Cell>
                 <Cell>{formatFaCurrency(item.lineTotal)}</Cell>
-                <Cell>{formatUnitCodes(item)}</Cell>
+                {!isStoreInvoice ? <Cell>{formatUnitCodes(item)}</Cell> : null}
               </tr>
             ))}
           </tbody>
@@ -247,12 +255,14 @@ function InvoiceDocument({
 
       {showTotals ? (
         <section className="mr-auto w-full max-w-[420px] overflow-hidden rounded-xl border border-[#D7DEE6] bg-white/95 text-sm">
-          <Total label="مبلغ ناخالص" value={invoice.grossAmount} />
-          <Total label="تخفیف" value={invoice.discount} />
-          <Total label="ارزش افزوده" value={invoice.tax} />
-          <Total label="عوارض" value={invoice.duty} />
-          <Total label="اضافات" value={invoice.addition} />
-          <Total label="مبلغ نهایی" value={invoice.netAmount} emphasis />
+          {totalRows.map((row, index) => (
+            <Total
+              key={row.label}
+              label={row.label}
+              value={row.value}
+              emphasis={index === totalRows.length - 1}
+            />
+          ))}
         </section>
       ) : null}
     </div>
@@ -316,4 +326,39 @@ function hasRecipientInfo(invoice: InternalInvoice): boolean {
     invoice.recipientMobile ||
     invoice.najaOrderNumber,
   );
+}
+
+export function getInternalInvoiceTotalRows(invoice: InternalInvoice) {
+  const rows = [
+    {
+      label: "مبلغ ناخالص",
+      value: invoice.grossAmount,
+    },
+    {
+      label: "تخفیف",
+      value: invoice.discount,
+    },
+    {
+      label: "مبلغ مشمول مالیات",
+      value: Math.max(invoice.grossAmount - invoice.discount, 0),
+    },
+    {
+      label: "مالیات بر ارزش افزوده",
+      value: invoice.tax,
+    },
+  ];
+
+  if (invoice.orderType !== "store") {
+    rows.push(
+      { label: "عوارض", value: invoice.duty },
+      { label: "اضافات", value: invoice.addition },
+    );
+  }
+
+  rows.push({
+    label: "مبلغ نهایی",
+    value: invoice.netAmount,
+  });
+
+  return rows;
 }

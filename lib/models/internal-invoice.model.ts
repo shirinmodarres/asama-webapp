@@ -4,6 +4,7 @@ export type InternalInvoiceStatus =
   | "ready_for_accounting"
   | "entered_manually"
   | "cancelled"
+  | "store_quotation_issued"
   | string;
 
 export interface InternalInvoiceItem {
@@ -27,6 +28,8 @@ export interface InternalInvoice {
   id: string;
   invoiceNumber: string;
   invoiceDate: string;
+  source: string | null;
+  orderType: string | null;
   orderObjectId: string;
   orderNumber: string;
   exitSlipObjectId: string;
@@ -42,12 +45,18 @@ export interface InternalInvoice {
   stockTitle: string | null;
   priceListTitle: string | null;
   saleTypeTitle: string | null;
+  storePaymentMethod?: "cash" | "credit" | null;
+  storePaymentTerms?: string | null;
+  sepidarInvoiceId?: number | null;
+  sepidarInvoiceNumber?: string | null;
+  sepidarInvoiceDate?: string | null;
   recipientFirstName: string | null;
   recipientLastName: string | null;
   recipientNationalId: string | null;
   recipientMobile: string | null;
   najaOrderNumber: string | null;
   grossAmount: number;
+  discountPercentage?: number | null;
   discount: number;
   tax: number;
   duty: number;

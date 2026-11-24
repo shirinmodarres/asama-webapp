@@ -1,9 +1,9 @@
 "use client";
 
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Printer, Trash2 } from "lucide-react";
+import { CheckCircle2, Printer, ScanLine, Trash2 } from "lucide-react";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import type { Order, OrderItem } from "@/lib/models/order.model";
 import type {
@@ -27,11 +27,13 @@ import type {
 } from "@/lib/models/warehouse.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { getOrder } from "@/lib/services/order.service";
+import { getStoreOrder } from "@/lib/services/store-expert-order.service";
 import {
   createExitSlip,
   validateExitSlipScan,
 } from "@/lib/services/warehouse.service";
 import { formatFaDigits, normalizeDigits } from "@/lib/utils/number-format";
+import { isRetailShowroomTitle } from "@/lib/store-expert/retail-exit-eligibility";
 
 interface ExpectedRow {
   item: OrderItem;
@@ -51,8 +53,18 @@ interface ExitSlipDraftState {
   savedAt: string;
 }
 
-export default function ExitSlipCreatePage() {
+export function ExitSlipCreatePage({ dashboardRole = "warehouse" }: { dashboardRole?: "warehouse" | "store-expert" }) {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const warehouseStockObjectIds = useMemo(
+    () => new Set(
+      (searchParams.get("stockObjectIds") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+    [searchParams],
+  );
   const productIdentifierRef = useRef<HTMLInputElement | null>(null);
   const serialNumberRef = useRef<HTMLInputElement | null>(null);
   const trackingCodeRef = useRef<HTMLInputElement | null>(null);
@@ -64,6 +76,8 @@ export default function ExitSlipCreatePage() {
   });
   const [scannedUnits, setScannedUnits] = useState<WarehouseItemUnit[]>([]);
   const [createdSlip, setCreatedSlip] = useState<ExitSlip | null>(null);
+  const [uncertainSlipId, setUncertainSlipId] = useState<string | null>(null);
+  const [uncertainOutcome, setUncertainOutcome] = useState(false);
   const [notes, setNotes] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
@@ -81,7 +95,9 @@ export default function ExitSlipCreatePage() {
       setIsLoading(true);
       setError("");
       try {
-        const data = await getOrder(params.id);
+        const data = dashboardRole === "store-expert"
+          ? await getStoreOrder(params.id)
+          : await getOrder(params.id);
         if (isMounted) setOrder(data);
       } catch (loadError) {
         if (isMounted) setError(getErrorMessage(loadError));
@@ -94,16 +110,17 @@ export default function ExitSlipCreatePage() {
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [dashboardRole, params.id]);
 
   useEffect(() => {
     if (!order) return;
     draftReadyRef.current = false;
     try {
-      const raw = window.localStorage.getItem(getExitSlipDraftStorageKey(order.objectId));
+      const raw = window.localStorage.getItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
       if (!raw) return;
       const draft = JSON.parse(raw) as Partial<ExitSlipDraftState>;
       if (Array.isArray(draft.scannedUnits)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate the persisted draft once for this order/role.
         setScannedUnits(
           draft.scannedUnits.filter(
             (unit): unit is WarehouseItemUnit =>
@@ -129,7 +146,7 @@ export default function ExitSlipCreatePage() {
     } finally {
       draftReadyRef.current = true;
     }
-  }, [order]);
+  }, [dashboardRole, order]);
 
   useEffect(() => {
     if (!order || !draftReadyRef.current) return;
@@ -140,21 +157,34 @@ export default function ExitSlipCreatePage() {
       savedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(
-      getExitSlipDraftStorageKey(order.objectId),
+      getExitSlipDraftStorageKey(order.objectId, dashboardRole),
       JSON.stringify(payload),
     );
-  }, [notes, order, scanValues, scannedUnits]);
+  }, [dashboardRole, notes, order, scanValues, scannedUnits]);
 
   useEffect(() => {
     if (!isLoading) serialNumberRef.current?.focus();
   }, [isLoading]);
 
+  const retailStockObjectIds = order?.retailStockObjectIds ?? [];
+
   const expectedRows = useMemo<ExpectedRow[]>(() => {
     if (!order) return [];
     const itemsByProduct = new Map<string, OrderItem>();
+    const visibleItems = dashboardRole === "store-expert"
+      ? order.items.filter((item) => itemIsAssignedToRetailWarehouse(
+        item,
+        retailStockObjectIds,
+        order.retailOrderItemObjectIds,
+      ))
+      : order.items.filter((item) => itemIsAssignedToWarehouseStocks(item, warehouseStockObjectIds));
 
-    for (const item of order.items) {
-      const key = getOrderItemProductKey(item);
+    for (const item of visibleItems) {
+      const key = getOrderItemProductKey(
+        item,
+        dashboardRole === "store-expert",
+        retailStockObjectIds,
+      );
       const existing = itemsByProduct.get(key);
       if (existing) {
         existing.quantity += item.quantity;
@@ -167,7 +197,12 @@ export default function ExitSlipCreatePage() {
 
     return Array.from(itemsByProduct.values()).map((item) => {
       const scannedQuantity = scannedUnits.filter((unit) =>
-        unitMatchesOrderItem(unit, item),
+        unitMatchesOrderItem(
+          unit,
+          item,
+          dashboardRole === "store-expert",
+          retailStockObjectIds,
+        ),
       ).length;
       return {
         item,
@@ -182,7 +217,7 @@ export default function ExitSlipCreatePage() {
         ),
       };
     });
-  }, [order, scannedUnits]);
+  }, [dashboardRole, order, retailStockObjectIds, scannedUnits, warehouseStockObjectIds]);
   const totalItemCount = useMemo(
     () =>
       expectedRows.reduce(
@@ -226,7 +261,12 @@ export default function ExitSlipCreatePage() {
     scannedUnits.length > 0 &&
     expectedRows.length > 0 &&
     scannedUnits.every((unit) =>
-      expectedRows.some((row) => unitMatchesOrderItem(unit, row.item)),
+      expectedRows.some((row) => unitMatchesOrderItem(
+        unit,
+        row.item,
+        dashboardRole === "store-expert",
+        retailStockObjectIds,
+      )),
     );
 
   const expectedColumns: DataTableColumn<ExpectedRow>[] = [
@@ -424,7 +464,12 @@ export default function ExitSlipCreatePage() {
         return;
       }
       const expectedRow = expectedRows.find((row) =>
-        unitMatchesOrderItem(unit, row.item),
+        unitMatchesOrderItem(
+          unit,
+          row.item,
+          dashboardRole === "store-expert",
+          retailStockObjectIds,
+        ),
       );
       if (!expectedRow) {
         setError("کالای اسکن‌شده در این سفارش وجود ندارد.");
@@ -480,15 +525,21 @@ export default function ExitSlipCreatePage() {
         notes: notes.trim() || undefined,
         unitObjectIds,
       });
-      window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId));
+      window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
       setCreatedSlip(slip);
-      setMessage(
-        isFullyScanned
-          ? "حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد."
-          : "حواله خروج جزئی صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.",
-      );
+      setMessage(isFullyScanned ? "حواله خروج صادر شد." : "حواله خروج جزئی صادر شد.");
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      if (submitError instanceof ApiError && submitError.code === "EXIT_SLIP_ISSUANCE_INCOMPLETE") {
+        const details = submitError.details as { exitSlipObjectId?: unknown } | undefined;
+        setUncertainSlipId(typeof details?.exitSlipObjectId === "string" ? details.exitSlipObjectId : null);
+        setUncertainOutcome(true);
+        setError(submitError.message);
+      } else if (submitError instanceof ApiError && (submitError.status === undefined || submitError.status >= 500)) {
+        setUncertainOutcome(true);
+        setError("نتیجه ثبت مشخص نیست. قبل از تلاش مجدد، حواله‌های سفارش را بررسی کنید.");
+      } else {
+        setError(getErrorMessage(submitError));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -503,7 +554,7 @@ export default function ExitSlipCreatePage() {
       savedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(
-      getExitSlipDraftStorageKey(order.objectId),
+      getExitSlipDraftStorageKey(order.objectId, dashboardRole),
       JSON.stringify(payload),
     );
     setDraftMessage(
@@ -513,12 +564,12 @@ export default function ExitSlipCreatePage() {
 
   const handleClearDraft = () => {
     if (!order) return;
-    window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId));
+    window.localStorage.removeItem(getExitSlipDraftStorageKey(order.objectId, dashboardRole));
     setDraftMessage("پیش‌نویس ثبت مرحله‌ای پاک شد.");
   };
 
   return (
-    <DashboardLayout role="warehouse" title="صدور حواله خروج">
+    <DashboardLayout role={dashboardRole} title="صدور حواله خروج">
       <style jsx global>{`
         @media print {
           body {
@@ -556,6 +607,23 @@ export default function ExitSlipCreatePage() {
           title="سفارش یافت نشد"
           description="شناسه سفارش معتبر نیست."
         />
+      ) : dashboardRole === "store-expert" && order.retailFulfillmentStatus === "completed" && !createdSlip ? (
+        <div className="space-y-4">
+          <SectionHeader title={`حواله‌های خروج سفارش ${formatFaDigits(order.code || order.id)}`} />
+          <Card className="space-y-3 p-5">
+            <p>خروج کالاهای نمایشگاه تک‌فروشی تکمیل شده است.</p>
+            {(order.retailExitSlips || []).map((slip) => (
+              <Button asChild variant="outline" key={slip.objectId}>
+                <Link href={`/store-expert/exit-slips/${slip.objectId}`}>
+                  مشاهده حواله {formatFaDigits(slip.slipCode)}
+                </Link>
+              </Button>
+            ))}
+            {!order.retailExitSlips?.length && (
+              <Button asChild variant="outline"><Link href="/store-expert/exit-slips">مشاهده حواله‌های خروج</Link></Button>
+            )}
+          </Card>
+        </div>
       ) : (
         <div className="space-y-5">
           <SectionHeader
@@ -669,7 +737,22 @@ export default function ExitSlipCreatePage() {
             />
           </section>
 
+          {!(dashboardRole === "store-expert" && createdSlip) ? <>
           <Card className="p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <ScanLine className="size-5 text-primary" />
+                  اسکن کدهای خروج
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  شناسه کالا را وارد کنید، سپس سریال یا کد رهگیری را اسکن و ثبت کنید.
+                </p>
+              </div>
+              <span className="rounded-md bg-muted px-3 py-1.5 text-sm font-medium text-muted-foreground">
+                {formatNumber(totalScannedCount)} از {formatNumber(totalItemCount)} اسکن شده
+              </span>
+            </div>
             <div className="grid gap-4 md:grid-cols-3">
               <ScanField
                 ref={productIdentifierRef}
@@ -778,7 +861,7 @@ export default function ExitSlipCreatePage() {
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!canIssueSlip || isSubmitting || Boolean(createdSlip)}
+                disabled={!canIssueSlip || isSubmitting || Boolean(createdSlip) || uncertainOutcome}
               >
                 {isSubmitting ? "در حال ثبت..." : "ثبت حواله خروج"}
               </Button>
@@ -795,35 +878,50 @@ export default function ExitSlipCreatePage() {
             ) : null}
           </Card>
 
+          </> : null}
+
+          {uncertainOutcome ? (
+            <Card className="border-amber-200 bg-amber-50 p-5 text-sm">
+              <p>قبل از ثبت دوباره، وضعیت حواله و خروج را بررسی کنید.</p>
+              <Link className="mt-2 inline-block underline" href={uncertainSlipId
+                ? `/${dashboardRole}/exit-slips/${uncertainSlipId}`
+                : `/${dashboardRole}/exit-slips`}>
+                {uncertainSlipId ? "مشاهده حواله ثبت‌شده" : "مشاهده حواله‌ها"}
+              </Link>
+            </Card>
+          ) : null}
           {createdSlip ? (
             <Card className="border-[#B9DFC0] bg-[#F3FAF4] p-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2 font-semibold text-[#2F6B3A]">
                     <CheckCircle2 className="size-5" />
-                    حواله خروج صادر شد و فاکتور داخلی برای حسابداری ایجاد شد.
+                    حواله خروج صادر شد{createdSlip.internalInvoiceObjectId ? " و فاکتور داخلی برای حسابداری ایجاد شد." : "."}
                   </div>
+                  {createdSlip.issuanceWarnings?.map((warning) => (
+                    <p key={warning} className="mt-2 text-sm text-amber-800">{warning}</p>
+                  ))}
                   <div className="mt-3 grid gap-2 text-sm text-[#334155]">
                     <span>
                       شماره حواله:{" "}
                       {formatFaDigits(createdSlip.slipCode || createdSlip.id)}
                     </span>
-                    <span>
-                      شماره فاکتور داخلی:{" "}
-                      {createdSlip.internalInvoiceNumber
-                        ? formatFaDigits(createdSlip.internalInvoiceNumber)
-                        : "-"}
-                    </span>
+                    {createdSlip.internalInvoiceNumber ? (
+                      <span>
+                        شماره فاکتور داخلی: {formatFaDigits(createdSlip.internalInvoiceNumber)}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline">
                     <Link
-                      href={`/warehouse/exit-slips/${createdSlip.objectId || createdSlip.id}`}
+                      href={`/${dashboardRole}/exit-slips/${createdSlip.objectId || createdSlip.id}`}
                     >
                       مشاهده حواله
                     </Link>
                   </Button>
+                  {dashboardRole === "store-expert" ? <Button asChild variant="outline"><Link href={`/store-expert/orders/${order.objectId}`}>بازگشت به سفارش</Link></Button> : null}
                   {createdSlip.internalInvoiceObjectId ? (
                     <Button asChild>
                       <Link
@@ -843,8 +941,10 @@ export default function ExitSlipCreatePage() {
   );
 }
 
-function getExitSlipDraftStorageKey(orderObjectId: string): string {
-  return `asama:warehouse:exit-slip:draft:${orderObjectId}`;
+export default ExitSlipCreatePage;
+
+function getExitSlipDraftStorageKey(orderObjectId: string, dashboardRole: "warehouse" | "store-expert" = "warehouse"): string {
+  return `asama:warehouse:exit-slip:draft:${dashboardRole}:${orderObjectId}`;
 }
 
 const ScanField = forwardRef<
@@ -894,7 +994,10 @@ function InfoItem({ label, value }: { label: string; value: string }) {
 function unitMatchesOrderItem(
   unit: WarehouseItemUnit,
   item: OrderItem,
+  restrictToRetailStock = false,
+  retailStockObjectIds: string[] = [],
 ): boolean {
+  if (restrictToRetailStock && !unitIsInRetailAllocation(unit, item, retailStockObjectIds)) return false;
   if (unit.productObjectId && item.productId) {
     return unit.productObjectId === item.productId;
   }
@@ -908,8 +1011,55 @@ function unitMatchesOrderItem(
   );
 }
 
-function getOrderItemProductKey(item: OrderItem): string {
-  if (item.productId) return item.productId;
-  if (item.productSku) return `sku:${item.productSku}`;
-  return `name:${item.productName}`;
+function itemIsAssignedToRetailWarehouse(
+  item: OrderItem,
+  retailStockObjectIds: string[] = [],
+  retailOrderItemObjectIds: string[] = [],
+): boolean {
+  const retailStockIds = new Set(retailStockObjectIds);
+  const retailItemIds = new Set(retailOrderItemObjectIds);
+  return retailItemIds.has(item.objectId)
+    || Boolean(item.stockObjectId && retailStockIds.has(item.stockObjectId))
+    || Boolean(item.stockAllocations?.some((allocation) =>
+      Boolean(allocation.stockObjectId && retailStockIds.has(allocation.stockObjectId))
+      || isRetailShowroomTitle(allocation.stockTitle)));
+}
+
+function itemIsAssignedToWarehouseStocks(
+  item: OrderItem,
+  warehouseStockObjectIds: Set<string>,
+): boolean {
+  if (!warehouseStockObjectIds.size) return true;
+  if (item.stockObjectId && warehouseStockObjectIds.has(item.stockObjectId)) return true;
+  return Boolean(item.stockAllocations?.some((allocation) =>
+    Boolean(allocation.stockObjectId && warehouseStockObjectIds.has(allocation.stockObjectId))));
+}
+
+function getOrderItemProductKey(
+  item: OrderItem,
+  includeStock = false,
+  retailStockObjectIds: string[] = [],
+): string {
+  const retailStockIds = new Set(retailStockObjectIds);
+  const stockKey = includeStock ? `:${item.stockAllocations?.find((allocation) => (
+    retailStockIds.has(allocation.stockObjectId || "")
+    || isRetailShowroomTitle(allocation.stockTitle)
+  ))?.stockObjectId || item.stockObjectId || "retail"}` : "";
+  if (item.productId) return `${item.productId}${stockKey}`;
+  if (item.productSku) return `sku:${item.productSku}${stockKey}`;
+  return `name:${item.productName}${stockKey}`;
+}
+
+function unitIsInRetailAllocation(
+  unit: WarehouseItemUnit,
+  item: OrderItem,
+  retailStockObjectIds: string[],
+): boolean {
+  const retailStockIds = new Set(retailStockObjectIds);
+  const unitStockObjectId = unit.stockObjectId || "";
+  if (retailStockIds.has(unitStockObjectId)) return true;
+  return Boolean(item.stockAllocations?.some((allocation) => (
+    allocation.stockObjectId === unitStockObjectId
+    && isRetailShowroomTitle(allocation.stockTitle)
+  )));
 }

@@ -12,6 +12,7 @@ import type {
   Customer,
   CustomerAddress,
   CustomerAddressStatus,
+  CustomerGrouping,
   CustomerStatus,
   ReceiverType,
 } from "@/lib/models/customer.model";
@@ -26,6 +27,7 @@ export function mapCustomerDto(dto: unknown): Customer {
   const record = toRecord(dto);
   const status = mapCustomerStatus(record.status);
   const rawSepidarCustomer = toRecord(record.rawSepidarCustomer);
+  const sepidarDetails = toRecord(record.sepidarDetails);
   const sepidarAddresses = toArray(
     record.sepidarAddresses ?? rawSepidarCustomer.Addresses,
   ).map((address) => mapCustomerAddressDto(address, record));
@@ -58,6 +60,23 @@ export function mapCustomerDto(dto: unknown): Customer {
     sepidarCustomerCode: toNullableString(
       record.sepidarCustomerCode ?? record.sepidarCode ?? record.code,
     ),
+    sepidarDetails: {
+      title: toNullableString(sepidarDetails.title),
+      code: toNullableString(sepidarDetails.code),
+      customerType: nullableNumber(sepidarDetails.customerType),
+      name: toNullableString(sepidarDetails.name),
+      lastName: toNullableString(sepidarDetails.lastName),
+      birthDate: toNullableString(sepidarDetails.birthDate),
+      nationalId: toNullableString(sepidarDetails.nationalId),
+      economicCode: toNullableString(sepidarDetails.economicCode),
+      registrationCode: toNullableString(sepidarDetails.registrationCode),
+      version: nullableNumber(sepidarDetails.version),
+      groupingRef: nullableNumber(sepidarDetails.groupingRef),
+      discountRate: nullableNumber(sepidarDetails.discountRate),
+      accountingRemainder: nullableNumber(sepidarDetails.accountingRemainder),
+      creditRemainder: nullableNumber(sepidarDetails.creditRemainder),
+      remainderWithoutCheque: nullableNumber(sepidarDetails.remainderWithoutCheque),
+    },
     saleType: mapCustomerSaleType(record.saleType),
     priceListId: legacyPriceListId,
     priceListIds: priceListIds.length
@@ -91,6 +110,10 @@ export function mapCustomerDto(dto: unknown): Customer {
       ? normalizeDigits(toStringValue(record.nationalId))
       : null,
     assignedExpertName: toNullableString(record.assignedExpertName),
+    grouping: mapCustomerGroupingDto(record.grouping),
+    channel: toNullableString(record.channel),
+    subChannel: toNullableString(record.subChannel),
+    lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
     status,
     statusLabel: toStringValue(record.statusLabel) || STATUS_LABELS[status],
     defaultAddress,
@@ -99,6 +122,29 @@ export function mapCustomerDto(dto: unknown): Customer {
     sepidarAddresses,
     createdAt: toStringValue(record.createdAt),
     updatedAt: toStringValue(record.updatedAt),
+  };
+}
+
+function nullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const number = toNumberValue(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function mapCustomerGroupingDto(value: unknown): CustomerGrouping | null {
+  const record = toRecord(value);
+  if (!Object.keys(record).length) return null;
+  return {
+    objectId: toStringValue(record.objectId),
+    sepidarGroupingId:
+      record.sepidarGroupingId === undefined || record.sepidarGroupingId === null
+        ? null
+        : toNumberValue(record.sepidarGroupingId),
+    code: toNullableString(record.code),
+    title: toNullableString(record.title),
+    channel: toNullableString(record.channel),
+    subChannel: toNullableString(record.subChannel),
+    lastSepidarSyncAt: toNullableString(record.lastSepidarSyncAt),
   };
 }
 
@@ -161,6 +207,7 @@ export function mapCustomerAddressDto(
     address: toNullableString(record.address ?? record.Address),
     province: toStringValue(record.province),
     city: toStringValue(record.city),
+    cityTitle: toNullableString(record.cityTitle) || toNullableString(record.city),
     county: toNullableString(record.county),
     fullAddress: toStringValue(record.fullAddress),
     postalCode: record.postalCode

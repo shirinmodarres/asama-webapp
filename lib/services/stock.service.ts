@@ -135,6 +135,10 @@ export function listWarehouseStockTransfersPage(filters?: TransferListFilters): 
   return listTransferPageFromPath("/api/warehouse/stock-transfers", filters);
 }
 
+export function listSystemsStockTransfersPage(filters?: TransferListFilters): Promise<StockTransferListResult> {
+  return listTransferPageFromPath("/api/warehouse/stock-transfers", filters);
+}
+
 type TransferListFilters = { status?: string; page?: number; pageSize?: number; search?: string };
 
 async function listTransferPageFromPath(

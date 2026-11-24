@@ -90,6 +90,21 @@ export function mapProductDto(dto: unknown): Product {
     ? inventoryNajaStock
     : toNumberValue(record.najaInventoryQty);
   const brandName = toNullableString(record.brandName) || toNullableString(record.brand);
+  const sepidarPropertyValues = Array.isArray(record.sepidarPropertyValues)
+    ? record.sepidarPropertyValues.map((value) => {
+        const property = toRecord(value);
+        return {
+          PropertyRef:
+            typeof property.PropertyRef === "number"
+              ? property.PropertyRef
+              : toNullableString(property.PropertyRef),
+          Value:
+            typeof property.Value === "number"
+              ? property.Value
+              : toNullableString(property.Value),
+        };
+      })
+    : [];
 
   return {
     objectId,
@@ -106,6 +121,7 @@ export function mapProductDto(dto: unknown): Product {
     brand: toStringValue(record.brand),
     brandName,
     saleGroupRef: toNullableString(record.saleGroupRef),
+    sepidarPropertyValues,
     model: toNullableString(record.model),
     category: toStringValue(record.category),
     unit: toStringValue(record.unit) || "عدد",

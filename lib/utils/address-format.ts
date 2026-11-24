@@ -24,6 +24,7 @@ type AddressLike =
       | "deliveryCity"
       | "deliveryCounty"
       | "deliveryFullAddress"
+      | "deliveryPostalCode"
       | "deliveryPlaque"
       | "deliveryUnit"
       | "customerAddressTitle"
@@ -52,17 +53,23 @@ export function getReceiverName(
 export function formatDeliveryAddress(address: AddressLike): string {
   if (!address) return "آدرس ثبت نشده است.";
 
-  const parts = [
-    getAddressValue(address, "addressText"),
+  const fullAddress = getAddressValue(address, "fullAddress");
+  const city = getAddressValue(address, "city");
+  const locality = [
     getAddressValue(address, "province"),
     getAddressValue(address, "county"),
-    getAddressValue(address, "city"),
-    getAddressValue(address, "fullAddress"),
+    city,
+  ].filter((value) => value && !fullAddress.includes(value));
+  const parts = [
+    ...locality,
+    fullAddress || getAddressValue(address, "addressText"),
     getAddressPostalCode(address),
     formatPlaqueUnit(address),
   ].filter(Boolean);
 
-  return parts.length ? parts.join("، ") : "آدرس ثبت نشده است.";
+  return parts.length
+    ? [...new Set(parts)].join("، ")
+    : "آدرس ثبت نشده است.";
 }
 
 export function formatPlaqueUnit(address: AddressLike): string {
@@ -109,6 +116,9 @@ function getAddressValue(
         deliveryFullAddress?: string | null;
         deliveryPlaque?: string | number | null;
         deliveryUnit?: string | number | null;
+        postalCode?: string | null;
+        zipCode?: string | null;
+        deliveryPostalCode?: string | null;
       }
     | undefined;
   if (key === "province")
@@ -131,5 +141,11 @@ function getAddressValue(
 }
 
 function getAddressPostalCode(address: NonNullable<AddressLike>): string {
-  return "";
+  const source = address as {
+    postalCode?: string | null;
+    zipCode?: string | null;
+    deliveryPostalCode?: string | null;
+  };
+  const postalCode = source.postalCode || source.zipCode || source.deliveryPostalCode;
+  return postalCode ? `کدپستی ${formatFaDigits(postalCode)}` : "";
 }

@@ -164,14 +164,6 @@ export default function DeliveryConfirmationPage() {
                   value={resolvedCustomer?.name || "-"}
                 />
                 <InfoItem
-                  label="کد مشتری سپیدار"
-                  value={
-                    resolvedCustomer?.sepidarCustomerCode
-                      ? formatFaDigits(resolvedCustomer.sepidarCustomerCode)
-                      : "-"
-                  }
-                />
-                <InfoItem
                   label="موبایل/تلفن"
                   value={
                     resolvedCustomer?.phone
@@ -181,78 +173,11 @@ export default function DeliveryConfirmationPage() {
                 />
                 <InfoItem
                   label="آدرس"
-                  value={resolvedCustomer?.address || "-"}
+                  value={formatCustomerAddress(delivery, resolvedCustomer?.address)}
                   className="sm:col-span-2"
                 />
               </dl>
             </Card>
-
-            {isNajaOrder ? (
-              <Card className="p-5">
-                <h2 className="text-base font-semibold text-[#1F3A5F]">
-                  اطلاعات تحویل‌گیرنده ناجا
-                </h2>
-                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <InfoItem
-                    label="نام و نام خانوادگی"
-                    value={resolvedRecipient?.fullName || "-"}
-                  />
-                  <InfoItem
-                    label="کد ملی"
-                    value={
-                      resolvedRecipient?.nationalId
-                        ? formatFaDigits(resolvedRecipient.nationalId)
-                        : "-"
-                    }
-                  />
-                  <InfoItem
-                    label="موبایل"
-                    value={
-                      resolvedRecipient?.mobile
-                        ? formatFaDigits(resolvedRecipient.mobile)
-                        : "-"
-                    }
-                  />
-                  <InfoItem
-                    label="شماره سفارش ناجا"
-                    value={
-                      resolvedRecipient?.najaOrderNumber
-                        ? formatFaDigits(resolvedRecipient.najaOrderNumber)
-                        : "-"
-                    }
-                  />
-                </dl>
-              </Card>
-            ) : (
-              <Card className="p-5">
-                <h2 className="text-base font-semibold text-[#1F3A5F]">
-                  اطلاعات تحویل
-                </h2>
-                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <InfoItem
-                    label="گیرنده بار"
-                    value={delivery.receiverFullName || "-"}
-                  />
-                  <InfoItem
-                    label="موبایل گیرنده"
-                    value={
-                      delivery.receiverPhone
-                        ? formatFaDigits(delivery.receiverPhone)
-                        : "-"
-                    }
-                  />
-                  <InfoItem
-                    label="آدرس تحویل"
-                    value={
-                      delivery.deliveryAddress ||
-                      delivery.deliveryFullAddress ||
-                      "-"
-                    }
-                    className="sm:col-span-2"
-                  />
-                </dl>
-              </Card>
-            )}
 
             {delivery.items.length > 0 ? (
               <Card className="p-5">
@@ -343,6 +268,17 @@ export default function DeliveryConfirmationPage() {
       </div>
     </main>
   );
+}
+
+function formatCustomerAddress(delivery: ExitSlip, address?: string | null): string {
+  const text = address || delivery.deliveryFullAddress || delivery.deliveryAddress || "";
+  const city = delivery.deliveryCity || delivery.order?.deliveryCity || "";
+  const postalCode = delivery.deliveryPostalCode || delivery.order?.deliveryPostalCode || "";
+  return [
+    city && !text.includes(city) ? city : null,
+    text || null,
+    postalCode ? `کد پستی ${formatFaDigits(postalCode)}` : null,
+  ].filter(Boolean).join("، ") || "-";
 }
 
 function InfoItem({

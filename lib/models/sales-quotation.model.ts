@@ -1,7 +1,6 @@
 import type { Customer } from "@/lib/models/customer.model";
 
 export type SalesQuotationStatus = "draft" | "finalized" | "cancelled";
-
 export interface SalesQuotationItem {
   rowNumber?: number;
   productObjectId: string;
@@ -47,7 +46,10 @@ export interface SalesQuotation {
   customer: Customer | null;
   expertName: string | null;
   status: SalesQuotationStatus;
+  orderObjectId: string | null;
+  stockObjectId: string | null;
   subtotal: number;
+  finalTotal: number;
   discountPercentage: number;
   discountAmount: number;
   discount: number;
@@ -117,6 +119,7 @@ export interface CreateSalesQuotationPayload {
   validUntil?: string | null;
   discountPercentage?: number;
   taxPercentage?: number;
+  stockObjectId?: string | null;
   status?: SalesQuotationStatus;
   items: Array<{
     productObjectId: string;

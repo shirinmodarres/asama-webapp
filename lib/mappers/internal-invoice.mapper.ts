@@ -13,6 +13,7 @@ import type {
 import { normalizeDigits, normalizePhone } from "@/lib/utils/number-format";
 
 const STATUS_LABELS: Record<string, string> = {
+  store_quotation_issued: "صورتحساب ماد سنتر",
   ready_for_accounting: "آماده ثبت در حسابداری",
   ready_for_accountin: "آماده ثبت در حسابداری",
   entered_manually: "ثبت‌شده در حسابداری",
@@ -100,6 +101,8 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
       ),
     ),
     invoiceDate: toStringValue(record.invoiceDate ?? record.createdAt),
+    source: toNullableString(record.source),
+    orderType: toNullableString(record.orderType),
     orderObjectId: toStringValue(
       record.orderObjectId ?? record.orderId ?? order.objectId,
     ),
@@ -166,6 +169,11 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
       record.priceListTitle ?? order.priceListTitle,
     ),
     saleTypeTitle: toNullableString(record.saleTypeTitle),
+    storePaymentMethod: toNullableString(record.storePaymentMethod) as "cash" | "credit" | null,
+    storePaymentTerms: toNullableString(record.storePaymentTerms),
+    sepidarInvoiceId: record.sepidarInvoiceId === undefined || record.sepidarInvoiceId === null ? null : toNumberValue(record.sepidarInvoiceId),
+    sepidarInvoiceNumber: toNullableString(record.sepidarInvoiceNumber),
+    sepidarInvoiceDate: toNullableString(record.sepidarInvoiceDate),
     recipientFirstName: toNullableString(record.recipientFirstName),
     recipientLastName: toNullableString(record.recipientLastName),
     recipientNationalId: toNullableString(record.recipientNationalId)
@@ -182,6 +190,9 @@ export function mapInternalInvoiceDto(dto: unknown): InternalInvoice {
         )
       : null,
     grossAmount: toNumberValue(record.grossAmount ?? record.totalAmount),
+    discountPercentage: record.discountPercentage === null || record.discountPercentage === undefined
+      ? null
+      : toNumberValue(record.discountPercentage),
     discount: toNumberValue(record.discountAmount ?? record.discount),
     tax: toNumberValue(record.taxAmount ?? record.tax),
     duty: toNumberValue(record.dutyAmount ?? record.duty),

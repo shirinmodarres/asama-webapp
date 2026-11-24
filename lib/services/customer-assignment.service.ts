@@ -39,13 +39,45 @@ export async function listSepidarCustomers(): Promise<Customer[]> {
   );
 }
 
-export async function listExpertCustomerAssignments(): Promise<
+export async function listExpertCustomerAssignments(filters?: { limit?: number; offset?: number }): Promise<
   ExpertCustomerAssignment[]
 > {
+  const params = new URLSearchParams();
+  if (filters?.limit) params.set("limit", String(filters.limit));
+  if (filters?.offset) params.set("offset", String(filters.offset));
   const data = await httpClient.get<unknown>(
-    "/api/support/expert-customer-assignments",
+    `/api/support/expert-customer-assignments${params.size ? `?${params.toString()}` : ""}`,
   );
   return mapExpertCustomerAssignmentListDto(data);
+}
+
+export async function listExpertCustomerAssignmentsPage(filters: {
+  expertUserId?: string;
+  customerObjectId?: string;
+  search?: string;
+  grouping?: string;
+  channel?: string;
+  subChannel?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ items: ExpertCustomerAssignment[]; total: number }> {
+  const params = new URLSearchParams({
+    status: "active",
+    limit: String(filters.limit),
+    offset: String(filters.offset),
+  });
+  if (filters.expertUserId) params.set("expertUserId", filters.expertUserId);
+  if (filters.customerObjectId) params.set("customerObjectId", filters.customerObjectId);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.grouping) params.set("grouping", filters.grouping);
+  if (filters.channel) params.set("channel", filters.channel);
+  if (filters.subChannel) params.set("subChannel", filters.subChannel);
+  const data = await httpClient.get<unknown>(`/api/support/expert-customer-assignments?${params.toString()}`);
+  const record = toRecord(data);
+  return {
+    items: mapExpertCustomerAssignmentListDto(record.items ?? []),
+    total: Number(record.total ?? 0),
+  };
 }
 
 export async function createExpertCustomerAssignment(

@@ -1,5 +1,7 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -15,6 +17,7 @@ import {
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import { ConfirmationModal } from "@/components/manager/confirmation-modal";
+import { OrderNoteCard } from "@/components/orders/order-note-card";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -35,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import {
+  getFinancialCorrectionReasons,
   REVIEW_REASONS,
   SHIPMENT_STOP_REASONS,
 } from "@/lib/domain/order-action-reasons";
@@ -46,10 +50,7 @@ import type {
   OrderItem,
 } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
-import {
-  approveNajaOrder,
-  rejectNajaOrder,
-} from "@/lib/services/naja.service";
+import { approveNajaOrder, rejectNajaOrder } from "@/lib/services/naja.service";
 import {
   approveOrder,
   approveFinancialOrder,
@@ -62,6 +63,11 @@ import {
   stopShipment,
 } from "@/lib/services/order.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
+import {
+  getOrderDisplayDiscountAmount,
+  getSalesRequestDiscountNote,
+} from "@/lib/utils/order-financial-display";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 
 type DecisionType = "approve" | "reject" | "cancel" | "needs_review" | null;
 type ShipmentAction = "lock" | "unlock" | null;
@@ -79,13 +85,19 @@ export default function ManagerOrderReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRetryingQuotation, setIsRetryingQuotation] = useState(false);
-  const [isFinancialActionSubmitting, setIsFinancialActionSubmitting] = useState(false);
+  const [isFinancialActionSubmitting, setIsFinancialActionSubmitting] =
+    useState(false);
   const [decision, setDecision] = useState<DecisionType>(null);
-  const [financialDecision, setFinancialDecision] = useState<"approve" | "return" | null>(null);
+  const [financialDecision, setFinancialDecision] = useState<
+    "approve" | "transfer_approve" | "return" | null
+  >(null);
   const [shipmentAction, setShipmentAction] = useState<ShipmentAction>(null);
   const [reviewReasonCode, setReviewReasonCode] = useState("");
   const [najaRejectReason, setNajaRejectReason] = useState("");
-  const [financialCorrectionReason, setFinancialCorrectionReason] = useState("");
+  const [financialCorrectionReasonCode, setFinancialCorrectionReasonCode] =
+    useState("");
+  const [financialCorrectionReason, setFinancialCorrectionReason] =
+    useState("");
   const [shipmentStopReasonCode, setShipmentStopReasonCode] = useState("");
   const [stockSelectionOptions, setStockSelectionOptions] = useState<
     StockSelectionOption[]
@@ -124,8 +136,23 @@ export default function ManagerOrderReviewPage() {
     };
   }, [objectId]);
 
-  const currentRole = getStoredCurrentUser()?.role ?? null;
-  const layoutRole = currentRole === "financial_control" ? "finance-control" : "manager";
+  const currentUser = getStoredCurrentUser();
+  const currentRole = currentUser?.activeRole ?? currentUser?.role ?? null;
+  const financialReviewerStage =
+    currentRole === "finance"
+      ? "sales_accountant"
+      : currentRole === "financial_control"
+        ? "treasurer"
+        : currentRole === "systems_expert"
+          ? "systems_expert"
+          : null;
+  const isFinancialReviewer = financialReviewerStage !== null;
+  const layoutRole =
+    currentRole === "finance"
+      ? "finance"
+      : isFinancialReviewer
+        ? "finance-control"
+        : "manager";
 
   if (isLoading) {
     return (
@@ -151,18 +178,46 @@ export default function ManagerOrderReviewPage() {
     (sum, item) => sum + item.quantity * item.unitPrice,
     0,
   );
-  const isFinancialControlUser = currentRole === "financial_control";
+  const discountNote = getSalesRequestDiscountNote(order.notes);
+  const displayDiscountAmount = getOrderDisplayDiscountAmount({
+    totalAmount,
+    storedDiscountAmount: order.salesRequestDiscountTotal,
+    notes: order.notes,
+  });
+  const orderFinancials = calculateSalesRequestFinancials(
+    totalAmount,
+    totalAmount > 0 ? (displayDiscountAmount / totalAmount) * 100 : 0,
+  );
   const isNajaOrder = order.orderType === "naja";
+  const workflowStage =
+    order.financialApprovalStage ??
+    (order.orderStatus === "pending_manager_approval" ? "sales_manager" : null);
+  const isSalesManagerUser = [
+    "sales_manager",
+    "manager",
+    "salesManager",
+    "sales-manager",
+  ].includes(currentRole ?? "");
   const effectiveFinancialApprovalStatus =
     order.financialApprovalStatus ??
     (order.orderStatus === "pending_financial_approval" ? "pending" : null);
   const financialGateOpen =
-    !effectiveFinancialApprovalStatus || effectiveFinancialApprovalStatus === "approved";
+    !effectiveFinancialApprovalStatus ||
+    effectiveFinancialApprovalStatus === "approved";
   const canManageFinancialDecision =
-    isFinancialControlUser &&
+    isFinancialReviewer &&
     order.orderStatus === "pending_financial_approval" &&
-    effectiveFinancialApprovalStatus === "pending";
+    effectiveFinancialApprovalStatus === "pending" &&
+    order.financialApprovalStage === financialReviewerStage;
+  const canManageSystemsTransferDecision =
+    currentRole === "systems_expert" &&
+    order.orderStatus === "approved" &&
+    order.warehouseStatus === "awaitingSystemsTransfer" &&
+    effectiveFinancialApprovalStatus === "approved" &&
+    workflowStage === "systems_transfer";
   const canApprove =
+    isSalesManagerUser &&
+    workflowStage === "sales_manager" &&
     financialGateOpen &&
     (isNajaOrder
       ? order.orderStatus === "pending_manager_approval"
@@ -173,16 +228,18 @@ export default function ManagerOrderReviewPage() {
     isNajaOrder &&
     order.orderStatus === "pending_manager_approval" &&
     financialGateOpen;
-  const canNeedReview = !isNajaOrder && order.orderStatus === "pending_manager_approval";
-  const shouldShowNeedReviewButton =
-    !isNajaOrder && (canNeedReview || order.orderStatus === "review_resolved");
+  const canNeedReview = false;
+  const shouldShowNeedReviewButton = false;
   const canCancelNajaInWarehouseReview =
+    isSalesManagerUser &&
     isNajaOrder &&
     order.orderStatus === "approved" &&
     order.warehouseStatus === "reviewing";
   const canCancel =
     canCancelNajaInWarehouseReview ||
-    (!isNajaOrder &&
+    (isSalesManagerUser &&
+      workflowStage === "sales_manager" &&
+      !isNajaOrder &&
       [
         "pending_manager_approval",
         "needs_review",
@@ -194,6 +251,7 @@ export default function ManagerOrderReviewPage() {
       order.orderStatus !== "voided");
   const shipmentActionBlockedStatuses = ["cancelled", "invoiced"];
   const shipmentActionBlockedWarehouseStatuses = [
+    "awaitingSystemsTransfer",
     "dispatchIssued",
     "delivered",
   ];
@@ -208,16 +266,31 @@ export default function ManagerOrderReviewPage() {
   const isReviewResolved = order.orderStatus === "review_resolved";
   const isVoided = order.orderStatus === "voided";
   const isFinancialReadOnly =
-    isFinancialControlUser && order.orderStatus !== "pending_financial_approval";
-  const pageTitle = isFinancialControlUser
+    isFinancialReviewer &&
+    !canManageFinancialDecision &&
+    !canManageSystemsTransferDecision;
+  const pageTitle = isFinancialReviewer
     ? "بررسی سفارش مالی"
     : "بررسی جزئیات سفارش";
-  const pageDescription = isFinancialControlUser
+  const pageDescription = isFinancialReviewer
     ? "ثبت تأیید یا برگشت سفارش برای اصلاح"
     : "ثبت تصمیم نهایی مدیر فروش برای شروع یا توقف فرآیند انبار";
-  const managerActionVisible = !isFinancialControlUser;
-  const reviewSectionVisible = !isFinancialControlUser && (isNeedsReview || isReviewResolved);
-  const shipmentControlVisible = !isFinancialControlUser;
+  const managerActionVisible = !isFinancialReviewer;
+  const reviewSectionVisible =
+    !isFinancialReviewer && (isNeedsReview || isReviewResolved);
+  const shipmentControlVisible = !isFinancialReviewer;
+  const financialBackPath =
+    currentRole === "finance"
+      ? "/finance/financial-approvals"
+      : "/finance-control/orders";
+  const financialApprovalNextStepLabel =
+    order.financialApprovalStage === "sales_accountant"
+      ? "خزانه‌دار"
+      : order.financialApprovalStage === "treasurer"
+        ? "کارشناس سامانه‌ها"
+        : "مدیر فروش";
+  const financialCorrectionReasons =
+    getFinancialCorrectionReasons(workflowStage);
 
   const columns: DataTableColumn<OrderItem>[] = [
     {
@@ -252,14 +325,15 @@ export default function ManagerOrderReviewPage() {
     setOrder((current) => {
       const refreshed = result.order ?? current;
       return refreshed
-        ? {
-            ...refreshed,
-            orderStatus: "approved",
-            orderStatusLabel: "تأیید شده",
-            quotationStatus: result.quotationStatus,
-          }
+        ? { ...refreshed, quotationStatus: result.quotationStatus }
         : refreshed;
     });
+    if (result.order?.financialApprovalStage === "systems_transfer") {
+      setMessageType("success");
+      setMessage("سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال شد.");
+      setDecision(null);
+      return;
+    }
     if (result.quotationStatus === "failed") {
       setMessageType("warning");
       setMessage(
@@ -354,8 +428,8 @@ export default function ManagerOrderReviewPage() {
         decision === "reject"
           ? "سفارش ناجا رد شد."
           : decision === "needs_review"
-          ? "سفارش برای بررسی کارشناس ثبت شد."
-          : "سفارش با موفقیت لغو شد.",
+            ? "سفارش برای بررسی کارشناس ثبت شد."
+            : "سفارش با موفقیت لغو شد.",
       );
       setDecision(null);
       setReviewReasonCode("");
@@ -374,10 +448,23 @@ export default function ManagerOrderReviewPage() {
 
   const confirmFinancialDecision = async () => {
     if (!financialDecision) return;
+    const submittedFinancialDecision = financialDecision;
+    const financialStatusBeforeSubmit = order.financialApprovalStatus;
 
-    if (financialDecision === "return" && !financialCorrectionReason.trim()) {
+    if (financialDecision === "return" && !financialCorrectionReasonCode) {
       setDialogErrors({
-        financialCorrectionReason: "لطفاً دلیل برگشت برای اصلاح را وارد کنید.",
+        financialCorrectionReasonCode:
+          "لطفاً دلیل برگشت برای اصلاح را انتخاب کنید.",
+      });
+      return;
+    }
+    if (
+      financialDecision === "return" &&
+      financialCorrectionReasonCode === "OTHER" &&
+      !financialCorrectionReason.trim()
+    ) {
+      setDialogErrors({
+        financialCorrectionReason: "لطفاً توضیحات دلیل «سایر» را وارد کنید.",
       });
       return;
     }
@@ -388,24 +475,57 @@ export default function ManagerOrderReviewPage() {
 
     try {
       const updated =
-      financialDecision === "approve"
+        financialDecision === "approve"
           ? await approveFinancialOrder(order.objectId, {
               approvedByName: getStoredCurrentUser()?.fullName ?? "",
             })
-          : await returnFinancialOrder(order.objectId, {
-              returnedByName: getStoredCurrentUser()?.fullName ?? "",
-              correctionReason: financialCorrectionReason,
-            });
-      setOrder(updated);
+          : financialDecision === "transfer_approve"
+            ? (
+                await approveOrder(order.objectId, {
+                  approvedByName: getStoredCurrentUser()?.fullName ?? "",
+                })
+              ).order
+            : await returnFinancialOrder(order.objectId, {
+                returnedByName: getStoredCurrentUser()?.fullName ?? "",
+                correctionReasonCode: financialCorrectionReasonCode,
+                correctionReason: financialCorrectionReason,
+              });
+      if (updated) setOrder(updated);
       setMessageType("success");
       setMessage(
         financialDecision === "approve"
-          ? "تأیید مالی با موفقیت ثبت شد."
-          : "سفارش برای اصلاح به کارشناس برگردانده شد.",
+          ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال شد.`
+          : financialDecision === "transfer_approve"
+            ? "تأیید انتقال بار ثبت شد و سفارش وارد فرآیند انبار شد."
+            : "سفارش برای اصلاح به کارشناس برگردانده شد.",
       );
       setFinancialDecision(null);
+      setFinancialCorrectionReasonCode("");
       setFinancialCorrectionReason("");
     } catch (error) {
+      // A mutation can succeed before a later response serialization failure.
+      // Refresh once so a successful correction return is not shown as an
+      // actionable pending order after the request reports an error.
+      try {
+        const refreshedOrder = await getOrder(order.objectId);
+        setOrder(refreshedOrder);
+        if (
+          refreshedOrder.financialApprovalStatus !== financialStatusBeforeSubmit
+        ) {
+          setFinancialDecision(null);
+          setFinancialCorrectionReasonCode("");
+          setFinancialCorrectionReason("");
+          setMessageType("warning");
+          setMessage(
+            submittedFinancialDecision === "return"
+              ? "سفارش برای اصلاح ثبت شد. وضعیت سفارش به‌روزرسانی شد."
+              : "تصمیم سفارش ثبت شد. وضعیت سفارش به‌روزرسانی شد.",
+          );
+          return;
+        }
+      } catch {
+        // Preserve the original error when refreshing the current state fails.
+      }
       setMessageType("error");
       setMessage(getErrorMessage(error));
     } finally {
@@ -527,22 +647,29 @@ export default function ManagerOrderReviewPage() {
   };
 
   return (
-    <DashboardLayout role={layoutRole} title={isFinancialControlUser ? "کنترل مالی" : "سفارش‌ها"}>
+    <DashboardLayout
+      role={layoutRole}
+      title={isFinancialReviewer ? "کنترل مالی" : "سفارش‌ها"}
+    >
       <SectionHeader
         title={pageTitle}
         description={pageDescription}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {order.canEdit && !isFinancialControlUser ? (
+            {order.canEdit && !isFinancialReviewer ? (
               <Link
                 href={`/manager/orders/${order.objectId}/edit`}
-                className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white hover:text-white"
+                className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-semibold !text-white "
               >
                 ویرایش سفارش
               </Link>
             ) : null}
             <Link
-              href={isFinancialControlUser ? "/finance-control/orders" : "/manager/order-tracking"}
+              href={
+                isFinancialReviewer
+                  ? financialBackPath
+                  : "/manager/order-tracking"
+              }
               className="rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm text-[#334155] hover:border-[#CBD5E1]"
             >
               بازگشت به لیست
@@ -565,12 +692,16 @@ export default function ManagerOrderReviewPage() {
         <InlineErrorMessage message={message} />
       ) : null}
 
-      {isFinancialControlUser && isFinancialReadOnly ? (
+      {isFinancialReviewer && isFinancialReadOnly ? (
         <div className="rounded-xl border border-[#D7E5F0] bg-[#F8FBFF] px-4 py-3 text-sm leading-7 text-[#1F3A5F]">
-          این سفارش قبلاً در کنترل مالی بررسی شده است؛ در این صفحه فقط می‌توانید جزئیات را مشاهده کنید.
+          این سفارش قبلاً در کنترل مالی بررسی شده است؛ در این صفحه فقط می‌توانید
+          جزئیات را مشاهده کنید.
         </div>
       ) : null}
 
+      {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
@@ -605,10 +736,18 @@ export default function ManagerOrderReviewPage() {
                 label="وضعیت تأیید مالی"
                 value={
                   order.financialApprovalStatusLabel ||
-                  getFinancialApprovalStatusLabel(effectiveFinancialApprovalStatus) ||
+                  getFinancialApprovalStatusLabel(
+                    effectiveFinancialApprovalStatus,
+                  ) ||
                   "-"
                 }
               />
+              {order.financialApprovalStageLabel ? (
+                <InfoItem
+                  label="مرحله تأیید مالی"
+                  value={order.financialApprovalStageLabel}
+                />
+              ) : null}
               {order.orderType === "naja" ? (
                 <>
                   <InfoItem
@@ -619,11 +758,6 @@ export default function ManagerOrderReviewPage() {
                         : "-"
                     }
                   />
-                  {order.salesTypeTitle ? (
-                    <div className="sm:col-span-2 rounded-xl border border-[#D7E5F0] bg-[#F8FBFF] px-4 py-3 text-sm leading-7 text-[#1F3A5F]">
-                      این سفارش با روش پرداخت <strong>{order.salesTypeTitle}</strong> ثبت شده است.
-                    </div>
-                  ) : null}
                   {hasRecipientInfo(order) ? (
                     <>
                       <InfoItem
@@ -666,11 +800,11 @@ export default function ManagerOrderReviewPage() {
               <InfoItem label="ثبت کننده" value={order.createdByName || "-"} />
               <InfoItem label="تاریخ ثبت" value={formatDate(order.createdAt)} />
               <InfoItem
-                label="تاریخ پیش‌فاکتور سپیدار"
+                label="تاریخ ثبت پیش‌فاکتور در سپیدار"
                 value={
                   order.sepidarQuotationDate
                     ? formatDate(order.sepidarQuotationDate)
-                    : "-"
+                    : "ثبت نشده"
                 }
               />
               <InfoItem
@@ -828,6 +962,7 @@ export default function ManagerOrderReviewPage() {
           ) : null}
 
           <CustomerInfoCard order={order} />
+          <OrderNoteCard notes={order.notes} />
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -837,7 +972,7 @@ export default function ManagerOrderReviewPage() {
                 </h3>
                 <div className="mt-3">{getQuotationStatusBadge(order)}</div>
               </div>
-              {order.quotationStatus === "failed" && !isFinancialControlUser ? (
+              {order.quotationStatus === "failed" && !isFinancialReviewer ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -870,12 +1005,20 @@ export default function ManagerOrderReviewPage() {
             <p className="mt-2 text-lg font-semibold text-[#102034]">
               {formatCurrency(totalAmount)}
             </p>
+            <p className="mt-4 text-sm text-[#6B7280]">تخفیف سفارش</p>
+            <p className="mt-1 text-base font-semibold text-[#102034]">
+              {displayDiscountAmount > 0
+                ? formatCurrency(displayDiscountAmount)
+                : discountNote || "-"}
+            </p>
+            <p className="mt-4 text-sm text-[#6B7280]">مبلغ با مالیات</p>
+            <p className="mt-1 text-base font-semibold text-[#102034]">
+              {formatCurrency(orderFinancials.total)}
+            </p>
           </div>
 
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <p className="text-sm font-semibold text-[#1F3A5F]">
-              اطلاعات فروش
-            </p>
+            <p className="text-sm font-semibold text-[#1F3A5F]">اطلاعات فروش</p>
             <div className="mt-3 space-y-3 text-sm">
               <InfoItem
                 label="روش پرداخت"
@@ -885,27 +1028,56 @@ export default function ManagerOrderReviewPage() {
                 label="لیست قیمت"
                 value={order.priceListTitle || order.priceList?.title || "-"}
               />
+              <InfoItem
+                label="شماره پیش‌فاکتور سپیدار"
+                value={
+                  order.sepidarQuotationNumber
+                    ? formatFaDigits(order.sepidarQuotationNumber)
+                    : "ثبت نشده"
+                }
+              />
             </div>
           </div>
 
-          {isFinancialControlUser ? (
+          {isFinancialReviewer ? (
             <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-              <p className="text-sm font-semibold text-[#1F3A5F]">
-                کنترل مالی
-              </p>
+              <p className="text-sm font-semibold text-[#1F3A5F]">کنترل مالی</p>
               <p className="mt-2 text-sm leading-7 text-[#64748B]">
-                وضعیت فعلی: {order.financialApprovalStatusLabel || getFinancialApprovalStatusLabel(effectiveFinancialApprovalStatus) || "-"}
+                وضعیت فعلی:{" "}
+                {order.financialApprovalStatusLabel ||
+                  getFinancialApprovalStatusLabel(
+                    effectiveFinancialApprovalStatus,
+                  ) ||
+                  "-"}
               </p>
-              {canManageFinancialDecision ? (
+              {order.financialApprovalStageLabel ? (
+                <p className="mt-1 text-sm leading-7 text-[#64748B]">
+                  مرحله فعلی: {order.financialApprovalStageLabel}
+                </p>
+              ) : null}
+              {canManageFinancialDecision ||
+              canManageSystemsTransferDecision ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    disabled={isFinancialActionSubmitting || order.financialApprovalStatus === "approved"}
-                    onClick={() => setFinancialDecision("approve")}
+                    disabled={
+                      isFinancialActionSubmitting ||
+                      (!canManageSystemsTransferDecision &&
+                        order.financialApprovalStatus === "approved")
+                    }
+                    onClick={() =>
+                      setFinancialDecision(
+                        canManageSystemsTransferDecision
+                          ? "transfer_approve"
+                          : "approve",
+                      )
+                    }
                     className="gap-2"
                   >
                     <CheckCircle2 className="size-4" />
-                    تأیید مالی
+                    {canManageSystemsTransferDecision
+                      ? "تأیید انتقال بار"
+                      : "تأیید مالی"}
                   </Button>
                   <Button
                     type="button"
@@ -913,7 +1085,8 @@ export default function ManagerOrderReviewPage() {
                     disabled={
                       isFinancialActionSubmitting ||
                       order.financialApprovalStatus === "needs_correction" ||
-                      order.financialApprovalStatus === "approved"
+                      (!canManageSystemsTransferDecision &&
+                        order.financialApprovalStatus === "approved")
                     }
                     onClick={() => setFinancialDecision("return")}
                     className="gap-2"
@@ -924,136 +1097,133 @@ export default function ManagerOrderReviewPage() {
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-3 text-sm leading-7 text-[#64748B]">
-                  این سفارش قبلاً در کنترل مالی بررسی شده است و فقط برای مشاهده در دسترس است.
+                  این سفارش قبلاً در کنترل مالی بررسی شده است و فقط برای مشاهده
+                  در دسترس است.
                 </div>
               )}
             </div>
           ) : null}
 
           {managerActionVisible ? (
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <p className="text-sm leading-7 text-[#6B7280]">
-              {isFinancialControlUser
-                ? "سفارش را در این مرحله تأیید یا برای اصلاح برگردانید."
-                : canApprove || canRejectNaja || canCancel || canNeedReview
-                ? "وضعیت سفارش را مشخص کنید."
-                : null}
-            </p>
-            {!isFinancialControlUser &&
-            effectiveFinancialApprovalStatus &&
-            effectiveFinancialApprovalStatus !== "approved" ? (
-              <p className="mt-3 rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] px-3 py-2 text-sm text-[#8A5A00]">
-                این سفارش هنوز در انتظار تأیید کنترل مالی است.
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <p className="text-sm leading-7 text-[#6B7280]">
+                {isFinancialReviewer
+                  ? "سفارش را در این مرحله تأیید یا برای اصلاح برگردانید."
+                  : canApprove || canRejectNaja || canCancel || canNeedReview
+                    ? "وضعیت سفارش را مشخص کنید."
+                    : null}
               </p>
-            ) : null}
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {canApprove && !isFinancialControlUser ? (
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => setDecision("approve")}
-                  className="w-full justify-center gap-2 sm:col-span-2"
-                >
-                  <CheckCircle2 className="size-4" />
-                  تایید سفارش
-                </Button>
+              {!isFinancialReviewer &&
+              effectiveFinancialApprovalStatus &&
+              effectiveFinancialApprovalStatus !== "approved" ? (
+                <p className="mt-3 rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] px-3 py-2 text-sm text-[#8A5A00]">
+                  این سفارش هنوز در انتظار تأیید کنترل مالی است.
+                </p>
               ) : null}
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {canApprove && !isFinancialReviewer ? (
+                  <Button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => setDecision("approve")}
+                    className="w-full justify-center gap-2 sm:col-span-2"
+                  >
+                    <CheckCircle2 className="size-4" />
+                    تایید و ارسال برای انتقال بار
+                  </Button>
+                ) : null}
 
-              {shouldShowNeedReviewButton ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSubmitting || !canNeedReview}
-                  onClick={() => setDecision("needs_review")}
-                  className="w-full justify-center gap-2 disabled:opacity-60"
-                  title={
-                    canNeedReview
-                      ? "ارسال سفارش برای بررسی کارشناس"
-                      : "مشکل این سفارش قبلاً برطرف شده است."
-                  }
-                >
-                  <AlertTriangle className="size-5 shrink-0" /> نیازمند بررسی
-                </Button>
-              ) : null}
+                {canApprove ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    onClick={() => setFinancialDecision("return")}
+                    className="w-full justify-center gap-2"
+                  >
+                    <AlertTriangle className="size-4" />
+                    نیازمند اصلاح
+                  </Button>
+                ) : null}
 
-              {canRejectNaja ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isSubmitting}
-                  onClick={() => setDecision("reject")}
-                  className="w-full justify-center gap-2 sm:col-span-2"
-                >
-                  <XCircle className="size-4" />
-                  رد سفارش ناجا
-                </Button>
-              ) : null}
+                {canRejectNaja ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isSubmitting}
+                    onClick={() => setDecision("reject")}
+                    className="w-full justify-center gap-2 sm:col-span-2"
+                  >
+                    <XCircle className="size-4" />
+                    رد سفارش ناجا
+                  </Button>
+                ) : null}
 
-              {canCancel ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={isSubmitting}
-                  onClick={() => setDecision("cancel")}
-                  className="w-full justify-center gap-2"
-                >
-                  <XCircle className="size-4" />
-                  لغو سفارش
-                </Button>
-              ) : null}
+                {canCancel ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={isSubmitting}
+                    onClick={() => setDecision("cancel")}
+                    className="w-full justify-center gap-2"
+                  >
+                    <XCircle className="size-4" />
+                    لغو سفارش
+                  </Button>
+                ) : null}
+              </div>
             </div>
-          </div>
           ) : null}
 
           {shipmentControlVisible ? (
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#1F3A5F]">
-                  ممنوعیت خروج از انبار
-                </p>
-                <p className="mt-2 text-sm leading-7 text-[#6B7280]">
-                  {isShipmentStopped
-                    ? "این سفارش فعلاً مجاز به خروج نیست."
-                    : "برای سفارش‌های تایید شده می‌توانید خروج از انبار را متوقف کنید."}
-                </p>
+            <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#1F3A5F]">
+                    ممنوعیت خروج از انبار
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-[#6B7280]">
+                    {isShipmentStopped
+                      ? "این سفارش فعلاً مجاز به خروج نیست."
+                      : "برای سفارش‌های تایید شده می‌توانید خروج از انبار را متوقف کنید."}
+                  </p>
+                </div>
+                {isShipmentStopped ? (
+                  <Badge variant="warning">
+                    <Lock className="size-3.5" />
+                    خروج متوقف شده
+                  </Badge>
+                ) : null}
               </div>
-              {isShipmentStopped ? (
-                <Badge variant="warning">
-                  <Lock className="size-3.5" />
-                  خروج متوقف شده
-                </Badge>
-              ) : null}
-            </div>
 
-            <div className="mt-4 flex">
-              {isShipmentStopped ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!canManageShipmentStop || isSubmitting}
-                  onClick={() => setShipmentAction("unlock")}
-                  title="با رفع توقف، سفارش دوباره برای خروج از انبار مجاز می‌شود."
-                  className="w-full justify-center gap-2"
-                >
-                  <Unlock className="size-4" />
-                  رفع توقف خروج
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!canManageShipmentStop || isSubmitting}
-                  onClick={() => setShipmentAction("lock")}
-                  title="با فعال‌سازی این گزینه، انباردار امکان صدور حواله خروج برای این سفارش را نخواهد داشت."
-                  className="w-full justify-center gap-2"
-                >
-                  <Lock className="size-4" />
-                  توقف خروج
-                </Button>
-              )}
+              <div className="mt-4 flex">
+                {isShipmentStopped ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManageShipmentStop || isSubmitting}
+                    onClick={() => setShipmentAction("unlock")}
+                    title="با رفع توقف، سفارش دوباره برای خروج از انبار مجاز می‌شود."
+                    className="w-full justify-center gap-2"
+                  >
+                    <Unlock className="size-4" />
+                    رفع توقف خروج
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!canManageShipmentStop || isSubmitting}
+                    onClick={() => setShipmentAction("lock")}
+                    title="با فعال‌سازی این گزینه، انباردار امکان صدور حواله خروج برای این سفارش را نخواهد داشت."
+                    className="w-full justify-center gap-2"
+                  >
+                    <Lock className="size-4" />
+                    توقف خروج
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
           ) : null}
         </div>
       </section>
@@ -1065,31 +1235,33 @@ export default function ManagerOrderReviewPage() {
             ? "تایید سفارش"
             : decision === "reject"
               ? "رد سفارش ناجا"
-            : decision === "needs_review"
-              ? "ارسال برای بررسی"
-              : "لغو سفارش"
+              : decision === "needs_review"
+                ? "ارسال برای بررسی"
+                : "لغو سفارش"
         }
         message={
           decision === "approve"
-            ? "با تایید، سفارش وارد فرآیند انبار می شود."
+            ? "با تایید، سفارش برای بررسی انتقال بار به کارشناس سامانه‌ها ارسال می‌شود."
             : decision === "reject"
               ? "با رد سفارش، رزرو احتمالی آن طبق منطق فعلی سفارش آزاد می‌شود."
-            : decision === "needs_review"
-              ? "در این وضعیت موجودی سفارش تا ۴۸ ساعت رزرو می‌ماند و کارشناس باید مشکل را برطرف کند."
-              : order.quotationStatus === "success"
-                ? "برای این سفارش پیش‌فاکتور در سپیدار ثبت شده است. با لغو سفارش، پیش‌فاکتور سپیدار حذف نخواهد شد. آیا از ادامه مطمئن هستید؟"
-                : "آیا از لغو این سفارش مطمئن هستید؟"
+              : decision === "needs_review"
+                ? "در این وضعیت موجودی سفارش تا ۴۸ ساعت رزرو می‌ماند و کارشناس باید مشکل را برطرف کند."
+                : order.quotationStatus === "success"
+                  ? "برای این سفارش پیش‌فاکتور در سپیدار ثبت شده است. با لغو سفارش، پیش‌فاکتور سپیدار حذف نخواهد شد. آیا از ادامه مطمئن هستید؟"
+                  : "آیا از لغو این سفارش مطمئن هستید؟"
         }
         confirmText={
           decision === "approve"
-            ? "تایید نهایی"
+            ? "تایید و ارسال"
             : decision === "reject"
               ? "ثبت رد سفارش"
-            : decision === "needs_review"
-              ? "ثبت نیاز به بررسی"
-              : "ثبت لغو سفارش"
+              : decision === "needs_review"
+                ? "ثبت نیاز به بررسی"
+                : "ثبت لغو سفارش"
         }
-        tone={decision === "cancel" || decision === "reject" ? "danger" : "success"}
+        tone={
+          decision === "cancel" || decision === "reject" ? "danger" : "success"
+        }
         busy={isSubmitting}
         onConfirm={confirmDecision}
         onCancel={() => {
@@ -1219,45 +1391,86 @@ export default function ManagerOrderReviewPage() {
         title={
           financialDecision === "approve"
             ? "تأیید مالی"
-            : "برگشت برای اصلاح"
+            : financialDecision === "transfer_approve"
+              ? "تأیید انتقال بار"
+              : "برگشت برای اصلاح"
         }
         message={
           financialDecision === "approve"
-            ? "سفارش وارد مرحله تأیید مدیر فروش می‌شود."
-            : "لطفاً دلیل برگشت برای اصلاح را وارد کنید."
+            ? `سفارش برای بررسی ${financialApprovalNextStepLabel} ارسال می‌شود.`
+            : financialDecision === "transfer_approve"
+              ? "با تأیید انتقال بار، سفارش وارد فرآیند موجود انبار می‌شود."
+              : "لطفاً دلیل برگشت برای اصلاح را وارد کنید."
         }
         confirmText={
           financialDecision === "approve"
             ? "تأیید مالی"
-            : "ثبت برگشت"
+            : financialDecision === "transfer_approve"
+              ? "تأیید انتقال بار"
+              : "ثبت برگشت"
         }
         tone={financialDecision === "return" ? "danger" : "success"}
         busy={isFinancialActionSubmitting}
         onConfirm={confirmFinancialDecision}
         onCancel={() => {
           setFinancialDecision(null);
+          setFinancialCorrectionReasonCode("");
           setFinancialCorrectionReason("");
           setDialogErrors({});
         }}
       >
         {financialDecision === "return" ? (
-          <label className="grid gap-2 text-sm font-medium text-[#334155]">
-            <span>دلیل برگشت</span>
-            <Textarea
-              value={financialCorrectionReason}
-              onChange={(event) => {
-                setFinancialCorrectionReason(event.target.value);
-                setDialogErrors((current) => ({
-                  ...current,
-                  financialCorrectionReason: "",
-                }));
-              }}
-              placeholder="مثلاً: نیاز به اصلاح تعداد یا اطلاعات مشتری"
-              rows={4}
-              disabled={isFinancialActionSubmitting}
-            />
-            <FieldError message={dialogErrors.financialCorrectionReason} />
-          </label>
+          <div className="grid gap-4">
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>دلیل برگشت</span>
+              <Select
+                value={financialCorrectionReasonCode || undefined}
+                onValueChange={(value) => {
+                  setFinancialCorrectionReasonCode(value);
+                  setDialogErrors((current) => ({
+                    ...current,
+                    financialCorrectionReasonCode: "",
+                  }));
+                }}
+                disabled={isFinancialActionSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="انتخاب دلیل" />
+                </SelectTrigger>
+                <SelectContent>
+                  {financialCorrectionReasons.map((reason) => (
+                    <SelectItem key={reason.code} value={reason.code}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError
+                message={dialogErrors.financialCorrectionReasonCode}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium text-[#334155]">
+              <span>
+                {financialCorrectionReasonCode === "OTHER"
+                  ? "توضیحات دلیل"
+                  : "توضیحات (اختیاری)"}
+              </span>
+              <Textarea
+                value={financialCorrectionReason}
+                onChange={(event) => {
+                  setFinancialCorrectionReason(event.target.value);
+                  setDialogErrors((current) => ({
+                    ...current,
+                    financialCorrectionReason: "",
+                  }));
+                }}
+                placeholder="توضیحات تکمیلی برای کارشناس فروش"
+                rows={4}
+                disabled={isFinancialActionSubmitting}
+              />
+              <FieldError message={dialogErrors.financialCorrectionReason} />
+            </label>
+          </div>
         ) : null}
       </ConfirmationModal>
 
@@ -1342,7 +1555,10 @@ function MetaLine({
 }
 
 function extractStockSelectionOptions(error: unknown): StockSelectionOption[] {
-  if (!(error instanceof ApiError) || error.code !== "WAREHOUSE_SELECTION_REQUIRED") {
+  if (
+    !(error instanceof ApiError) ||
+    error.code !== "WAREHOUSE_SELECTION_REQUIRED"
+  ) {
     return [];
   }
 
@@ -1406,9 +1622,9 @@ function formatReviewRemaining(order: Order): string | null {
 function hasRecipientInfo(order: Order): boolean {
   return Boolean(
     order.recipientFirstName ||
-      order.recipientLastName ||
-      order.recipientNationalId ||
-      order.recipientMobile,
+    order.recipientLastName ||
+    order.recipientNationalId ||
+    order.recipientMobile,
   );
 }
 

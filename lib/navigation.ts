@@ -2,12 +2,56 @@ import type { PanelRoleKey } from "@/lib/domain/roles";
 import type { SidebarItem } from "@/lib/types";
 
 export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
+  "store-expert": [
+    {
+      label: "داشبورد",
+      href: "/store-expert",
+      icon: "dashboard",
+      description: "خلاصه سفارش‌ها و خروج کالا",
+    },
+    {
+      label: "ثبت سفارش فروشگاه",
+      href: "/store-expert/orders/new",
+      icon: "shopping-cart",
+      description: "ثبت سفارش با مشتریان و قیمت‌های مادسنتر",
+    },
+    {
+      label: "پیگیری سفارش‌ها",
+      href: "/store-expert/orders",
+      icon: "file-text",
+      description: "وضعیت پیش‌فاکتور، خروج و فاکتور سفارش‌های فروشگاه",
+    },
+    {
+      label: "حواله‌های خروج",
+      href: "/store-expert/exit-slips",
+      icon: "file-text",
+      description: "خروج‌های در انتظار، جزئی و تکمیل‌شده",
+    },
+    {
+      label: "مشتریان فروشگاه",
+      href: "/store-expert/customers",
+      icon: "users",
+      description: "مشتریان گروه‌های مادسنتر",
+    },
+    {
+      label: "ثبت مشتری جدید",
+      href: "/store-expert/customers/new",
+      icon: "users",
+      description: "ثبت اطلاعات مشتری برای ارسال به سپیدار",
+    },
+  ],
   expert: [
     {
       label: "داشبورد",
       href: "/expert",
       icon: "dashboard",
       description: "وضعیت سفارش‌های روز",
+    },
+    {
+      label: "درخواست‌های فروش",
+      href: "/expert/quotations",
+      icon: "file-text",
+      description: "فهرست و مدیریت درخواست فروش",
     },
     {
       label: "سفارش ها",
@@ -26,12 +70,6 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/expert/products",
       icon: "boxes",
       description: "کالاهای قابل فروش و قیمت‌ها",
-    },
-    {
-      label: "پیش فاکتورها",
-      href: "/expert/quotations",
-      icon: "file-text",
-      description: "فهرست و مدیریت پیش فاکتور",
     },
   ],
   naja: [
@@ -162,16 +200,16 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "وضعیت مالی سفارش‌ها",
     },
     {
-      label: "آماده فاکتور",
-      href: "/finance/ready",
-      icon: "layers",
-      description: "آماده بررسی مالی",
+      label: "تأیید مالی سفارش‌ها",
+      href: "/finance/financial-approvals",
+      icon: "clipboard-check",
+      description: "بررسی درخواست‌های در انتظار حسابدار فروش",
     },
     {
-      label: "فاکتورها",
-      href: "/finance/invoices",
-      icon: "file-text",
-      description: "اسناد مالی صادرشده",
+      label: "لیست قیمت‌ها",
+      href: "/finance/pricing/price-lists",
+      icon: "layers",
+      description: "مشاهده کالاها و قیمت‌های فعال",
     },
     {
       label: "فاکتورهای داخلی",
@@ -194,6 +232,30 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       icon: "clipboard-check",
       description: "تأیید یا برگشت برای اصلاح",
       group: "سفارش‌ها",
+    },
+    {
+      label: "انتقال در سامانه مشتری",
+      href: "/finance-control/customer-system-transfers",
+      icon: "truck",
+      description: "ثبت انتقال بار و ارسال به صف انبار",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
+    {
+      label: "حواله‌های انتقال",
+      href: "/finance-control/stock-transfers",
+      icon: "file-check",
+      description: "مشاهده انتقال‌های تأییدشده و حواله‌های تکمیل‌شده",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
+    },
+    {
+      label: "حواله‌های مادسنتر",
+      href: "/finance-control/store-exit-slips",
+      icon: "file-check",
+      description: "مشاهده حواله‌های خروج صادرشده مادسنتر",
+      group: "سفارش‌ها",
+      visibleToRoles: ["systems_expert"],
     },
   ],
   support: [
@@ -223,6 +285,13 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       href: "/support/pricing/generated-price-lists",
       icon: "file-check",
       description: "قیمت‌های داخلی قابل استفاده در سفارش",
+      group: "قیمت‌گذاری",
+    },
+    {
+      label: "قیمت‌گذاری فروشگاه",
+      href: "/finance-control/store-price-lists",
+      icon: "layers",
+      description: "انتخاب لیست قیمت مشترک هر برند مادسنتر",
       group: "قیمت‌گذاری",
     },
     {

@@ -60,7 +60,7 @@ export const roles: Role[] = [
   },
   {
     key: "finance",
-    title: "حسابداری",
+    title: "حسابدار فروش",
     description:
       "کنترل سفارش های تحویل شده و نهایی سازی مالی با صدور فاکتور داخلی.",
     path: "/finance",
@@ -73,7 +73,7 @@ export const roles: Role[] = [
   },
   {
     key: "finance-control",
-    title: "کارشناس کنترل مالی",
+    title: "کنترل مالی قدیمی",
     description:
       "بررسی سفارش های در انتظار تایید مالی و بازگردانی موارد نیازمند اصلاح.",
     path: "/finance-control",
@@ -108,6 +108,7 @@ export const rolesByKey: Record<RoleKey, Role> = roles.reduce(
 );
 
 export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
+  "store-expert": [],
   expert: [
     {
       label: "داشبورد",
@@ -293,6 +294,7 @@ export const sidebarByRole: Record<RoleKey, SidebarItem[]> = {
 };
 
 export const statsByRole: Record<RoleKey, DashboardStat[]> = {
+  "store-expert": [],
   expert: [
     {
       id: "1",
@@ -426,6 +428,7 @@ export const statsByRole: Record<RoleKey, DashboardStat[]> = {
 };
 
 export const activityByRole: Record<RoleKey, ActivityItem[]> = {
+  "store-expert": [],
   expert: [
     {
       id: "1",

@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { FieldError } from "@/components/shared/field-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
 import { formatFaDigits } from "@/lib/utils/number-format";
 
 interface JalaliDateInputProps {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   label?: string;
@@ -40,8 +41,10 @@ const JALALI_MONTHS = [
 ];
 
 const WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const JALALI_YEARS = Array.from({ length: 201 }, (_, index) => 1300 + index);
 
 export function JalaliDateInput({
+  id,
   value,
   onChange,
   label = "تاریخ",
@@ -222,9 +225,35 @@ export function JalaliDateInput({
                 >
                   <ChevronRight className="size-4" />
                 </Button>
-                <div className="text-sm font-semibold text-[#1F3A5F]">
-                  {JALALI_MONTHS[visibleMonth.month - 1]}{" "}
-                  {formatFaDigits(String(visibleMonth.year))}
+                <div className="grid grid-cols-2 gap-2">
+                  <CalendarDropdown
+                    value={String(visibleMonth.month)}
+                    options={JALALI_MONTHS.map((month, index) => ({
+                      value: String(index + 1),
+                      label: month,
+                    }))}
+                    placeholder="ماه"
+                    onValueChange={(value) => {
+                      const month = Number(value);
+                      if (month >= 1 && month <= 12) {
+                        setVisibleMonth((current) => ({ ...current, month }));
+                      }
+                    }}
+                  />
+                  <CalendarDropdown
+                    value={String(visibleMonth.year)}
+                    options={JALALI_YEARS.map((year) => ({
+                      value: String(year),
+                      label: formatFaDigits(String(year)),
+                    }))}
+                    placeholder="سال"
+                    onValueChange={(value) => {
+                      const year = Number(value);
+                      if (Number.isInteger(year)) {
+                        setVisibleMonth((current) => ({ ...current, year }));
+                      }
+                    }}
+                  />
                 </div>
                 <Button
                   type="button"
@@ -275,6 +304,7 @@ export function JalaliDateInput({
       <div className="relative">
         <CalendarDays className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#6CAE75]" />
         <Input
+          id={id}
           ref={triggerRef}
           data-jalali-date-input-trigger="true"
           value={displayValue}
@@ -308,4 +338,60 @@ function clamp(value: number, min: number, max: number): number {
   if (Number.isNaN(value)) return min;
   if (max < min) return min;
   return Math.min(Math.max(value, min), max);
+}
+
+function CalendarDropdown({
+  value,
+  options,
+  placeholder,
+  onValueChange,
+}: {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  placeholder: string;
+  onValueChange: (value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabel = options.find((option) => option.value === value)?.label;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="flex h-9 w-full min-w-24 items-center justify-between gap-2 rounded-lg border border-[#D7DEE6] bg-white px-2 text-xs text-[#102034]"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span>{selectedLabel || placeholder}</span>
+        <ChevronDown className="size-3.5 text-[#6B7280]" />
+      </button>
+      {isOpen ? (
+        <div
+          role="listbox"
+          className="absolute top-full right-0 z-20 mt-1 max-h-52 w-full min-w-28 overflow-y-auto rounded-lg border border-[#D7DEE6] bg-white p-1 shadow-lg"
+        >
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={option.value === value}
+              onClick={() => {
+                onValueChange(option.value);
+                setIsOpen(false);
+              }}
+              className={`block w-full rounded-md px-2 py-2 text-right text-xs transition-colors ${
+                option.value === value
+                  ? "bg-[#F3F7FB] text-[#1F3A5F]"
+                  : "text-[#334155] hover:bg-[#EFF4F8]"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
 }

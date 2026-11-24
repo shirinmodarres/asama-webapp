@@ -1,3 +1,4 @@
+import type { OrderFulfillment } from "@/lib/models/order-fulfillment.model";
 import { httpClient } from "@/lib/api/http-client";
 import { ApiError } from "@/lib/api/api-error";
 import { getShipmentStopReasonLabel } from "@/lib/domain/order-action-reasons";
@@ -34,6 +35,13 @@ export async function listOrders(filters?: OrderFilters): Promise<Order[]> {
 export async function getOrder(objectId: string): Promise<Order> {
   const data = await httpClient.get<unknown>(`/api/orders/${objectId}`);
   return mapOrderDto(data);
+}
+
+export function getOrderFulfillment(objectId: string, signal?: AbortSignal) {
+  return httpClient.get<OrderFulfillment>(
+    `/api/orders/${encodeURIComponent(objectId)}/fulfillment`,
+    { signal },
+  );
 }
 
 export async function getOrderEditData(objectId: string): Promise<OrderEditData> {
@@ -315,6 +323,7 @@ function toNumberSnapshot(value: unknown): number | null {
 
 export interface ApproveOrderPayload {
   stockObjectId?: string;
+  approvedByName?: string;
 }
 
 export async function approveOrder(
@@ -361,7 +370,8 @@ export interface FinancialApprovalPayload {
 export interface FinancialReturnPayload {
   returnedByName?: string;
   returnedBy?: string;
-  correctionReason: string;
+  correctionReasonCode: string;
+  correctionReason?: string;
   reason?: string;
 }
 
@@ -434,6 +444,12 @@ function buildOrdersPath(filters?: OrderFilters): string {
   if (filters.financialApprovalStatus) {
     params.set("financialApprovalStatus", filters.financialApprovalStatus);
   }
+  if (filters.financialApprovalStage) {
+    params.set("financialApprovalStage", filters.financialApprovalStage);
+  }
+  if (filters.warehouseStatus) {
+    params.set("warehouseStatus", filters.warehouseStatus);
+  }
 
   const query = params.toString();
   return query ? `/api/orders?${query}` : "/api/orders";
@@ -461,7 +477,10 @@ function mapApprovalResult(
   const order = hasOrderData
     ? mapOrderDto({
         ...orderSource,
-        orderStatus: "approved",
+        orderStatus:
+          typeof orderSource.orderStatus === "string"
+            ? orderSource.orderStatus
+            : "approved",
         quotationStatus,
       })
     : null;

@@ -7,14 +7,22 @@ import {
 } from "@/lib/domain/statuses";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import { PaymentMethodRow } from "@/components/shared/payment-method-row";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
+import {
+  getOrderDisplayDiscountAmount,
+  getSalesRequestDiscountNote,
+} from "@/lib/utils/order-financial-display";
 
 interface OrderSummaryCardProps {
   customerName: string | null;
   itemCount: number;
   totalQuantity: number;
   totalAmount: number;
+  discountAmount?: number;
+  notes?: string | null;
   status: string;
   warehouseStatus: string;
+  financialApprovalStageLabel?: string | null;
   saleTypeTitle?: string | null;
   priceListTitle?: string | null;
   stockTitles?: string[];
@@ -25,12 +33,25 @@ export function OrderSummaryCard({
   itemCount,
   totalQuantity,
   totalAmount,
+  discountAmount = 0,
+  notes,
   status,
   warehouseStatus,
+  financialApprovalStageLabel,
   saleTypeTitle,
   priceListTitle,
   stockTitles = [],
 }: OrderSummaryCardProps) {
+  const discountNote = getSalesRequestDiscountNote(notes);
+  const displayDiscountAmount = getOrderDisplayDiscountAmount({
+    totalAmount,
+    storedDiscountAmount: discountAmount,
+    notes,
+  });
+  const financials = calculateSalesRequestFinancials(
+    totalAmount,
+    totalAmount > 0 ? (displayDiscountAmount / totalAmount) * 100 : 0,
+  );
   return (
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4">
@@ -51,7 +72,16 @@ export function OrderSummaryCard({
         <SummaryRow label="مشتری" value={customerName || "-"} />
         <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
         <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
-        <SummaryRow label="مبلغ تقریبی" value={formatCurrency(totalAmount)} />
+        <SummaryRow label="مبلغ کل" value={formatCurrency(totalAmount)} />
+        <SummaryRow
+          label="تخفیف سفارش"
+          value={
+            displayDiscountAmount > 0
+              ? formatCurrency(displayDiscountAmount)
+              : discountNote || "-"
+          }
+        />
+        <SummaryRow label="مبلغ با مالیات" value={formatCurrency(financials.total)} />
         <PaymentMethodRow value={saleTypeTitle} />
         {priceListTitle ? (
           <SummaryRow label="لیست قیمت" value={priceListTitle} />
@@ -64,10 +94,14 @@ export function OrderSummaryCard({
           label="وضعیت سفارش"
           value={getDisplayOrderStatusLabel(status, warehouseStatus)}
         />
+        {financialApprovalStageLabel ? (
+          <SummaryRow label="مرحله تأیید مالی" value={financialApprovalStageLabel} />
+        ) : null}
         <SummaryRow
           label="وضعیت انبار"
           value={getWarehouseStatusLabel(warehouseStatus)}
         />
+        {notes ? <SummaryRow label="توضیحات سفارش" value={notes} /> : null}
       </dl>
     </Card>
   );

@@ -1,9 +1,11 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Pencil } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { CustomerInfoCard } from "@/components/customer/customer-info-card";
 import type { DataTableColumn } from "@/components/shared/data-table";
@@ -24,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/api/api-error";
-import { getFinancialApprovalStatusLabel } from "@/lib/domain/statuses";
+import { getFinancialApprovalStageLabel } from "@/lib/domain/statuses";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
@@ -88,7 +90,16 @@ export default function ExpertOrderDetailsPage() {
     0,
   );
   const paymentMethodTitle = order?.salesTypeTitle ?? null;
-  const needsFinancialCorrection = order?.financialApprovalStatus === "needs_correction";
+  const needsFinancialCorrection =
+    order?.financialApprovalStatus === "needs_correction";
+  const financialCorrectionReason = order
+    ? [order.financialCorrectionReasonLabel, order.financialCorrectionReason]
+        .filter(
+          (value, index, values) =>
+            Boolean(value) && values.indexOf(value) === index,
+        )
+        .join(" - ")
+    : "";
 
   const handleResolveReview = async () => {
     if (!order) return;
@@ -120,7 +131,7 @@ export default function ExpertOrderDetailsPage() {
     try {
       const updated = await resubmitFinancialOrder(order.objectId);
       setOrder(updated);
-      setActionMessage("سفارش برطرف شد و دوباره برای بررسی مالی ارسال شد.");
+      setActionMessage("سفارش برطرف شد و دوباره برای بررسی ارسال شد.");
     } catch (resubmitError) {
       setActionError(getErrorMessage(resubmitError));
     } finally {
@@ -156,7 +167,11 @@ export default function ExpertOrderDetailsPage() {
         <span className="font-medium text-[#1F3A5F]">{row.name}</span>
       ),
     },
-    { key: "brand", header: "برند", render: (row) => row.brandName || row.brand || "-" },
+    {
+      key: "brand",
+      header: "برند",
+      render: (row) => row.brandName || row.brand || "-",
+    },
     {
       key: "sku",
       header: "شناسه کالا",
@@ -202,9 +217,10 @@ export default function ExpertOrderDetailsPage() {
             title={`سفارش ${formatFaDigits(order.code)}`}
             description="جزئیات وضعیت سفارش، انبار و اقلام ثبت شده"
             actions={
-              order.canEdit || order.canCancel ? (
+              (!needsFinancialCorrection && order.canEdit) ||
+              order.canCancel ? (
                 <div className="flex flex-wrap gap-2">
-                  {order.canEdit ? (
+                  {!needsFinancialCorrection && order.canEdit ? (
                     <Link
                       href={`/expert/orders/${order.objectId}/edit`}
                       className="btn-primary rounded-xl px-4 py-2 text-sm font-medium text-white visited:text-white hover:text-white focus:text-white"
@@ -234,12 +250,16 @@ export default function ExpertOrderDetailsPage() {
             </div>
           ) : null}
 
-          <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+          <Dialog
+            open={isCancelDialogOpen}
+            onOpenChange={setIsCancelDialogOpen}
+          >
             <DialogContent dir="rtl">
               <DialogHeader>
                 <DialogTitle>لغو سفارش</DialogTitle>
                 <DialogDescription>
-                  با لغو سفارش، موجودی رزروشده آن آزاد می‌شود. آیا از ادامه مطمئن هستید؟
+                  با لغو سفارش، موجودی رزروشده آن آزاد می‌شود. آیا از ادامه
+                  مطمئن هستید؟
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -271,42 +291,52 @@ export default function ExpertOrderDetailsPage() {
           ) : null}
 
           {needsFinancialCorrection ? (
-            <div className="rounded-xl border border-[#F8D9A0] bg-[#FFF8E7] p-5 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2 text-[#9A6C18]">
-                <AlertTriangle className="size-4" />
-                <h3 className="text-base font-semibold">
-                  این سفارش برای اصلاح از کنترل مالی برگشت خورده است.
-                </h3>
-                <StatusBadge
-                  type="financial"
-                  status={order.financialApprovalStatus ?? "needs_correction"}
-                />
+            <section className="overflow-hidden rounded-xl border border-[#F1D7AA] bg-[#FFF8EB] shadow-sm">
+              <div className="flex items-start gap-3 p-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#F1D7AA] bg-white/70 text-[#9A6C18]">
+                  <AlertTriangle className="size-5" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge type="financial" status="needs_correction" />
+                    <h3 className="text-sm font-semibold text-[#9A6C18]">
+                      این سفارش برای اصلاح به شما بازگشته است.
+                    </h3>
+                  </div>
+
+                  <p className="mt-2 text-sm leading-7 text-[#9A6C18]">
+                    {financialCorrectionReason || "دلیل مشخصی ثبت نشده است."}
+                  </p>
+                </div>
               </div>
-              <p className="mt-3 text-sm leading-7 text-[#5F4320]">
-                {order.financialCorrectionReason || "دلیل مشخصی ثبت نشده است."}
-                <span className="mt-2 block text-xs text-[#8A6A3A]">
-                  وضعیت فعلی: {getFinancialApprovalStatusLabel(order.financialApprovalStatus)}
-                </span>
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+
+              <div className="flex flex-wrap items-center gap-2 border-t border-[#F1D7AA] px-4 py-3 sm:px-5">
                 {order.canEdit ? (
-                  <Link
-                    href={`/expert/orders/${order.objectId}/edit`}
-                    className="rounded-xl border border-[#D9A441] bg-white px-4 py-2 text-sm font-medium text-[#9A6C18] visited:text-[#9A6C18] hover:bg-[#FFF1D6] hover:text-[#7A520F]"
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 gap-2 rounded-xl border-[#F1D7AA] bg-white text-[#9A6C18] hover:bg-[#FFF1D6] hover:text-[#7A520F]"
                   >
-                    اصلاح سفارش
-                  </Link>
+                    <Link href={`/expert/orders/${order.objectId}/edit`}>
+                      <Pencil className="size-4" />
+                      اصلاح سفارش
+                    </Link>
+                  </Button>
                 ) : null}
+
                 <Button
                   type="button"
-                  className="rounded-xl bg-[#1F3A5F] px-4 py-2 text-sm font-medium text-white hover:text-white"
+                  className="h-10 gap-2 rounded-xl bg-[#9A6C18] text-white hover:bg-[#7A520F]"
                   disabled={isSubmitting || !order.canEdit}
                   onClick={handleResubmitFinancialReview}
                 >
-                  برطرف شد و ارسال مجدد برای بررسی مالی
+                  {isSubmitting
+                    ? "در حال ارسال..."
+                    : "ارسال مجدد برای بررسی مالی"}
                 </Button>
               </div>
-            </div>
+            </section>
           ) : null}
 
           <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -386,6 +416,9 @@ export default function ExpertOrderDetailsPage() {
                 </div>
               ) : null}
 
+              {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
               <CustomerInfoCard order={order} />
 
               <DataTable
@@ -403,8 +436,14 @@ export default function ExpertOrderDetailsPage() {
                 0,
               )}
               totalAmount={totalAmount}
+              discountAmount={order.salesRequestDiscountTotal}
+              notes={order.notes}
               status={order.orderStatus}
               warehouseStatus={order.warehouseStatus}
+              financialApprovalStageLabel={
+                order.financialApprovalStageLabel ||
+                getFinancialApprovalStageLabel(order.financialApprovalStage)
+              }
               saleTypeTitle={paymentMethodTitle}
             />
           </section>

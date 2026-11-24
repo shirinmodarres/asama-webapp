@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
-import { getErrorMessage } from "@/lib/api/api-error";
+import { ApiError, getErrorMessage } from "@/lib/api/api-error";
 import { formatCurrency, formatNumber } from "@/lib/expert/utils";
 import type { Customer } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
@@ -23,10 +23,14 @@ import { getStoredCurrentUser } from "@/lib/services/auth.service";
 import { listAssignedCustomersForExpert } from "@/lib/services/expert-customer.service";
 import { listQuotationProductsForAssignment } from "@/lib/services/product.service";
 import { listActiveSalesTypes } from "@/lib/services/sales-type.service";
-import { formatFaDigits, normalizeDigits, toNumber } from "@/lib/utils/number-format";
+import { normalizeDigits, toNumber } from "@/lib/utils/number-format";
 import { JalaliDateInput } from "@/components/shared/jalali-date-input";
-import { SELECT_REQUIRED_MESSAGE, POSITIVE_NUMBER_MESSAGE } from "@/lib/utils/form-validation";
-import { jalaliToIso, todayJalaliParts } from "@/lib/utils/jalali-date";
+import {
+  SELECT_REQUIRED_MESSAGE,
+  POSITIVE_NUMBER_MESSAGE,
+} from "@/lib/utils/form-validation";
+import { tomorrowTehranIso } from "@/lib/utils/jalali-date";
+import { calculateSalesRequestFinancials } from "@/lib/utils/sales-request-financials";
 import {
   buildQuotationSubmitPayload,
   getQuotationCustomerSnapshot,
@@ -78,7 +82,9 @@ export function QuotationForm({
   const [customerError, setCustomerError] = useState("");
   const [productError, setProductError] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState(
-    initialQuotation?.customerObjectId || initialQuotation?.customer?.objectId || "",
+    initialQuotation?.customerObjectId ||
+      initialQuotation?.customer?.objectId ||
+      "",
   );
   const [selectedPriceListId, setSelectedPriceListId] = useState(
     initialQuotation?.priceListObjectId || initialQuotation?.priceListId || "",
@@ -88,12 +94,12 @@ export function QuotationForm({
     getQuotationSalesTypeOptionKey(initialQuotation) || "",
   );
   const [selectedValidUntil, setSelectedValidUntil] = useState(
-    initialQuotation?.validUntil?.slice(0, 10) || (() => {
-      const [year, month, day] = todayJalaliParts();
-      return jalaliToIso(year, month, day);
-    })(),
+    initialQuotation?.validUntil?.slice(0, 10) || tomorrowTehranIso(),
   );
   const [notes, setNotes] = useState(initialQuotation?.notes || "");
+  const [selectedStockObjectId, setSelectedStockObjectId] = useState(
+    initialQuotation?.stockObjectId || "",
+  );
   const [rows, setRows] = useState<DraftRow[]>(
     initialQuotation?.items?.length
       ? initialQuotation.items.map((item, index) => ({
@@ -110,11 +116,9 @@ export function QuotationForm({
   const [discountPercentage, setDiscountPercentage] = useState(
     initialQuotation?.discountPercentage ?? 0,
   );
-  const [taxPercentage, setTaxPercentage] = useState(
-    initialQuotation?.taxPercentage ?? 10,
-  );
   const quotationSalesTypeFallback = useMemo(
-    () => getQuotationSalesTypeSnapshot(initialQuotation) as SalesTypeOption | null,
+    () =>
+      getQuotationSalesTypeSnapshot(initialQuotation) as SalesTypeOption | null,
     [initialQuotation],
   );
   const quotationCustomerFallback = useMemo(
@@ -136,7 +140,9 @@ export function QuotationForm({
         }));
         if (quotationSalesTypeFallback) {
           const exists = normalizedSalesTypes.some(
-            (salesType) => getSalesTypeOptionKey(salesType) === getSalesTypeOptionKey(quotationSalesTypeFallback),
+            (salesType) =>
+              getSalesTypeOptionKey(salesType) ===
+              getSalesTypeOptionKey(quotationSalesTypeFallback),
           );
           if (!exists) {
             normalizedSalesTypes.push({
@@ -148,9 +154,13 @@ export function QuotationForm({
           }
         }
         setSalesTypes(normalizedSalesTypes);
-        if (!selectedSalesTypeId && initialQuotation) {
+        if (initialQuotation) {
           const nextSelected = getQuotationSalesTypeOptionKey(initialQuotation);
-          if (nextSelected) setSelectedSalesTypeId(nextSelected);
+          if (nextSelected) {
+            setSelectedSalesTypeId(
+              (current: string) => current || nextSelected,
+            );
+          }
         }
       } catch {
         if (mounted) setSalesTypes([]);
@@ -160,20 +170,23 @@ export function QuotationForm({
       setIsLoadingCustomers(true);
       setCustomerError("");
       try {
-        const data = await listAssignedCustomersForExpert(getStoredCurrentUser()?.objectId);
+        const data = await listAssignedCustomersForExpert(
+          getStoredCurrentUser()?.objectId,
+        );
         if (!mounted) return;
         const normalizedCustomers = [...data];
         if (
           quotationCustomerFallback &&
           !normalizedCustomers.some(
-            (customer) => customer.objectId === quotationCustomerFallback.objectId,
+            (customer) =>
+              customer.objectId === quotationCustomerFallback.objectId,
           )
         ) {
           normalizedCustomers.unshift(quotationCustomerFallback);
         }
         setCustomers(normalizedCustomers);
-        if (!selectedCustomerId && data.length === 1) {
-          setSelectedCustomerId(data[0].objectId);
+        if (data.length === 1) {
+          setSelectedCustomerId((current) => current || data[0].objectId);
         }
       } catch (loadError) {
         if (mounted) setCustomerError(getErrorMessage(loadError));
@@ -187,24 +200,59 @@ export function QuotationForm({
       mounted = false;
     };
   }, [
+    initialQuotation,
     initialQuotation?.salesTypeObjectId,
     quotationCustomerFallback,
-    selectedSalesTypeId,
+    quotationSalesTypeFallback,
   ]);
+
+  const focusField = (id: string) => {
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.focus({ preventScroll: true });
+    });
+  };
 
   const selectedCustomer = useMemo(
     () =>
       customers.find((customer) => customer.objectId === selectedCustomerId) ??
-      (quotationCustomerFallback && quotationCustomerFallback.objectId === selectedCustomerId
+      (quotationCustomerFallback &&
+      quotationCustomerFallback.objectId === selectedCustomerId
         ? quotationCustomerFallback
         : null),
     [customers, quotationCustomerFallback, selectedCustomerId],
   );
+  const stockOptions = useMemo(() => {
+    if (selectedCustomer?.allowedStocks?.length) {
+      return selectedCustomer.allowedStocks.map(
+        (stock: Customer["allowedStocks"][number]) => ({
+          value: stock.objectId,
+          label: stock.title || stock.objectId,
+        }),
+      );
+    }
+    return (selectedCustomer?.allowedStockObjectIds || []).map(
+      (objectId: string, index: number) => ({
+        value: objectId,
+        label: selectedCustomer?.allowedStockTitles?.[index] || objectId,
+      }),
+    );
+  }, [selectedCustomer]);
+
+  const effectiveStockObjectId = stockOptions.some(
+    (option: PriceListOption) => option.value === selectedStockObjectId,
+  )
+    ? selectedStockObjectId
+    : stockOptions.length === 1
+      ? stockOptions[0].value
+      : "";
 
   const priceListOptions = useMemo(() => {
     const options: PriceListOption[] = [];
     const seen = new Set<string>();
-    const addOption = (value: string | null | undefined, label: string | null | undefined) => {
+    const addOption = (
+      value: string | null | undefined,
+      label: string | null | undefined,
+    ) => {
       if (!value || seen.has(value)) return;
       seen.add(value);
       options.push({ value, label: label || value });
@@ -216,7 +264,10 @@ export function QuotationForm({
       name?: string | null;
     }> = selectedCustomer?.priceLists || [];
     priceLists.forEach((priceList: (typeof priceLists)[number]) => {
-      addOption(priceList.objectId, priceList.title || priceList.displayName || priceList.name);
+      addOption(
+        priceList.objectId,
+        priceList.title || priceList.displayName || priceList.name,
+      );
     });
     addOption(selectedCustomer?.priceListId, selectedCustomer?.priceListTitle);
     // if (!options.length && selectedCustomer?.saleType?.objectId) {
@@ -243,7 +294,9 @@ export function QuotationForm({
   }, [quotationSalesTypeFallback, salesTypes]);
   const selectedSalesType = useMemo(
     () =>
-      mergedSalesTypes.find((salesType) => getSalesTypeOptionKey(salesType) === selectedSalesTypeId) ||
+      mergedSalesTypes.find(
+        (salesType) => getSalesTypeOptionKey(salesType) === selectedSalesTypeId,
+      ) ||
       quotationSalesTypeFallback ||
       null,
     [mergedSalesTypes, quotationSalesTypeFallback, selectedSalesTypeId],
@@ -251,21 +304,43 @@ export function QuotationForm({
 
   useEffect(() => {
     if (!selectedCustomer) {
-      if (quotationCustomerFallback && quotationCustomerFallback.objectId === selectedCustomerId) {
+      if (
+        quotationCustomerFallback &&
+        quotationCustomerFallback.objectId === selectedCustomerId
+      ) {
         const fallbackPriceLists = quotationCustomerFallback.priceLists || [];
         const fallbackOptions = fallbackPriceLists
-          .map((priceList: { objectId: string; title?: string | null; displayName?: string | null; name?: string | null }) => ({
-            value: priceList.objectId,
-            label: priceList.title || priceList.displayName || priceList.name,
-          }))
-          .filter((option: { value: string; label: string }) => Boolean(option.value));
+          .map(
+            (priceList: {
+              objectId: string;
+              title?: string | null;
+              displayName?: string | null;
+              name?: string | null;
+            }) => ({
+              value: priceList.objectId,
+              label: priceList.title || priceList.displayName || priceList.name,
+            }),
+          )
+          .filter((option: { value: string; label: string }) =>
+            Boolean(option.value),
+          );
         if (fallbackPriceLists.length) {
-      setSelectedPriceListId((current: string) => {
-            if (current && fallbackOptions.some((option: { value: string; label: string }) => option.value === current)) return current;
-            return (
-              initialQuotation?.priceListObjectId &&
-              fallbackOptions.some((option: { value: string; label: string }) => option.value === initialQuotation.priceListObjectId)
+          // Keep the stored draft selection when asynchronously loaded assignment data arrives.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setSelectedPriceListId((current: string) => {
+            if (
+              current &&
+              fallbackOptions.some(
+                (option: { value: string; label: string }) =>
+                  option.value === current,
+              )
             )
+              return current;
+            return initialQuotation?.priceListObjectId &&
+              fallbackOptions.some(
+                (option: { value: string; label: string }) =>
+                  option.value === initialQuotation.priceListObjectId,
+              )
               ? initialQuotation.priceListObjectId
               : fallbackOptions[0].value;
           });
@@ -278,8 +353,15 @@ export function QuotationForm({
     }
     if (priceListOptions.length > 0) {
       setSelectedPriceListId((current) => {
-        if (current && priceListOptions.some((option) => option.value === current)) return current;
-        return selectedCustomer.priceListId && priceListOptions.some((option) => option.value === selectedCustomer.priceListId)
+        if (
+          current &&
+          priceListOptions.some((option) => option.value === current)
+        )
+          return current;
+        return selectedCustomer.priceListId &&
+          priceListOptions.some(
+            (option) => option.value === selectedCustomer.priceListId,
+          )
           ? selectedCustomer.priceListId
           : priceListOptions[0].value;
       });
@@ -302,13 +384,12 @@ export function QuotationForm({
       setIsLoadingProducts(true);
       setProductError("");
       try {
-        const data = await listQuotationProductsForAssignment(
-          {
-            customerObjectId: selectedCustomerId,
-            priceListId: selectedPriceListId,
-            expertUserId: getStoredCurrentUser()?.objectId,
-          },
-        );
+        const data = await listQuotationProductsForAssignment({
+          customerObjectId: selectedCustomerId,
+          priceListId: selectedPriceListId,
+          stockObjectId: effectiveStockObjectId || undefined,
+          expertUserId: getStoredCurrentUser()?.objectId,
+        });
         if (!mounted) return;
         setProducts(data);
         if (mode === "edit" && initialQuotation) {
@@ -326,16 +407,21 @@ export function QuotationForm({
     return () => {
       mounted = false;
     };
-  }, [initialQuotation, mode, selectedCustomerId, selectedPriceListId]);
+  }, [
+    effectiveStockObjectId,
+    initialQuotation,
+    mode,
+    selectedCustomerId,
+    selectedPriceListId,
+  ]);
 
   const productOptions = useMemo(
     () =>
       products.map((product) => ({
         value: product.objectId,
-        label: [
-          product.sepidarCode || product.sku,
-          product.name,
-        ].filter(Boolean).join(" - "),
+        label: [product.sepidarCode || product.sku, product.name]
+          .filter(Boolean)
+          .join(" - "),
         description: product.brandName || undefined,
         searchText: [
           product.sepidarCode,
@@ -380,19 +466,26 @@ export function QuotationForm({
   );
 
   const subtotal = resolvedRows.reduce((sum, row) => sum + row.lineTotal, 0);
-  const discountAmount = subtotal * (discountPercentage / 100);
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
-  const taxAmount = taxableAmount * (taxPercentage / 100);
-  const total = taxableAmount + taxAmount;
+  const financials = calculateSalesRequestFinancials(
+    subtotal,
+    discountPercentage,
+  );
   const itemCount = resolvedRows.length;
-  const totalQuantity = resolvedRows.reduce((sum, row) => sum + row.quantity, 0);
+  const totalQuantity = resolvedRows.reduce(
+    (sum, row) => sum + row.quantity,
+    0,
+  );
 
   const addRow = () => {
     setRows((current) => [...current, createEmptyRow(current.length)]);
   };
 
   const removeRow = (rowId: string) => {
-    setRows((current) => (current.length > 1 ? current.filter((row) => row.rowId !== rowId) : current));
+    setRows((current) =>
+      current.length > 1
+        ? current.filter((row) => row.rowId !== rowId)
+        : current,
+    );
   };
 
   const updateRow = (rowId: string, patch: Partial<DraftRow>) => {
@@ -411,7 +504,10 @@ export function QuotationForm({
   const submit = async (status: "draft" | "finalized") => {
     setError("");
     setRowErrors({});
-    const nextRowErrors: Record<string, { productId?: string; quantity?: string }> = {};
+    const nextRowErrors: Record<
+      string,
+      { productId?: string; quantity?: string }
+    > = {};
 
     if (!selectedCustomerId) {
       setError("لطفاً مشتری را انتخاب کنید.");
@@ -421,8 +517,21 @@ export function QuotationForm({
       setError("لطفاً روش پرداخت را انتخاب کنید.");
       return;
     }
+    if (
+      !selectedSalesType?.objectId ||
+      selectedSalesType.objectId.startsWith("quotation-sales-type-")
+    ) {
+      setError(
+        "روش پرداخت انتخاب‌شده معتبر نیست. لطفاً یک روش پرداخت فعال انتخاب کنید.",
+      );
+      return;
+    }
     if (!selectedPriceListId) {
       setError("لطفاً لیست قیمت را انتخاب کنید.");
+      return;
+    }
+    if (!effectiveStockObjectId) {
+      setError("لطفاً انبار درخواست را انتخاب کنید.");
       return;
     }
 
@@ -440,6 +549,12 @@ export function QuotationForm({
       }
       if (!Number.isFinite(row.quantity) || row.quantity <= 0) {
         rowErrors.quantity = POSITIVE_NUMBER_MESSAGE;
+      } else if (
+        row.productId &&
+        row.quantity >
+          Number(productsById[row.productId]?.availableForSale || 0)
+      ) {
+        rowErrors.quantity = `حداکثر موجودی قابل فروش ${formatNumber(productsById[row.productId]?.availableForSale || 0)} است.`;
       }
       if (Object.keys(rowErrors).length) {
         nextRowErrors[row.rowId] = rowErrors;
@@ -451,22 +566,67 @@ export function QuotationForm({
       return;
     }
 
+    const requestedByProduct = resolvedRows.reduce<Record<string, number>>(
+      (result, row) => {
+        result[row.productId] = (result[row.productId] || 0) + row.quantity;
+        return result;
+      },
+      {},
+    );
+    const overAvailableProduct = Object.entries(requestedByProduct).find(
+      ([productId, quantity]) =>
+        quantity > Number(productsById[productId]?.availableForSale || 0),
+    );
+    if (overAvailableProduct) {
+      const [productId, quantity] = overAvailableProduct;
+      const product = productsById[productId];
+      setError(
+        `${product?.name || "کالا"}: درخواستی ${formatNumber(quantity)}، قابل فروش ${formatNumber(product?.availableForSale || 0)}`,
+      );
+      return;
+    }
     try {
       await onSubmit(
         buildQuotationSubmitPayload({
           selectedCustomerId,
-          selectedSalesTypeId,
           selectedSalesType: selectedSalesType ?? null,
           selectedPriceListId,
           notes,
           selectedValidUntil,
           discountPercentage,
-          taxPercentage,
+          taxPercentage: financials.taxPercentage,
+          stockObjectId: effectiveStockObjectId,
           status,
           rows: resolvedRows,
         }),
       );
     } catch (submitError) {
+      if (
+        submitError instanceof ApiError &&
+        submitError.code === "INSUFFICIENT_AVAILABLE_FOR_SALE"
+      ) {
+        const shortages =
+          (
+            submitError.details as {
+              shortages?: Array<{
+                productName?: string;
+                requestedQuantity?: number;
+                availableForSale?: number;
+              }>;
+            } | null
+          )?.shortages || [];
+        if (shortages.length) {
+          setError(
+            shortages
+              .map(
+                (item) =>
+                  `${item.productName || "کالا"}: درخواستی ${formatNumber(item.requestedQuantity || 0)}، قابل فروش ${formatNumber(item.availableForSale || 0)}`,
+              )
+              .join(" | "),
+          );
+          return;
+        }
+      }
       setError(getErrorMessage(submitError));
     }
   };
@@ -476,36 +636,57 @@ export function QuotationForm({
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
-      <Card className="p-5">
+    <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* فرم اصلی */}
+      <Card className="min-w-0 p-5">
+        {error ? (
+          <div className="mb-4">
+            <InlineErrorMessage message={error} />
+          </div>
+        ) : null}
+
+        {/* اطلاعات درخواست */}
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
+          <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>مشتری</span>
             <SearchableSelect
+              id="quotation-customer"
               value={selectedCustomerId || undefined}
               onValueChange={(value) => {
                 setSelectedCustomerId(value);
                 setRows([createEmptyRow(0)]);
                 setProducts([]);
                 setSelectedPriceListId("");
+                focusField("quotation-sales-type");
               }}
-            options={
-              quotationCustomerFallback &&
-              !customers.some(
-                (customer) => customer.objectId === quotationCustomerFallback.objectId,
-              )
-                ? [
-                    {
-                      value: quotationCustomerFallback.objectId,
-                      label: [
-                        quotationCustomerFallback.sepidarCustomerCode ||
-                          quotationCustomerFallback.id,
-                        quotationCustomerFallback.fullName,
-                      ]
-                        .filter(Boolean)
-                        .join(" - "),
-                    },
-                    ...customers.map((customer) => ({
+              options={
+                quotationCustomerFallback &&
+                !customers.some(
+                  (customer) =>
+                    customer.objectId === quotationCustomerFallback.objectId,
+                )
+                  ? [
+                      {
+                        value: quotationCustomerFallback.objectId,
+                        label: [
+                          quotationCustomerFallback.sepidarCustomerCode ||
+                            quotationCustomerFallback.id,
+                          quotationCustomerFallback.fullName,
+                        ]
+                          .filter(Boolean)
+                          .join(" - "),
+                      },
+                      ...customers.map((customer) => ({
+                        value: customer.objectId,
+                        label: [
+                          customer.sepidarCustomerCode || customer.id,
+                          customer.fullName,
+                        ]
+                          .filter(Boolean)
+                          .join(" - "),
+                      })),
+                    ]
+                  : customers.map((customer) => ({
                       value: customer.objectId,
                       label: [
                         customer.sepidarCustomerCode || customer.id,
@@ -513,30 +694,27 @@ export function QuotationForm({
                       ]
                         .filter(Boolean)
                         .join(" - "),
-                    })),
-                  ]
-                : customers.map((customer) => ({
-                    value: customer.objectId,
-                    label: [
-                      customer.sepidarCustomerCode || customer.id,
-                      customer.fullName,
-                    ]
-                      .filter(Boolean)
-                      .join(" - "),
-                  }))
-            }
-            placeholder="انتخاب مشتری"
-            searchPlaceholder="جستجو در مشتری‌ها"
-            emptyMessage={assignedCustomersOnly ? "مشتری پیدا نشد" : "مشتری یافت نشد"}
-          />
+                    }))
+              }
+              placeholder="انتخاب مشتری"
+              searchPlaceholder="جستجو در مشتری‌ها"
+              emptyMessage={
+                assignedCustomersOnly ? "مشتری پیدا نشد" : "مشتری یافت نشد"
+              }
+            />
             <FieldError message={customerError} />
           </label>
-          <label className="grid content-start gap-1.5 text-sm font-medium text-[#334155]">    
-          <span>روش پرداخت</span>
+
+          <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
+            <span>روش پرداخت</span>
             <SearchableSelect
+              id="quotation-sales-type"
               value={selectedSalesTypeId || undefined}
-              onValueChange={setSelectedSalesTypeId}
-          options={mergedSalesTypes.map((salesType) => ({
+              onValueChange={(value) => {
+                setSelectedSalesTypeId(value);
+                focusField("quotation-price-list");
+              }}
+              options={mergedSalesTypes.map((salesType) => ({
                 value: getSalesTypeOptionKey(salesType),
                 label: salesType.title,
                 searchText: [salesType.title, salesType.internalCode]
@@ -548,11 +726,16 @@ export function QuotationForm({
               emptyMessage="روش پرداختی پیدا نشد"
             />
           </label>
-          <label className="grid content-start gap-1.5 text-sm font-medium text-[#334155]">  
+
+          <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <span>لیست قیمت</span>
             <SearchableSelect
+              id="quotation-price-list"
               value={selectedPriceListId || undefined}
-              onValueChange={setSelectedPriceListId}
+              onValueChange={(value) => {
+                setSelectedPriceListId(value);
+                focusField("quotation-stock");
+              }}
               options={priceListOptions}
               placeholder="انتخاب لیست قیمت"
               searchPlaceholder="جستجو در لیست قیمت"
@@ -560,113 +743,159 @@ export function QuotationForm({
               disabled={!selectedCustomerId || priceListOptions.length === 0}
             />
           </label>
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
+
+          <label className="grid content-start gap-1.5 text-sm font-medium text-[var(--foreground)]">
+            <span>انبار درخواست</span>
+            <SearchableSelect
+              id="quotation-stock"
+              value={effectiveStockObjectId || undefined}
+              onValueChange={(value) => {
+                setSelectedStockObjectId(value);
+                focusField("quotation-valid-until");
+              }}
+              options={stockOptions}
+              placeholder="انتخاب انبار"
+              searchPlaceholder="جستجو در انبارها"
+              emptyMessage="انبار مجازی برای این مشتری یافت نشد"
+            />
+          </label>
+
+          <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]">
             <JalaliDateInput
+              id="quotation-valid-until"
               value={selectedValidUntil}
               onChange={setSelectedValidUntil}
               placeholder="انتخاب تاریخ اعتبار"
               label="اعتبار تا تاریخ"
             />
           </label>
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155] md:col-span-2">
+
+          <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)] md:col-span-2">
             <span>توضیحات</span>
             <Textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={3}
-              placeholder="یادداشت‌های پیش فاکتور"
+              placeholder="یادداشت‌های درخواست فروش"
             />
           </label>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
-            <span>درصد تخفیف کل</span>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={discountPercentage}
-              onChange={(event) => {
-                const value = Math.min(100, Math.max(0, toNumber(normalizeDigits(event.target.value))));
-                setDiscountPercentage(value);
-              }}
-              placeholder="0"
-              inputMode="numeric"
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-medium text-[#334155]">
-            <span>درصد ارزش افزوده</span>
-            <Input
-              type="text"
-              inputMode="numeric"
-              min={0}
-              max={100}
-              value={taxPercentage}
-              onChange={(event) => {
-                const value = Math.min(100, Math.max(0, toNumber(normalizeDigits(event.target.value))));
-                setTaxPercentage(value);
-              }}
-              placeholder="10"
-            />
-          </label>
-        </div>
+        {/* اقلام درخواست */}
+        <div className="mt-8 space-y-4 border-t border-[var(--border)] pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--foreground)]">
+                اقلام درخواست فروش
+              </h3>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                کالا و تعداد مورد نیاز را مشخص کنید.
+              </p>
+            </div>
 
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-[#1F3A5F]">اقلام پیش فاکتور</h3>
             <Button type="button" variant="outline" onClick={addRow}>
-              <PlusCircle className="ml-2 size-4" />
+              <PlusCircle className="size-4" />
               افزودن کالا
             </Button>
           </div>
+
           {productError ? <InlineErrorMessage message={productError} /> : null}
-          {isLoadingProducts ? <LoadingState title="در حال دریافت کالاها" /> : null}
+
+          {isLoadingProducts ? (
+            <LoadingState title="در حال دریافت کالاها" />
+          ) : null}
+
           <div className="space-y-3">
             {rows.map((row) => {
               const product = productsById[row.productId];
               const unitPrice = product?.unitPrice ?? 0;
               const lineTotal = Math.max(0, row.quantity * unitPrice);
+
               return (
                 <div
                   key={row.rowId}
-                  className="grid gap-3 rounded-2xl border border-[#E5E7EB] bg-[#FBFCFD] p-4"
+                  className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4"
                 >
-                  <div>
-                    <SearchableSelect
-                      value={row.productId || undefined}
-                      onValueChange={(value) => updateRow(row.rowId, { productId: value })}
-                      options={productOptions}
-                      placeholder="انتخاب کالا"
-                      searchPlaceholder="جستجو در کالاها"
-                      emptyMessage="کالایی پیدا نشد"
-                      invalid={Boolean(rowErrors[row.rowId]?.productId)}
-                    />
-                    <FieldError message={rowErrors[row.rowId]?.productId} />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-[120px_140px_140px_auto] xl:grid-cols-[120px_140px_140px_auto]">
+                  <div className="grid gap-3">
                     <div>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={row.quantity}
-                        onChange={(event) => updateRow(row.rowId, { quantity: toNumber(event.target.value) })}
-                        placeholder="تعداد"
+                      <SearchableSelect
+                        value={row.productId || undefined}
+                        onValueChange={(value) =>
+                          updateRow(row.rowId, { productId: value })
+                        }
+                        options={productOptions}
+                        placeholder="انتخاب کالا"
+                        searchPlaceholder="جستجو در کالاها"
+                        emptyMessage="کالایی پیدا نشد"
+                        invalid={Boolean(rowErrors[row.rowId]?.productId)}
                       />
-                      <FieldError message={rowErrors[row.rowId]?.quantity} />
+                      <FieldError message={rowErrors[row.rowId]?.productId} />
                     </div>
-                    <Input value={formatCurrency(unitPrice)} readOnly disabled />
-                    <Input value={formatCurrency(lineTotal)} readOnly disabled />
-                    <div className="flex items-center justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeRow(row.rowId)}
-                        disabled={rows.length === 1}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
+
+                    <div className="grid gap-3 sm:grid-cols-[120px_minmax(160px,1fr)_minmax(160px,1fr)_40px] sm:items-start">
+                      <div className="grid gap-1.5">
+                        <span className="text-xs text-[var(--muted-foreground)]">
+                          تعداد
+                        </span>
+
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={formatNumber(row.quantity)}
+                          onChange={(event) =>
+                            updateRow(row.rowId, {
+                              quantity: toNumber(
+                                normalizeDigits(event.target.value),
+                              ),
+                            })
+                          }
+                          placeholder="تعداد"
+                        />
+
+                        <FieldError message={rowErrors[row.rowId]?.quantity} />
+
+                        {product ? (
+                          <p className="text-xs text-[var(--muted-foreground)]">
+                            قابل فروش:{" "}
+                            {formatNumber(product.availableForSale || 0)}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <span className="text-xs text-[var(--muted-foreground)]">
+                          قیمت واحد
+                        </span>
+                        <Input
+                          value={formatCurrency(unitPrice)}
+                          readOnly
+                          disabled
+                        />
+                      </div>
+
+                      <div className="grid gap-1.5">
+                        <span className="text-xs text-[var(--muted-foreground)]">
+                          مبلغ
+                        </span>
+                        <Input
+                          value={formatCurrency(lineTotal)}
+                          readOnly
+                          disabled
+                        />
+                      </div>
+
+                      <div className="flex pt-[22px]">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          title="حذف کالا"
+                          onClick={() => removeRow(row.rowId)}
+                          disabled={rows.length === 1}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -674,56 +903,125 @@ export function QuotationForm({
             })}
           </div>
         </div>
+
+        {/* تخفیف */}
+        <div className="mt-8 space-y-4 border-t border-[var(--border)] pt-6">
+          <label className="grid max-w-xs gap-1.5 text-sm font-medium text-[var(--foreground)]">
+            <span>تخفیف (درصد)</span>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={formatNumber(discountPercentage)}
+              onChange={(event) =>
+                setDiscountPercentage(
+                  Math.min(
+                    100,
+                    Math.max(0, toNumber(normalizeDigits(event.target.value))),
+                  ),
+                )
+              }
+              placeholder="درصد تخفیف"
+            />
+          </label>
+        </div>
       </Card>
 
-      <div className="space-y-4">
-        <Card className="p-5">
-          <h3 className="text-base font-semibold text-[#1F3A5F]">خلاصه پیش فاکتور</h3>
-          <dl className="mt-4 space-y-3 text-sm">
-            <SummaryRow label="مشتری" value={selectedCustomer?.fullName || "-"} />
+      {/* خلاصه */}
+      <aside className="min-w-0 space-y-4">
+        <Card className="p-5 lg:sticky lg:top-4">
+          <h3 className="text-base font-semibold text-[var(--foreground)]">
+            خلاصه درخواست فروش
+          </h3>
+
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            خلاصه مبلغ و اطلاعات درخواست
+          </p>
+
+          <dl className="mt-5 divide-y divide-[var(--border)] text-sm">
+            <SummaryRow
+              label="مشتری"
+              value={selectedCustomer?.fullName || "-"}
+            />
+
             {selectedSalesTypeId ? (
               <SummaryRow
                 label="روش پرداخت"
                 value={
-                  salesTypes.find((salesType) => getSalesTypeOptionKey(salesType) === selectedSalesTypeId)?.title ||
-                  selectedSalesTypeId
+                  mergedSalesTypes.find(
+                    (salesType) =>
+                      getSalesTypeOptionKey(salesType) === selectedSalesTypeId,
+                  )?.title || selectedSalesTypeId
                 }
               />
             ) : null}
+
             {selectedPriceListId ? (
               <SummaryRow
                 label="لیست قیمت"
                 value={
-                  priceListOptions.find((option) => option.value === selectedPriceListId)?.label ||
-                  selectedPriceListId
+                  priceListOptions.find(
+                    (option) => option.value === selectedPriceListId,
+                  )?.label || selectedPriceListId
                 }
               />
             ) : null}
-            <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
-            <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
-            <SummaryRow label="جمع مبلغ اقلام" value={formatCurrency(subtotal)} />
-            <SummaryRow label="درصد تخفیف کل" value={`${formatNumber(discountPercentage)}%`} />
-            <SummaryRow label="مبلغ تخفیف" value={formatCurrency(discountAmount)} />
-            <SummaryRow label="مبلغ مشمول ارزش افزوده" value={formatCurrency(taxableAmount)} />
-            <SummaryRow label="ارزش افزوده ۱۰٪" value={formatCurrency(taxAmount)} />
-            <SummaryRow label="جمع کل" value={formatCurrency(total)} />
-          </dl>
-        </Card>
 
-        <div className="flex flex-col gap-3">
-          {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel}>
-              انصراف
+            <SummaryRow label="تعداد آیتم" value={formatNumber(itemCount)} />
+
+            <SummaryRow label="جمع تعداد" value={formatNumber(totalQuantity)} />
+
+            <SummaryRow
+              label="جمع مبلغ اقلام"
+              value={formatCurrency(subtotal)}
+            />
+
+            <SummaryRow
+              label={`تخفیف ${formatNumber(discountPercentage)}٪`}
+              value={formatCurrency(financials.discountAmount)}
+            />
+
+            <SummaryRow
+              label="مالیات بر ارزش افزوده (۱۰٪)"
+              value={formatCurrency(financials.taxAmount)}
+            />
+          </dl>
+
+          <div className="mt-5 flex items-center justify-between gap-4 rounded-lg bg-[var(--muted)] px-4 py-4">
+            <span className="text-sm font-semibold text-[var(--foreground)]">
+              مبلغ نهایی
+            </span>
+
+            <span className="text-base font-bold text-[var(--foreground)]">
+              {formatCurrency(financials.total)}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-2">
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => submit("draft")}
+            >
+              {submitLabel}
             </Button>
-          ) : null}
-          <Button type="button" disabled={isSubmitting} onClick={() => submit("draft")}>
-            {submitLabel}
-          </Button>
-          <Button type="button" disabled={isSubmitting} variant="secondary" onClick={() => submit("finalized")}>
-            نهایی‌سازی
-          </Button>
-        </div>
-      </div>
+
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              variant="secondary"
+              onClick={() => submit("finalized")}
+            >
+              نهایی‌سازی درخواست
+            </Button>
+
+            {onCancel ? (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                انصراف
+              </Button>
+            ) : null}
+          </div>
+        </Card>
+      </aside>
     </section>
   );
 }
@@ -749,7 +1047,7 @@ function getSalesTypeOptionKey(option?: SalesTypeOption | null): string {
 
 function mapQuotationItems(items: SalesQuotationItem[]): DraftRow[] {
   return items.length
-      ? items.map((item, index) => ({
+    ? items.map((item, index) => ({
         rowId: `quotation-${index}-${item.productObjectId}`,
         productId: item.productObjectId,
         quantity: item.quantity,
@@ -759,9 +1057,12 @@ function mapQuotationItems(items: SalesQuotationItem[]): DraftRow[] {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8EEF4] bg-[#FBFCFD] px-3.5 py-3">
-      <dt className="text-[#6B7280]">{label}</dt>
-      <dd className="font-semibold text-[#102034]">{value}</dd>
+    <div className="flex items-center justify-between gap-3 py-3">
+      <dt className="text-[var(--muted-foreground)]">{label}</dt>
+
+      <dd className="text-left font-semibold text-[var(--foreground)]">
+        {value}
+      </dd>
     </div>
   );
 }

@@ -5,7 +5,10 @@ import { Download, Printer } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/shared/data-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FieldError } from "@/components/shared/field-error";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
@@ -51,6 +54,7 @@ export default function InternalInvoiceDetailPage() {
   const [manualInvoiceNumber, setManualInvoiceNumber] = useState("");
   const [accountantNote, setAccountantNote] = useState("");
   const [fieldError, setFieldError] = useState("");
+  const [dialogError, setDialogError] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -85,6 +89,7 @@ export default function InternalInvoiceDetailPage() {
 
     setIsSubmitting(true);
     setError("");
+    setDialogError("");
     try {
       const updated = await markInternalInvoiceEntered(params.id, {
         manualInvoiceNumber,
@@ -94,7 +99,10 @@ export default function InternalInvoiceDetailPage() {
       setMessage("فاکتور داخلی به عنوان ثبت‌شده در حسابداری علامت‌گذاری شد.");
       setIsDialogOpen(false);
     } catch (submitError) {
-      setError(getErrorMessage(submitError));
+      const nextError = getErrorMessage(submitError);
+      setDialogError(nextError);
+      setError("");
+      setIsDialogOpen(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +119,11 @@ export default function InternalInvoiceDetailPage() {
       header: "کد کالا",
       render: (row) => formatFaDigits(row.productCode) || "-",
     },
-    { key: "name", header: "نام کالا", render: (row) => row.productName || "-" },
+    {
+      key: "name",
+      header: "نام کالا",
+      render: (row) => row.productName || "-",
+    },
     {
       key: "quantity",
       header: "تعداد",
@@ -170,7 +182,7 @@ export default function InternalInvoiceDetailPage() {
         <div className="space-y-5">
           <SectionHeader
             title={`فاکتور داخلی ${formatFaDigits(invoice.invoiceNumber || invoice.id)}`}
-            description="اطلاعات حواله خروج و مبالغ سفارش را پیش از ثبت دستی بررسی کنید."
+            description="مبالغ و اطلاعات سفارش را پیش از ثبت در سیستم حسابداری بررسی کنید."
             actions={
               <div className="flex flex-wrap gap-2">
                 {invoice.pdfUrl ? (
@@ -182,14 +194,16 @@ export default function InternalInvoiceDetailPage() {
                   </Button>
                 ) : null}
                 <Button asChild variant="outline">
-                  <Link href={`/accounting/internal-invoices/${params.id}/print`}>
+                  <Link
+                    href={`/accounting/internal-invoices/${params.id}/print`}
+                  >
                     <Printer className="size-4" />
                     چاپ فاکتور
                   </Link>
                 </Button>
                 {invoice.status === "ready_for_accounting" ? (
                   <Button type="button" onClick={() => setIsDialogOpen(true)}>
-                    علامت‌گذاری به عنوان ثبت‌شده در حسابداری
+                    ثبت در سیستم حسابداری
                   </Button>
                 ) : null}
               </div>
@@ -216,23 +230,38 @@ export default function InternalInvoiceDetailPage() {
               <Info label="مشتری" value={invoice.customerName || "-"} />
               <Info
                 label="کد مشتری"
-                value={formatFaDigits(
-                  invoice.sepidarCustomerCode || invoice.customerCode,
-                ) || "-"}
+                value={
+                  formatFaDigits(
+                    invoice.sepidarCustomerCode || invoice.customerCode,
+                  ) || "-"
+                }
               />
               <Info
                 label="موبایل مشتری"
-                value={formatFaDigits(
-                  invoice.customerMobile || invoice.customerPhone,
-                ) || "-"}
+                value={
+                  formatFaDigits(
+                    invoice.customerMobile || invoice.customerPhone,
+                  ) || "-"
+                }
               />
-              <Info
-                label="آدرس مشتری"
-                value={invoice.customerAddress || "-"}
-              />
+              <Info label="آدرس مشتری" value={invoice.customerAddress || "-"} />
               <Info label="انبار خروج" value={invoice.stockTitle || "-"} />
               {invoice.saleTypeTitle ? (
                 <Info label="روش پرداخت" value={invoice.saleTypeTitle || ""} />
+              ) : null}
+              {invoice.storePaymentMethod ? (
+                <Info
+                  label="پرداخت فروشگاه"
+                  value={
+                    invoice.storePaymentMethod === "credit" ? "اعتباری" : "نقدی"
+                  }
+                />
+              ) : null}
+              {invoice.storePaymentTerms ? (
+                <Info
+                  label="توضیحات شرایط پرداخت"
+                  value={invoice.storePaymentTerms}
+                />
               ) : null}
               {invoice.priceListTitle ? (
                 <Info label="لیست قیمت" value={invoice.priceListTitle || ""} />
@@ -276,10 +305,22 @@ export default function InternalInvoiceDetailPage() {
               </h3>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Info label="نام" value={invoice.recipientFirstName || "-"} />
-                <Info label="نام خانوادگی" value={invoice.recipientLastName || "-"} />
-                <Info label="کد ملی" value={formatFaDigits(invoice.recipientNationalId) || "-"} />
-                <Info label="موبایل" value={formatFaDigits(invoice.recipientMobile) || "-"} />
-                <Info label="شماره سفارش" value={formatFaDigits(invoice.najaOrderNumber) || "-"} />
+                <Info
+                  label="نام خانوادگی"
+                  value={invoice.recipientLastName || "-"}
+                />
+                <Info
+                  label="کد ملی"
+                  value={formatFaDigits(invoice.recipientNationalId) || "-"}
+                />
+                <Info
+                  label="موبایل"
+                  value={formatFaDigits(invoice.recipientMobile) || "-"}
+                />
+                <Info
+                  label="شماره سفارش"
+                  value={formatFaDigits(invoice.najaOrderNumber) || "-"}
+                />
               </div>
             </Card>
           ) : null}
@@ -287,7 +328,9 @@ export default function InternalInvoiceDetailPage() {
           <DataTable
             columns={columns}
             rows={invoice.items}
-            rowKey={(row) => row.objectId || row.productObjectId || row.productCode}
+            rowKey={(row) =>
+              row.objectId || row.productObjectId || row.productCode
+            }
           />
 
           <Card className="p-5">
@@ -313,6 +356,14 @@ export default function InternalInvoiceDetailPage() {
                   شماره ثبت دستی و توضیح حسابدار را وارد کنید.
                 </DialogDescription>
               </DialogHeader>
+              {dialogError ? (
+                <div
+                  role="alert"
+                  className="rounded-md border border-[#F5B8B8] bg-[#FFF1F1] px-3 py-2 text-sm font-medium text-[#C53030]"
+                >
+                  {dialogError}
+                </div>
+              ) : null}
               <div className="grid gap-4">
                 <label className="grid gap-2 text-sm font-medium text-[#334155]">
                   <span>شماره فاکتور حسابداری</span>
@@ -394,9 +445,9 @@ function Total({
 function hasRecipientInfo(invoice: InternalInvoice): boolean {
   return Boolean(
     invoice.recipientFirstName ||
-      invoice.recipientLastName ||
-      invoice.recipientNationalId ||
-      invoice.recipientMobile ||
-      invoice.najaOrderNumber,
+    invoice.recipientLastName ||
+    invoice.recipientNationalId ||
+    invoice.recipientMobile ||
+    invoice.najaOrderNumber,
   );
 }

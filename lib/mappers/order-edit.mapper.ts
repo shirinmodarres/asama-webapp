@@ -76,6 +76,7 @@ export function normalizeOrderEditPayload(
       : editPayload.najaOrderNumber,
     najaPurchaseDate: trimOrNull(editPayload.najaPurchaseDate),
     sepidarQuotationDate: trimOrNull(editPayload.sepidarQuotationDate),
+    discountPercentage: numberOrUndefined(editPayload.discountPercentage),
     notes: trimOrNull(editPayload.notes),
     items,
   });

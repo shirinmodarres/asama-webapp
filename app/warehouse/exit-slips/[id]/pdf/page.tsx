@@ -100,9 +100,18 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
       title: "اطلاعات مرکز / مشتری سپیدار",
       fields: [
         { label: "نام مشتری/مرکز", value: customer.name || "-" },
-        { label: "کد دریافت", value: customer.sepidarCustomerCode ? formatFaDigits(customer.sepidarCustomerCode) : "-" },
+        { label: "کد مشتری سپیدار", value: customer.sepidarCustomerCode ? formatFaDigits(customer.sepidarCustomerCode) : "-" },
+        ...(hasText(data.deliveryCode)
+          ? [{ label: "کد تأیید دریافت", value: formatFaDigits(data.deliveryCode || "") }]
+          : []),
         { label: "موبایل/تلفن", value: customer.phone ? formatFaDigits(customer.phone) : "-" },
         { label: "آدرس", value: customer.address || "-", className: "col-span-2" },
+        {
+          label: "کد پستی",
+          value: data.deliveryAddress.postalCode
+            ? formatFaDigits(data.deliveryAddress.postalCode)
+            : "-",
+        },
       ],
     },
   ];
@@ -127,6 +136,12 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
           label: "آدرس تحویل",
           value: data.deliveryAddress.formatted || data.deliveryAddress.fullAddress || "-",
           className: "col-span-2",
+        },
+        {
+          label: "کد پستی",
+          value: data.deliveryAddress.postalCode
+            ? formatFaDigits(data.deliveryAddress.postalCode)
+            : "-",
         },
       ],
     });
@@ -170,9 +185,6 @@ function buildExitSlipDocumentData(data: ExitSlipPdfData) {
     summaryRows,
     detailRows,
     noteFields: [
-      ...(hasText(data.deliveryCode)
-        ? [{ label: "کد تأیید دریافت", value: formatFaDigits(data.deliveryCode || "") }]
-        : []),
       ...(hasText(data.notes) ? [{ label: "توضیحات", value: data.notes || "" }] : []),
     ],
   };

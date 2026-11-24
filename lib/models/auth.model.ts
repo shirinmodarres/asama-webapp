@@ -11,7 +11,11 @@ export interface AuthUser {
   phone: string;
   role: BackendRoleKey;
   roleLabel: string;
+  activeRole: BackendRoleKey;
+  activeRoleLabel: string;
+  canSwitchRole: boolean;
   status: UserStatus;
+  assignedCustomerCount?: number;
 }
 
 export interface LoginResponse {

@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlineErrorMessage } from "@/components/shared/inline-error-message";
 import { ApiError, getErrorMessage } from "@/lib/api/api-error";
-import { getPanelRouteForRole } from "@/lib/domain/roles";
+import { getEffectiveRole, getPanelRouteForRole } from "@/lib/domain/roles";
 import {
   getStoredCurrentUser,
   getStoredSessionToken,
@@ -51,7 +51,7 @@ export function LoginScreen() {
     const sessionToken = getStoredSessionToken();
     const currentUser = getStoredCurrentUser();
     if (sessionToken && currentUser) {
-      router.replace(getPanelRouteForRole(currentUser.role));
+      router.replace(getPanelRouteForRole(getEffectiveRole(currentUser)));
     }
   }, [router]);
 
@@ -62,7 +62,7 @@ export function LoginScreen() {
 
     try {
       const response = await login(phone.trim(), password);
-      router.replace(getPanelRouteForRole(response.user.role));
+      router.replace(getPanelRouteForRole(getEffectiveRole(response.user)));
     } catch (submitError) {
       if (
         submitError instanceof ApiError &&

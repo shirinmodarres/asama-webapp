@@ -17,6 +17,8 @@ export interface SlipSummaryRow {
   key: string;
   productName: string;
   quantity: number;
+  unitPrice?: number;
+  lineTotal?: number;
 }
 
 export interface SlipDetailRow {
@@ -36,6 +38,11 @@ interface ExitSlipPdfDocumentProps {
   detailRows: SlipDetailRow[];
   noteFields?: SlipInfoField[];
   signatureLabels: [string, string];
+  showAmounts?: boolean;
+  summaryTitle?: string;
+  showSummaryMeta?: boolean;
+  showSignatures?: boolean;
+  noteLayout?: "grid" | "single-column-left";
 }
 
 const SUMMARY_ROWS_FIRST_PAGE = 16;
@@ -51,6 +58,11 @@ export function ExitSlipPdfDocument({
   detailRows,
   noteFields = [],
   signatureLabels,
+  showAmounts = false,
+  summaryTitle = "خلاصه کالاها",
+  showSummaryMeta = true,
+  showSignatures = true,
+  noteLayout = "grid",
 }: ExitSlipPdfDocumentProps) {
   const summaryPages = paginateRows(
     summaryRows,
@@ -80,11 +92,13 @@ export function ExitSlipPdfDocument({
                 {informationSections.map((section) => (
                   <InformationSection key={section.title} section={section} />
                 ))}
-                <SummaryMeta totalItemCount={totalItemCount} />
+                {showSummaryMeta ? <SummaryMeta totalItemCount={totalItemCount} /> : null}
               </>
             ) : null}
             <SummaryTable
               rows={rows}
+              showAmounts={showAmounts}
+              title={summaryTitle}
               startIndex={
                 index === 0
                   ? 0
@@ -96,6 +110,8 @@ export function ExitSlipPdfDocument({
               <DocumentFooter
                 noteFields={noteFields}
                 signatureLabels={signatureLabels}
+                showSignatures={showSignatures}
+                noteLayout={noteLayout}
               />
             ) : null}
           </div>
@@ -123,6 +139,8 @@ export function ExitSlipPdfDocument({
               <DocumentFooter
                 noteFields={noteFields}
                 signatureLabels={signatureLabels}
+                showSignatures={showSignatures}
+                noteLayout={noteLayout}
               />
             ) : null}
           </div>
@@ -172,14 +190,18 @@ function InformationSection({ section }: { section: SlipInfoSection }) {
 function SummaryTable({
   rows,
   startIndex,
+  showAmounts,
+  title,
 }: {
   rows: SlipSummaryRow[];
   startIndex: number;
+  showAmounts: boolean;
+  title: string;
 }) {
   return (
     <section className="print-section print-table-section rounded-md border border-[#94A3B8] bg-white/95">
       <h2 className="border-b border-[#94A3B8] px-3 py-1.5 text-[10.5px] font-bold text-[#1F3A5F]">
-        خلاصه کالاها
+        {title}
       </h2>
       <table className="summary-table items-table w-full table-fixed border-collapse text-right text-[10px] leading-4">
         <thead>
@@ -187,6 +209,7 @@ function SummaryTable({
             <TableHeader className="w-10">ردیف</TableHeader>
             <TableHeader>نام کالا</TableHeader>
             <TableHeader className="w-16">تعداد</TableHeader>
+            {showAmounts ? <><TableHeader className="w-24">قیمت واحد</TableHeader><TableHeader className="w-28">مبلغ</TableHeader></> : null}
           </tr>
         </thead>
         <tbody>
@@ -195,6 +218,7 @@ function SummaryTable({
               <TableCell>{formatNumber(startIndex + index + 1)}</TableCell>
               <TableCell>{row.productName || "-"}</TableCell>
               <TableCell>{formatNumber(row.quantity)}</TableCell>
+              {showAmounts ? <><TableCell>{formatFaDigits(row.unitPrice || 0)}</TableCell><TableCell>{formatFaDigits(row.lineTotal || 0)}</TableCell></> : null}
             </tr>
           ))}
         </tbody>
@@ -265,25 +289,33 @@ function SummaryMeta({ totalItemCount }: { totalItemCount: number }) {
 function DocumentFooter({
   noteFields,
   signatureLabels,
+  showSignatures,
+  noteLayout,
 }: {
   noteFields: SlipInfoField[];
   signatureLabels: [string, string];
+  showSignatures: boolean;
+  noteLayout: "grid" | "single-column-left";
 }) {
   return (
     <>
       {noteFields.length ? (
         <section className="print-section rounded-md border border-[#CBD5E1] bg-white/95 px-3 py-2">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[9px]">
+          <dl className={noteLayout === "single-column-left"
+            ? "mr-auto grid w-64 grid-cols-1 gap-y-0.5 text-[9px]"
+            : "grid grid-cols-2 gap-x-4 gap-y-0.5 text-[9px]"}>
             {noteFields.map((field) => (
               <InlineInfo key={field.label} {...field} />
             ))}
           </dl>
         </section>
       ) : null}
-      <footer className="grid grid-cols-2 gap-8 pt-7">
-        <Signature label={signatureLabels[0]} />
-        <Signature label={signatureLabels[1]} />
-      </footer>
+      {showSignatures ? (
+        <footer className="grid grid-cols-2 gap-8 pt-7">
+          <Signature label={signatureLabels[0]} />
+          <Signature label={signatureLabels[1]} />
+        </footer>
+      ) : null}
     </>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { OrderFulfillmentSummary } from "@/components/orders/order-fulfillment-summary";
+import { showOrderFulfillment } from "@/lib/domain/order-fulfillment-visibility";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
@@ -171,6 +173,9 @@ export default function NajaOrderDetailsPage() {
         }
       />
 
+      {showOrderFulfillment(order) ? (
+            <OrderFulfillmentSummary orderId={order.objectId} revision={order.updatedAt} />
+          ) : null}
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
@@ -270,6 +275,14 @@ export default function NajaOrderDetailsPage() {
                   value={formatFaDigits(order.sepidarQuotationNumber)}
                 />
               ) : null}
+              <InfoItem
+                label="تاریخ ثبت پیش‌فاکتور در سپیدار"
+                value={
+                  order.sepidarQuotationDate
+                    ? formatDate(order.sepidarQuotationDate)
+                    : "ثبت نشده"
+                }
+              />
               {order.returnReason ? <InfoItem label="دلیل برگشت" value={order.returnReason} /> : null}
             </dl>
             {!order.customerPhone || !order.deliveryFullAddress ? (
@@ -290,6 +303,8 @@ export default function NajaOrderDetailsPage() {
             itemCount={detailRows.length}
             totalQuantity={detailRows.reduce((sum, item) => sum + item.quantity, 0)}
             totalAmount={totalAmount}
+            discountAmount={order.salesRequestDiscountTotal}
+            notes={order.notes}
             status={order.orderStatus as never}
             warehouseStatus={order.warehouseStatus as never}
             saleTypeTitle={order.salesTypeTitle || null}

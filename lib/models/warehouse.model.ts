@@ -235,13 +235,16 @@ export interface ExitSlipItemGroup {
 }
 
 export interface ExitSlip {
+  issuanceWarnings?: string[];
   objectId: string;
   id: string;
   slipCode: string;
   orderId: string;
   orderCode: string;
   orderType: string | null;
+  stockTitle: string | null;
   issuedByName: string;
+  issuedAt: string | null;
   exitDate: string;
   deliveryToken: string | null;
   deliveryLink: string | null;
@@ -266,6 +269,7 @@ export interface ExitSlip {
   deliveryProvince: string | null;
   deliveryCity: string | null;
   deliveryCounty: string | null;
+  deliveryPostalCode: string | null;
   deliveryAddress: string | null;
   notes: string | null;
   internalInvoiceObjectId: string | null;
@@ -314,6 +318,7 @@ export interface ExitSlipPdfData {
     city: string | null;
     county: string | null;
     fullAddress: string | null;
+    postalCode?: string | null;
     formatted: string | null;
   };
   items: ExitSlipItemGroup[];

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Activity, RefreshCw, Save, ServerCog, Zap } from "lucide-react";
+import { Activity, FileOutput, RefreshCw, Save, ServerCog, Zap } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { DataTable } from "@/components/shared/data-table";
@@ -13,18 +13,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { getErrorMessage, type ApiError } from "@/lib/api/api-error";
 import { formatDateTime, formatNumber } from "@/lib/expert/utils";
 import {
   getSepidarSettings,
   getSepidarSyncSummary,
   syncSepidarCustomers,
+  syncSepidarGeographicAreas,
   syncSepidarItems,
   syncSepidarPrices,
   syncSepidarSaleTypes,
   syncSepidarStocks,
   testSepidarConnection,
   updateSepidarSettings,
+  updateAutomaticQuotationPush,
+  updateStoreSepidarSettings,
   type SepidarConnectionTestResult,
   type SepidarDiagnosticStep,
   type SepidarSettings,
@@ -41,7 +45,7 @@ import {
 } from "@/lib/services/pricing.service";
 import { formatFaDigits } from "@/lib/utils/number-format";
 
-type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks";
+type SyncKey = "items" | "customers" | "sale-types" | "prices" | "stocks" | "geographic-areas";
 type PriceNoteItemsSyncResult = NonNullable<PriceNoteItemsSyncJob["result"]> & {
   syncedAt: string;
 };
@@ -52,6 +56,7 @@ const SYNC_LABELS: Record<SyncKey, string> = {
   "sale-types": "نوع‌های فروش",
   prices: "قیمت‌ها",
   stocks: "انبارها",
+  "geographic-areas": "استان‌ها و شهرها",
 };
 
 export default function SupportSepidarSettingsPage() {
@@ -63,6 +68,8 @@ export default function SupportSepidarSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isSavingQuotationPush, setIsSavingQuotationPush] = useState(false);
+  const [isSavingStoreSepidar, setIsSavingStoreSepidar] = useState(false);
   const [syncingKey, setSyncingKey] = useState<SyncKey | "">("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -155,6 +162,48 @@ export default function SupportSepidarSettingsPage() {
       setError(getSepidarUiError(testError));
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const changeAutomaticQuotationPush = async (enabled: boolean) => {
+    if (!settings || isSavingQuotationPush) return;
+    setIsSavingQuotationPush(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updateAutomaticQuotationPush(enabled);
+      setSettings((current) => current ? { ...current, ...updated } : current);
+      setMessage(
+        enabled
+          ? "ارسال خودکار پیش‌فاکتور سپیدار فعال شد."
+          : "ارسال خودکار پیش‌فاکتور سپیدار غیرفعال شد.",
+      );
+    } catch (saveError) {
+      setError(getSepidarUiError(saveError));
+    } finally {
+      setIsSavingQuotationPush(false);
+    }
+  };
+
+  const changeStoreSepidarSetting = async (
+    key: "sendCustomerToSepidar" | "sendQuotationToSepidar",
+    enabled: boolean,
+  ) => {
+    if (!settings || isSavingStoreSepidar) return;
+    setIsSavingStoreSepidar(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await updateStoreSepidarSettings({
+        sendCustomerToSepidar: key === "sendCustomerToSepidar" ? enabled : settings.sendCustomerToSepidar,
+        sendQuotationToSepidar: key === "sendQuotationToSepidar" ? enabled : settings.sendQuotationToSepidar,
+      });
+      setSettings((current) => current ? { ...current, ...updated } : current);
+      setMessage("تنظیمات اتصال مادسنتر به سپیدار ذخیره شد.");
+    } catch (saveError) {
+      setError(getSepidarUiError(saveError));
+    } finally {
+      setIsSavingStoreSepidar(false);
     }
   };
 
@@ -304,6 +353,68 @@ export default function SupportSepidarSettingsPage() {
           />
 
           <Card className="p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#EFF6F0] text-[#4E8B58]">
+                  <FileOutput className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-[#102034]">
+                    ارسال خودکار پیش‌فاکتور
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-[#6B7280]">
+                    در صورت فعال‌بودن، بعد از تأیید مدیر فروش پیش‌فاکتور در سپیدار ثبت می‌شود.
+                  </p>
+                  <p className="mt-1 text-xs text-[#7B8797]">
+                    {settings?.quotationPushEnvironment === "production"
+                      ? "در محیط production این قابلیت همیشه فعال است و امکان خاموش‌کردن ندارد."
+                      : "در محیط dev وضعیت پیش‌فرض خاموش است و ارسال مجدد دستی مستقل از این تنظیم کار می‌کند."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <Badge
+                  variant={settings?.automaticQuotationPushEnabled ? "success" : "neutral"}
+                  dot
+                >
+                  {settings?.automaticQuotationPushEnabled ? "فعال" : "غیرفعال"}
+                </Badge>
+                <Switch
+                  aria-label="ارسال خودکار پیش‌فاکتور سپیدار"
+                  checked={Boolean(settings?.automaticQuotationPushEnabled)}
+                  disabled={
+                    isSavingQuotationPush || !settings?.quotationPushConfigurable
+                  }
+                  onCheckedChange={changeAutomaticQuotationPush}
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-[#102034]">اتصال مادسنتر به سپیدار</h2>
+              <p className="mt-1 text-sm leading-6 text-[#6B7280]">تا زمانی که هر گزینه خاموش است، هیچ POSTی برای همان عملیات به سپیدار ارسال نمی‌شود و فقط پیش‌نمایش امن درخواست نمایش داده می‌شود.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <StoreSepidarToggle
+                title="ارسال مشتری جدید"
+                description="ثبت مشتری مادسنتر در سپیدار"
+                checked={Boolean(settings?.sendCustomerToSepidar)}
+                disabled={isSavingStoreSepidar}
+                onCheckedChange={(enabled) => changeStoreSepidarSetting("sendCustomerToSepidar", enabled)}
+              />
+              <StoreSepidarToggle
+                title="ارسال پیش‌فاکتور"
+                description="ثبت پیش‌فاکتور سفارش مادسنتر در سپیدار"
+                checked={Boolean(settings?.sendQuotationToSepidar)}
+                disabled={isSavingStoreSepidar}
+                onCheckedChange={(enabled) => changeStoreSepidarSetting("sendQuotationToSepidar", enabled)}
+              />
+            </div>
+          </Card>
+
+          <Card className="p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-[#102034]">
@@ -335,7 +446,7 @@ export default function SupportSepidarSettingsPage() {
                   داده‌های آساما را با آخرین اطلاعات سپیدار به‌روزرسانی کنید.
                 </p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7">
                 <SyncButton
                   label="کالاها"
                   loading={syncingKey === "items"}
@@ -365,6 +476,12 @@ export default function SupportSepidarSettingsPage() {
                   loading={syncingKey === "stocks"}
                   disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
                   onClick={() => runSync("stocks", syncSepidarStocks)}
+                />
+                <SyncButton
+                  label="استان‌ها و شهرها"
+                  loading={syncingKey === "geographic-areas"}
+                  disabled={Boolean(syncingKey) || isSyncingPriceNoteItems}
+                  onClick={() => runSync("geographic-areas", syncSepidarGeographicAreas)}
                 />
                 <SyncButton
                   label="آیتم‌های لیست قیمت"
@@ -692,6 +809,27 @@ function SyncStatusBadge({ status }: { status: string }) {
   if (status === "running") return <Badge variant="warning">در حال اجرا</Badge>;
   if (status === "never_run") return <Badge variant="neutral">اجرا نشده</Badge>;
   return <Badge variant="neutral">{status || "-"}</Badge>;
+}
+
+function StoreSepidarToggle({ title, description, checked, disabled, onCheckedChange }: {
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E7EDF3] p-4">
+      <div>
+        <p className="text-sm font-semibold text-[#102034]">{title}</p>
+        <p className="mt-1 text-xs text-[#6B7280]">{description}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={checked ? "success" : "neutral"} dot>{checked ? "فعال" : "Dry Run"}</Badge>
+        <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={title} />
+      </div>
+    </div>
+  );
 }
 
 function formatDateValue(value?: string | null): string {

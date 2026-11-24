@@ -9,6 +9,7 @@ import { LoadingState } from "@/components/shared/loading-state";
 import { PageErrorMessage } from "@/components/shared/page-error-message";
 import { SectionHeader } from "@/components/shared/section-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { OrderFinancialAmounts } from "@/components/shared/order-financial-amounts";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -124,9 +125,42 @@ export default function ExpertOrdersPage() {
         formatNumber(row.items.reduce((sum, item) => sum + item.quantity, 0)),
     },
     {
+      key: "amounts",
+      header: "مبالغ سفارش",
+      render: (row) => <OrderFinancialAmounts order={row} />,
+    },
+    {
       key: "order-status",
       header: "وضعیت سفارش",
-      render: (row) => <StatusBadge type="order" status={row.orderStatus} />,
+      render: (row) => {
+        const workflowLabel = getExpertWorkflowLabel(row);
+        return (
+          <div className="space-y-1.5">
+            {row.financialApprovalStatus === "needs_correction" ? (
+              <StatusBadge type="financial" status="needs_correction" />
+            ) : (
+              <StatusBadge type="order" status={row.orderStatus} />
+            )}
+            {workflowLabel ? (
+              <p className="text-xs leading-5 text-[#64748B]">
+                {workflowLabel}
+              </p>
+            ) : null}
+          {row.financialApprovalStatus === "needs_correction" ? (
+            <div className="space-y-0.5 text-xs leading-5 text-[#8A5A00]">
+              <p>
+                برگشت از: {row.financialApprovalStageLabel || "مرحله مالی"}
+              </p>
+              <p>
+                {row.financialCorrectionReasonLabel ||
+                  row.financialCorrectionReason ||
+                  "نیازمند اصلاح"}
+              </p>
+            </div>
+          ) : null}
+          </div>
+        );
+      },
     },
     {
       key: "review",
@@ -272,6 +306,19 @@ export default function ExpertOrdersPage() {
       )}
     </DashboardLayout>
   );
+}
+
+function getExpertWorkflowLabel(order: Order): string | null {
+  if (order.financialApprovalStage === "systems_transfer") {
+    return "در انتظار ثبت انتقال در سامانه مشتری";
+  }
+  if (order.financialApprovalStage === "systems_expert") {
+    return "در انتظار بررسی اولیه کارشناس سامانه‌ها";
+  }
+  if (order.financialApprovalStage === "sales_accountant") {
+    return "در انتظار بررسی حسابدار فروش";
+  }
+  return null;
 }
 
 function isWithinDateRange(

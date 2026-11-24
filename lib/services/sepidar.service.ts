@@ -17,6 +17,15 @@ export interface SepidarSettings {
   lastRegisterAt: string | null;
   lastLoginAt: string | null;
   lastAuthorizedAt: string | null;
+  automaticQuotationPushEnabled: boolean;
+  quotationPushConfigurable: boolean;
+  quotationPushEnvironment: "development" | "production";
+  quotationPushUpdatedAt: string | null;
+  quotationPushUpdatedByName: string | null;
+  sendCustomerToSepidar: boolean;
+  sendQuotationToSepidar: boolean;
+  storeSepidarUpdatedAt: string | null;
+  storeSepidarUpdatedByName: string | null;
 }
 
 export interface UpdateSepidarSettingsPayload {
@@ -85,6 +94,49 @@ export async function updateSepidarSettings(
   return mapSepidarSettings(data);
 }
 
+export async function updateAutomaticQuotationPush(
+  enabled: boolean,
+): Promise<Pick<
+  SepidarSettings,
+  | "automaticQuotationPushEnabled"
+  | "quotationPushConfigurable"
+  | "quotationPushEnvironment"
+  | "quotationPushUpdatedAt"
+  | "quotationPushUpdatedByName"
+>> {
+  const data = await httpClient.patch<unknown>(
+    "/api/integrations/sepidar/settings/quotation-push",
+    { enabled },
+  );
+  const record = toRecord(data);
+  return {
+    automaticQuotationPushEnabled: toBooleanValue(
+      record.automaticQuotationPushEnabled,
+    ),
+    quotationPushConfigurable: toBooleanValue(record.quotationPushConfigurable),
+    quotationPushEnvironment:
+      toStringValue(record.quotationPushEnvironment) === "production"
+        ? "production"
+        : "development",
+    quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
+    quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
+  };
+}
+
+export async function updateStoreSepidarSettings(payload: {
+  sendCustomerToSepidar: boolean;
+  sendQuotationToSepidar: boolean;
+}): Promise<Pick<SepidarSettings, "sendCustomerToSepidar" | "sendQuotationToSepidar" | "storeSepidarUpdatedAt" | "storeSepidarUpdatedByName">> {
+  const data = await httpClient.patch<unknown>("/api/integrations/sepidar/settings/store", payload);
+  const record = toRecord(data);
+  return {
+    sendCustomerToSepidar: toBooleanValue(record.sendCustomerToSepidar),
+    sendQuotationToSepidar: toBooleanValue(record.sendQuotationToSepidar),
+    storeSepidarUpdatedAt: toStringValue(record.storeSepidarUpdatedAt) || null,
+    storeSepidarUpdatedByName: toStringValue(record.storeSepidarUpdatedByName) || null,
+  };
+}
+
 export async function testSepidarConnection(): Promise<SepidarConnectionTestResult> {
   const data = await httpClient.post<unknown>(
     "/api/integrations/sepidar/test-connection",
@@ -129,6 +181,14 @@ export async function syncSepidarStocks(): Promise<SepidarSyncOperationSummary> 
   return syncSepidar("/api/integrations/sepidar/sync/stocks");
 }
 
+export async function syncSepidarGeographicAreas(): Promise<SepidarSyncOperationSummary> {
+  const data = await httpClient.post<unknown>(
+    "/api/store-expert/geographic-areas/sync",
+    { force: true },
+  );
+  return mapSepidarSyncOperationSummary(data);
+}
+
 async function syncSepidar(path: string): Promise<SepidarSyncOperationSummary> {
   const data = await httpClient.post<unknown>(path);
   return mapSepidarSyncOperationSummary(data);
@@ -152,6 +212,20 @@ function mapSepidarSettings(dto: unknown): SepidarSettings {
     lastRegisterAt: toStringValue(record.lastRegisterAt) || null,
     lastLoginAt: toStringValue(record.lastLoginAt) || null,
     lastAuthorizedAt: toStringValue(record.lastAuthorizedAt) || null,
+    automaticQuotationPushEnabled: toBooleanValue(
+      record.automaticQuotationPushEnabled,
+    ),
+    quotationPushConfigurable: toBooleanValue(record.quotationPushConfigurable),
+    quotationPushEnvironment:
+      toStringValue(record.quotationPushEnvironment) === "production"
+        ? "production"
+        : "development",
+    quotationPushUpdatedAt: toStringValue(record.updatedAt) || null,
+    quotationPushUpdatedByName: toStringValue(record.updatedByName) || null,
+    sendCustomerToSepidar: toBooleanValue(record.sendCustomerToSepidar),
+    sendQuotationToSepidar: toBooleanValue(record.sendQuotationToSepidar),
+    storeSepidarUpdatedAt: toStringValue(record.storeSepidarUpdatedAt) || null,
+    storeSepidarUpdatedByName: toStringValue(record.storeSepidarUpdatedByName) || null,
   };
 }
 

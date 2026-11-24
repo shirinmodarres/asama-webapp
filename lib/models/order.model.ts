@@ -2,9 +2,9 @@ import type { NajaCenter } from "@/lib/models/naja-center.model";
 import type { Customer, CustomerAddress } from "@/lib/models/customer.model";
 import type { Product } from "@/lib/models/product.model";
 
-export type OrderType = "normal" | "naja";
+export type OrderType = "normal" | "naja" | "store";
 export type FulfillmentStatus = "normal" | "onHold";
-export type QuotationStatus = "success" | "failed" | "pending";
+export type QuotationStatus = "success" | "failed" | "pending" | "pending_verification" | "dry_run";
 
 export interface OrderItem {
   objectId: string;
@@ -22,6 +22,14 @@ export interface OrderItem {
   pricingSource?: string | null;
   productIdentifier: string | null;
   trackingCode: string | null;
+  stockObjectId?: string | null;
+  sepidarStockId?: number | null;
+  stockAllocations?: Array<{
+    stockObjectId?: string | null;
+    sepidarStockId?: number | null;
+    stockTitle?: string | null;
+    quantity?: number;
+  }>;
 }
 
 export interface Order {
@@ -80,7 +88,33 @@ export interface Order {
   warehouseName: string | null;
   warehouseType: string | null;
   stockObjectId: string | null;
+  stockCode: number | null;
   selectedStockObjectIds?: string[];
+  retailStockObjectIds?: string[];
+  retailOrderItemObjectIds?: string[];
+  retailPendingOrderItemObjectIds?: string[];
+  retailExitAvailable?: boolean;
+  retailExitSlips?: Array<{ objectId: string; slipCode: string }>;
+  retailFulfillmentStatus?: "pending" | "partial" | "completed" | "not_applicable";
+  retailAllocatedQuantity?: number;
+  retailDispatchedQuantity?: number;
+  retailRemainingQuantity?: number;
+  warehouseExitAvailable?: boolean;
+  warehouseStockObjectIds?: string[];
+  warehouseFulfillment?: {
+    stocks: Array<{
+      stockObjectId: string;
+      sepidarStockId: number | null;
+      stockTitle: string | null;
+      responsibleRole: "warehouse" | "store_sales_expert";
+      allocatedQuantity: number;
+      dispatchedQuantity: number;
+      remainingQuantity: number;
+    }>;
+    warehouseStockObjectIds: string[];
+    warehouseRemainingQuantity: number;
+    retailRemainingQuantity: number;
+  };
   sepidarStockId: number | null;
   stockTitle: string | null;
   selectedStockTitles: string[];
@@ -130,12 +164,27 @@ export interface Order {
   reviewRemainingMs: number | null;
   financialApprovalStatus: "pending" | "approved" | "needs_correction" | null;
   financialApprovalStatusLabel: string | null;
+  financialApprovalStage:
+    | "sales_accountant"
+    | "treasurer"
+    | "systems_expert"
+    | "sales_manager"
+    | "systems_transfer"
+    | null;
+  financialApprovalStageLabel: string | null;
   financialApprovedAt: string | null;
   financialApprovedBy: string | null;
+  financialCorrectionReasonCode: string | null;
+  financialCorrectionReasonLabel: string | null;
   financialCorrectionReason: string | null;
   financialReturnedAt: string | null;
   financialReturnedBy: string | null;
   sourceLabel: string | null;
+  discountPercentage: number;
+  salesRequestSubtotal: number;
+  salesRequestDiscountTotal: number;
+  salesRequestTaxAmount: number;
+  salesRequestTotalWithTax: number;
   notes: string | null;
   editedByUserId: string | null;
   editedByName: string | null;
@@ -154,9 +203,22 @@ export interface Order {
   sepidarQuotationNumber: number | string | null;
   manualInvoiceNumber: string | null;
   quotationStatus: QuotationStatus;
+  quotationSyncStatus: string | null;
   sepidarIntegrationStatus: string | null;
   quotationSyncError: string | null;
   sepidarLastError: string | null;
+  approvedBy: string | null;
+  exitSlipObjectId: string | null;
+  exitSlipNumber: string | null;
+  exitSlipIssuedAt: string | null;
+  internalInvoiceObjectId: string | null;
+  internalInvoiceNumber: string | null;
+  modCenterInvoiceObjectId: string | null;
+  modCenterInvoiceNumber: string | null;
+  accountingStatus: string | null;
+  inventoryReservationStatus: string | null;
+  storePaymentMethod: "cash" | "credit" | null;
+  storePaymentTerms: string | null;
   canEdit: boolean;
   canCancel?: boolean;
   editBlockedReason: string | null;
@@ -170,6 +232,8 @@ export interface OrderFilters {
   status?: string;
   orderType?: OrderType;
   financialApprovalStatus?: "pending" | "approved" | "needs_correction";
+  financialApprovalStage?: Order["financialApprovalStage"];
+  warehouseStatus?: string;
 }
 
 export interface CreateOrderPayload {
@@ -194,6 +258,7 @@ export interface CreateOrderPayload {
   najaOrderNumber?: string;
   najaPurchaseDate?: string | null;
   sepidarQuotationDate?: string | null;
+  discountPercentage?: number | null;
   notes?: string;
   items: Array<{
     productObjectId?: string;
@@ -229,7 +294,8 @@ export interface CancelOrderPayload {
 }
 
 export interface MarkOrderNeedsReviewPayload {
-  reasonCode: string;
+  reasonCode?: string;
+  reason?: string;
   requestedByName: string;
 }
 

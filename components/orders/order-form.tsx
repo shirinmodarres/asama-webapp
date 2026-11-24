@@ -1556,7 +1556,7 @@ export function OrderForm({
                 </p>
                 <p>
                   آدرس کامل:{" "}
-                  {selectedAddress.Address || formatDeliveryAddress(selectedAddress)}
+                  {formatDeliveryAddress(selectedAddress)}
                 </p>
               </div>
             ) :
@@ -2116,7 +2116,7 @@ export function OrderForm({
 
         <div className="mt-5 rounded-[18px] border border-[#E7EDF3] bg-[#FBFCFD] px-4 py-3 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[#6B7280]">مبلغ تقریبی سفارش</span>
+            <span className="text-[#6B7280]">مبلغ کل</span>
             <span className="font-semibold text-[#102034]">
               {formatCurrency(totalAmount)}
             </span>

@@ -141,6 +141,14 @@ export default function FinanceNajaInvoicePage() {
                 }
               />
               <InfoItem label="تاریخ ثبت سفارش" value={formatDate(order.createdAt)} />
+              <InfoItem
+                label="تاریخ ثبت پیش‌فاکتور در سپیدار"
+                value={
+                  order.sepidarQuotationDate
+                    ? formatDate(order.sepidarQuotationDate)
+                    : "ثبت نشده"
+                }
+              />
               <InfoItem label="آخرین تغییر" value={formatDateTime(order.updatedAt)} />
             </div>
 
