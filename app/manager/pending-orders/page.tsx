@@ -27,6 +27,7 @@ import { getOrderStatusLabel } from "@/lib/domain/statuses";
 import { formatDate, formatNumber } from "@/lib/expert/utils";
 import type { Order } from "@/lib/models/order.model";
 import { getStoredCurrentUser } from "@/lib/services/auth.service";
+import { approveNajaOrder } from "@/lib/services/naja.service";
 import {
   approveOrder,
   listOrders,
@@ -44,8 +45,8 @@ const WORKFLOW_PENDING_STATUSES = [
 
 function isManagerApprovalEligible(order: Order): boolean {
   return (
-    order.orderType !== "naja" &&
     order.orderStatus === "pending_manager_approval" &&
+    (!order.financialApprovalStatus || order.financialApprovalStatus === "approved") &&
     order.financialApprovalStage !== "systems_transfer"
   );
 }
@@ -149,6 +150,7 @@ export default function ManagerPendingOrdersPage() {
   const selectedSelectableOrderIds = selectedOrderIds.filter((id) =>
     selectableOrderIds.has(id),
   );
+  const hasSelectedNaja = selectableOrders.some((order) => order.orderType === "naja" && selectedSelectableOrderIds.includes(order.objectId));
 
   const toggleOrderSelection = (orderId: string, checked: boolean) => {
     setSelectedOrderIds((current) =>
@@ -169,6 +171,7 @@ export default function ManagerPendingOrdersPage() {
 
   const executeBulkAction = async () => {
     if (!bulkAction || selectedSelectableOrderIds.length === 0) return;
+    if (bulkAction === "needs_review" && hasSelectedNaja) return;
     if (bulkAction === "needs_review" && !bulkReasonCode) {
       setError("لطفاً دلیل ارجاع برای اصلاح را انتخاب کنید.");
       return;
@@ -191,8 +194,13 @@ export default function ManagerPendingOrdersPage() {
     for (const order of selected) {
       try {
         if (bulkAction === "approve") {
-          const result = await approveOrder(order.objectId);
-          successes.push({ id: order.objectId, order: result.order });
+          if (order.orderType === "naja") {
+            const updated = await approveNajaOrder(order.objectId, { approvedByName: requestedByName });
+            successes.push({ id: order.objectId, order: updated });
+          } else {
+            const result = await approveOrder(order.objectId);
+            successes.push({ id: order.objectId, order: result.order });
+          }
         } else {
           const updated = await returnFinancialOrder(order.objectId, {
             correctionReasonCode: bulkReasonCode,
@@ -494,9 +502,10 @@ export default function ManagerPendingOrdersPage() {
                   size="sm"
                   variant="outline"
                   disabled={
-                    !selectedSelectableOrderIds.length || isBulkSubmitting
+                    !selectedSelectableOrderIds.length || isBulkSubmitting || hasSelectedNaja
                   }
                   onClick={() => setBulkAction("needs_review")}
+                  title={hasSelectedNaja ? "برای ارجاع گروهی، سفارش ناجا را از انتخاب خارج کنید." : undefined}
                 >
                   ارجاع گروهی برای اصلاح
                 </Button>

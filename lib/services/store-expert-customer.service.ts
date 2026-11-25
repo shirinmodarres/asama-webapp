@@ -48,6 +48,10 @@ export async function reconcileStoreCustomerRegistration(operationKey: string) {
   );
 }
 
+export async function syncStoreExpertCustomers(): Promise<{ partial: boolean; failedCount: number }> {
+  return httpClient.post<{ partial: boolean; failedCount: number }>("/api/store-expert/customers/sync");
+}
+
 export async function listStoreExpertCustomers(filters: {
   search?: string;
   status?: string;
