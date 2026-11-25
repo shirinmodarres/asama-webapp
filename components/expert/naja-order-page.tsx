@@ -460,7 +460,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>مرکز ناجا</span>
-              <div className="relative">
+              <div>
+                <div className="relative">
                 <Landmark className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={customerObjectId}
@@ -485,6 +486,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   triggerClassName="pr-10"
                   invalid={Boolean(fieldErrors.customerObjectId)}
                 />
+                </div>
                 <FieldError message={fieldErrors.customerObjectId} />
                 {assignmentError ? (
                   <FieldError message="برای این مرکز تنظیمات فروش تعریف نشده است." />
@@ -575,7 +577,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>لیست قیمت</span>
-              <div className="relative">
+              <div>
+                <div className="relative">
                 <Tags className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={selectedPriceListId || undefined}
@@ -604,6 +607,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   triggerClassName="pr-10"
                   invalid={Boolean(fieldErrors.selectedPriceListId)}
                 />
+                </div>
                 <FieldError message={fieldErrors.selectedPriceListId} />
               </div>
             </label>
@@ -648,7 +652,8 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
 
             <label className="grid gap-2 text-sm font-medium text-[#334155] md:col-span-2">
               <span>کالا</span>
-              <div className="relative overflow-hidden rounded-[14px]">
+              <div>
+                <div className="relative">
                 <PackageSearch className="pointer-events-none absolute top-1/2 right-3.5 z-10 size-4 -translate-y-1/2 text-[#6CAE75]" />
                 <SearchableSelect
                   value={productId}
@@ -687,6 +692,7 @@ export function NajaOrderPage({ role = "naja" }: NajaOrderPageProps) {
                   triggerClassName="pr-10"
                   invalid={Boolean(fieldErrors.productId)}
                 />
+                </div>
                 <FieldError message={fieldErrors.productId} />
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
                   <ReadonlyValueInput

@@ -206,6 +206,12 @@ export const sidebarByRole: Record<PanelRoleKey, SidebarItem[]> = {
       description: "بررسی درخواست‌های در انتظار حسابدار فروش",
     },
     {
+      label: "حواله‌های انتقال",
+      href: "/finance/stock-transfers",
+      icon: "file-check",
+      description: "مشاهده حواله‌های انتقال صادرشده",
+    },
+    {
       label: "لیست قیمت‌ها",
       href: "/finance/pricing/price-lists",
       icon: "layers",

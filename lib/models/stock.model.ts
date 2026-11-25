@@ -101,6 +101,7 @@ export interface StockTransferRequest {
   scannedUnitObjectIds: string[];
   movedUnitCount: number;
   transferSlipId: string | null;
+  transferSlipCode?: string | null;
   requestedAt: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;

@@ -217,6 +217,7 @@ export function mapStockTransferRequestDto(dto: unknown): StockTransferRequest {
     ),
     movedUnitCount: toNumberValue(record.movedUnitCount),
     transferSlipId: toNullableString(record.transferSlipId),
+    transferSlipCode: toNullableString(record.transferSlipCode),
     requestedAt: toNullableString(record.requestedAt),
     approvedAt: toNullableString(record.approvedAt),
     rejectedAt: toNullableString(record.rejectedAt),
