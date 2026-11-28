@@ -92,6 +92,9 @@ export default function ExpertOrderDetailsPage() {
   const paymentMethodTitle = order?.salesTypeTitle ?? null;
   const needsFinancialCorrection =
     order?.financialApprovalStatus === "needs_correction";
+  const returnedBySystems =
+    order?.financialApprovalStage === "systems_expert" ||
+    order?.financialApprovalStage === "systems_transfer";
   const financialCorrectionReason = order
     ? [order.financialCorrectionReasonLabel, order.financialCorrectionReason]
         .filter(
@@ -131,7 +134,11 @@ export default function ExpertOrderDetailsPage() {
     try {
       const updated = await resubmitFinancialOrder(order.objectId);
       setOrder(updated);
-      setActionMessage("سفارش برطرف شد و دوباره برای بررسی ارسال شد.");
+      setActionMessage(
+        returnedBySystems
+          ? "سفارش دوباره برای کارشناس سامانه‌ها ارسال شد."
+          : "سفارش دوباره برای بررسی ارسال شد.",
+      );
     } catch (resubmitError) {
       setActionError(getErrorMessage(resubmitError));
     } finally {
@@ -333,7 +340,9 @@ export default function ExpertOrderDetailsPage() {
                 >
                   {isSubmitting
                     ? "در حال ارسال..."
-                    : "ارسال مجدد برای بررسی مالی"}
+                    : returnedBySystems
+                      ? "ارسال مجدد به کارشناس سامانه‌ها"
+                      : "ارسال مجدد برای بررسی"}
                 </Button>
               </div>
             </section>
